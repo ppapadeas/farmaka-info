@@ -10,6 +10,7 @@ which prevails if anything differs.
 from __future__ import annotations
 
 import json
+import re
 from email.utils import parsedate_to_datetime
 from pathlib import Path
 
@@ -18,14 +19,103 @@ from .pages import e
 from .text import date_gr, slugify
 
 
-def _blocks(blocks: list[dict]) -> str:
+_FRIDGE = re.compile(
+    r"[Φφ]υλάσσετε\s+(?:το\s+\w+\s+)?σε\s+ψυγείο\s*\(\s*2\s*°?\s*C?\s*(?:[–-]|έως)\s*8\s*[°o]?\s*C\s*\)"
+)
+_FREEZER = re.compile(r"[Φφ]υλάσσετε\s+(?:το\s+\w+\s+)?(?:σε\s+)?καταψύκτη")
+_MONITOR = re.compile(r"συμπληρωματική\s+παρακολούθηση")
+
+# Quick buttons: (label, section number) for the leaflet and the SmPC, plus
+# leaflet sub-headings found by their opening words.
+PIL_QUICK = [
+    ("Πριν το πάρετε", "2"),
+    ("Πώς να το πάρετε", "3"),
+    ("Ανεπιθύμητες ενέργειες", "4"),
+    ("Φύλαξη", "5"),
+]
+PIL_SUBS = [("Κύηση / θηλασμός", ("Κύηση", "Θηλασμός")), ("Οδήγηση", ("Οδήγηση",)), ("Παιδιά", ("Παιδιά",))]
+SMPC_QUICK = [
+    ("Ενδείξεις", "4.1"),
+    ("Δοσολογία", "4.2"),
+    ("Αντενδείξεις", "4.3"),
+    ("Προειδοποιήσεις", "4.4"),
+    ("Αλληλεπιδράσεις", "4.5"),
+    ("Κύηση / γαλουχία", "4.6"),
+    ("Οδήγηση", "4.7"),
+    ("Ανεπιθύμητες", "4.8"),
+    ("Φύλαξη", "6.4"),
+]
+
+
+def _text(section: dict) -> str:
+    return " ".join(b.get("text") or " ".join(b.get("items", [])) for b in section.get("blocks", []))
+
+
+def flags(d: dict) -> list[str]:
+    """Labels read from the storage sections (SmPC 6.4, else leaflet 5) and the SmPC opening.
+
+    One product can hold several forms with different storage (GONAL-f powder up
+    to 25 °C, its pens in the fridge): a label that holds for only some of them
+    says so."""
+    docs = d.get("smpc") or d.get("pil") or []
+    num = "6.4" if d.get("smpc") else "5"
+    storages = [
+        " ".join(_text(s) for s in doc.get("sections", []) if str(s.get("number")) == num) for doc in docs
+    ]
+    storages = [t for t in storages if t.strip()]
     out = []
+    for rx, label in ((_FRIDGE, "Ψυγείο 2–8 °C"), (_FREEZER, "Κατάψυξη")):
+        hits = sum(1 for t in storages if rx.search(t))
+        if hits:
+            out.append(label if hits == len(storages) else f"{label} (ορισμένες μορφές)")
+    head = " ".join(
+        b.get("text", "") for doc in d.get("smpc", [])[:1] for b in (doc.get("preamble") or [])
+    ) + " ".join(_text(s) for doc in d.get("smpc", [])[:1] for s in doc.get("sections", [])[:1])
+    if _MONITOR.search(head) or _MONITOR.search(json.dumps(d.get("smpc", [])[:1], ensure_ascii=False)[:3000]):
+        out.append("▼ Συμπληρωματική παρακολούθηση")
+    return out
+
+
+def quick_links(d: dict, kind: str) -> list[tuple[str, str]]:
+    """(label, fragment) for the first document of the leaflet or SmPC, only where it exists."""
+    docs = d.get("pil" if kind == "pil" else "smpc") or []
+    if not docs:
+        return []
+    secs = {str(s.get("number")): s for s in docs[0].get("sections", [])}
+    out = [
+        (label, f"d0-s{num}") for label, num in (PIL_QUICK if kind == "pil" else SMPC_QUICK) if num in secs
+    ]
+    if kind == "pil" and "2" in secs:
+        heads = [b for b in secs["2"].get("blocks", []) if b.get("type") == "subheading"]
+        for label, starts in PIL_SUBS:
+            for k, b in enumerate(heads):
+                if b.get("text", "").strip().startswith(starts):
+                    out.insert(len(out) - 2, (label, f"d0-s2-h{k}"))
+                    break
+    return out
+
+
+def _quick(links: list[tuple[str, str]], base: str = "") -> str:
+    if not links:
+        return ""
+    return (
+        '<nav class="quick" aria-label="Γρήγορη μετάβαση">'
+        + "".join(f'<a class="chip" href="{e(base)}#{e(f)}">{e(label)}</a>' for label, f in links)
+        + "</nav>"
+    )
+
+
+def _blocks(blocks: list[dict], prefix: str | None = None) -> str:
+    out = []
+    k = 0
     for b in blocks:
         t = b.get("type")
         if t == "paragraph":
             out.append(f"<p>{e(b['text'])}</p>")
         elif t == "subheading":
-            out.append(f"<h4>{e(b['text'])}</h4>")
+            anchor = f' id="{e(prefix)}-h{k}"' if prefix else ""
+            k += 1
+            out.append(f"<h4{anchor}>{e(b['text'])}</h4>")
         elif t == "list":
             lvl = int(b.get("level") or 1)
             items = "".join(f"<li>{e(x)}</li>" for x in b.get("items", []))
@@ -43,11 +133,14 @@ def _doc(doc: dict, i: int, multi: bool) -> str:
     if multi:
         head = f'<h2 class="pi-products" id="d{i}">{e(" · ".join(doc.get("products") or []) or doc.get("title", ""))}</h2>'
     pre = _blocks(doc.get("preamble") or [])
-    secs = "".join(
-        f'<section class="pi-sec" id="d{i}-s{e(s["number"])}"><h3><span>{e(s["number"])}.</span> {e(s["title"])}</h3>'
-        f"{_blocks(s['blocks'])}</section>"
-        for s in doc.get("sections", [])
-    )
+    parts = []
+    for s in doc.get("sections", []):
+        sid = f"d{i}-s{s['number']}"
+        parts.append(
+            f'<section class="pi-sec" id="{e(sid)}"><h3><span>{e(s["number"])}.</span> {e(s["title"])}</h3>'
+            f"{_blocks(s['blocks'], sid)}</section>"
+        )
+    secs = "".join(parts)
     return f'<article class="pi-doc">{head}{f"<div class=pi-pre>{pre}</div>" if pre else ""}{secs}</article>'
 
 
@@ -106,8 +199,10 @@ def _page(ctx, d: dict, slug: str, kind: str) -> str:
 <div class="page-head">
   <h1>{e(name)}</h1>
   <p>{title} · {e(d.get("product_number", ""))}</p>
+  {'<div class="chips flags">' + "".join(f'<span class="chip flag">{e(f)}</span>' for f in flags(d)) + "</div>" if flags(d) else ""}
 </div>
-<div class="pi-tabs">{"".join(tabs)}</div>
+<div class="pi-tabs">{"".join(tabs)}<button type="button" class="print-btn" data-print>Εκτύπωση</button></div>
+{_quick(quick_links(d, kind))}
 {_source(d)}
 <div class="pi-layout">
   {_toc(docs, kind)}
@@ -153,6 +248,8 @@ def build(ctx, src: Path, out: Path) -> dict[str, dict]:
             "name": d.get("name"),
             "pil": bool(d.get("pil")),
             "smpc": bool(d.get("smpc")),
+            "flags": flags(d),
+            "quick": quick_links(d, "pil"),
         }
     lis = "".join(
         f'<li><a href="/fylla/{e(v["slug"])}/">{e(v["name"])}</a></li>'

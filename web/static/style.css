@@ -457,3 +457,26 @@ a.stat-link span { text-decoration: underline; text-decoration-color: var(--line
   .tag.stop { background: #3d1d12; color: #f6b39a; }
   .av.stop { border-left-color: #f08a5d; }
 }
+
+/* leaflet quick buttons, flags, print */
+.quick { margin-top: 14px; display: flex; flex-wrap: wrap; gap: 6px; font-size: 14px; }
+.quick .chip { background: var(--bg); border: 1px solid var(--line); }
+.quick .chip:hover { border-color: var(--accent-line); background: var(--accent-soft); color: var(--accent-ink); }
+.small-quick { margin: 6px 0 12px; font-size: 13px; gap: 5px; }
+.small-quick .chip { padding: 3px 9px; }
+.chip.flag { background: var(--new-bg); color: var(--new-ink); font-weight: 500; }
+.flags { margin-top: 10px; font-size: 13px; }
+.print-btn { margin-left: auto; align-self: center; font: inherit; font-size: 14px; cursor: pointer; border: 1px solid var(--line); background: var(--bg); color: var(--ink-2); border-radius: 10px; padding: 5px 12px; }
+.print-btn:hover { color: var(--ink); border-color: var(--field); }
+h4[id] { scroll-margin-top: 16px; }
+:target { animation: flash 1.6s ease-out 1; }
+@keyframes flash { from { background: var(--accent-soft); } to { background: transparent; } }
+@media print {
+  body { font-size: 12pt; }
+  .pi-toc, .pi-tabs, .quick, .crumbs, .print-btn { display: none !important; }
+  .pi-layout { display: block; }
+  .pi-body { max-width: none; }
+  .pi-sec { break-inside: auto; }
+  .pi-sec h3, .pi-sec h4 { break-after: avoid; }
+  a { color: inherit; text-decoration: none; }
+}

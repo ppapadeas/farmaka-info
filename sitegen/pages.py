@@ -478,6 +478,15 @@ def docs_card(ctx: Context, p: dict) -> str:
                 read.append(
                     f'<a class="doc" href="/fylla/{e(lf["slug"])}/">Φύλλο οδηγιών χρήσης</a><div>Για τον ασθενή · σε ενότητες</div>'
                 )
+            if lf.get("quick"):
+                read.append(
+                    '<div class="quick small-quick">'
+                    + "".join(
+                        f'<a class="chip" href="/fylla/{e(lf["slug"])}/#{e(frag)}">{e(label)}</a>'
+                        for label, frag in lf["quick"]
+                    )
+                    + "</div>"
+                )
             if lf["smpc"]:
                 href = f"/fylla/{e(lf['slug'])}/pxp/" if lf["pil"] else f"/fylla/{e(lf['slug'])}/"
                 read.append(
@@ -611,6 +620,10 @@ def package(ctx: Context, p: dict) -> str:
     fam, form_label = form_kind(p["name"])
     if fam != "other":
         chips.append(f'<span class="chip">{e(form_label)}</span>')
+    for pi in p.get("product_information") or []:
+        for flag in (ctx.leaflets.get(pi.get("product_number")) or {}).get("flags", []):
+            chips.append(f'<span class="chip flag" title="Από το επίσημο κείμενο (EMA)">{e(flag)}</span>')
+        break
     if p["mah"]:
         chips.append(f'<span class="chip" title="{e(p["mah"])}">{e(short_mah(p["mah"]))}</span>')
     disp = dispensing_label(p["reimbursement"][0]["dispensing"]) if p["reimbursement"] else None

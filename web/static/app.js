@@ -258,3 +258,6 @@ appBox?.querySelector(".install")?.addEventListener("click", async () => {
 window.addEventListener("appinstalled", () => {
   if (appBox) appBox.hidden = true;
 });
+
+// Print buttons (no inline handlers: the CSP allows only our own scripts)
+document.querySelectorAll("[data-print]").forEach((b) => b.addEventListener("click", () => window.print()));

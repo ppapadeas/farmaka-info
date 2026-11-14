@@ -197,3 +197,51 @@ def test_shortage_alert(tmp_path):
     got = load_shortages(tmp_path, "2026-11-14")
     assert set(got) == {"1", "3"}
     assert got["1"][0]["reason"] == "Καθυστέρηση παράδοσης"
+
+
+def test_leaflet_flags_and_quick_links():
+    from sitegen.leaflets import flags, quick_links
+
+    def sec(num, *texts, heads=()):
+        blocks = [{"type": "subheading", "text": h} for h in heads] + [
+            {"type": "paragraph", "text": t} for t in texts
+        ]
+        return {"number": num, "title": "", "blocks": blocks}
+
+    d = {
+        "pil": [
+            {
+                "sections": [
+                    sec(
+                        "2",
+                        heads=(
+                            "Προειδοποιήσεις και προφυλάξεις",
+                            "Κύηση και θηλασμός",
+                            "Οδήγηση και χειρισμός μηχανημάτων",
+                        ),
+                    ),
+                    sec("3", "x"),
+                    sec("4", "x"),
+                    sec("5", "Φυλάσσετε σε ψυγείο (2°C – 8°C). Μην καταψύχετε."),
+                ]
+            }
+        ],
+        "smpc": [
+            {
+                "preamble": [
+                    {"type": "paragraph", "text": "Το φάρμακο αυτό τελεί υπό συμπληρωματική παρακολούθηση."}
+                ],
+                "sections": [sec("4.1", "x"), sec("6.4", "Φυλάσσετε σε ψυγείο (2°C έως 8°C).")],
+            }
+        ],
+    }
+    assert flags(d) == ["Ψυγείο 2–8 °C", "▼ Συμπληρωματική παρακολούθηση"]
+    links = dict(quick_links(d, "pil"))
+    assert links["Κύηση / θηλασμός"] == "d0-s2-h1" and links["Οδήγηση"] == "d0-s2-h2"
+    assert links["Φύλαξη"] == "d0-s5" and "Παιδιά" not in links
+    # reconstituted solution kept cold is not a storage condition of the product
+    d["pil"][0]["sections"][3] = sec(
+        "5", "Μετά την ανασύσταση, φυλάσσετε στο ψυγείο στους 2°C έως 8°C για 24 ώρες."
+    )
+    d["smpc"][0]["sections"][1] = sec("6.4", "Δεν απαιτούνται ιδιαίτερες συνθήκες φύλαξης.")
+    assert "Ψυγείο 2–8 °C" not in flags(d)
