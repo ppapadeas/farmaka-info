@@ -50,6 +50,28 @@ Source ──< (κάθε εγγραφή γεγονότος έχει source_id)
 
 `Restriction`: `restriction_id`, `text`, `scope_atc` (σε ποια ομάδα ATC/οδό ισχύει).
 
+#### ReimbursementRow (έξοδος `ingest/reimbursement.py`, `reimbursement_<list>.csv`)
+
+Μία γραμμή ανά συσκευασία του καταλόγου, όπως τυπώνεται. Δεν είναι ακόμη `ReimbursementEvent`: δεν έχει `published`/`source_id` (τα προσθέτει το build ή το CLI με `--article`/`--published`) και κρατά τα κείμενα των περιορισμών αντί για `restriction_id`.
+
+| πεδίο | τύπος | σημείωση |
+|---|---|---|
+| `eof_code` | char(9) | ΚΩΔΙΚΟΣ, μοναδικός ανά αρχείο |
+| `list_name` | text | `main` / `n3816` |
+| `atc` | text | όπως τυπώνεται· 12 γραμμές έχουν ψευδο-ATC (`A12AX-1`, `D05AXxx`, `D05AX--`, `L01FFF0`) |
+| `name_pdf`, `dose_form`, `strength`, `pack`, `dispensing`, `mah_pdf` | text | κομμένα στο pdf· τα πλήρη έρχονται από S1 |
+| `ddd`, `ddd_unit` | numeric?, text? | κενό όταν τυπώνεται 0 (δεν δίνεται ή < 0,0005 της μονάδας) |
+| `daily_doses_per_pack` | numeric? | ΑΗΔ· κενό όταν τυπώνεται 0 |
+| `daily_cost` | numeric? | ΚΗΘ = ΛΙΑΝΙΚΗ / ΑΗΔ· κενό όταν τυπώνεται 0 |
+| `retail_in_list` | numeric | ΛΙΑΝΙΚΗ όπως στον κατάλογο |
+| `reimbursement_price` | numeric | ΑΠΟΖΗΜ., πάντα > 0 |
+| `flag_s`, `flag_t` | text | στήλες `Σ`, `Τ` όπως τυπώνονται (`Φ`, `Ν`, `N`, `(Φ)`, `(Ν)`, κενό)· σημασία άγνωστη |
+| `route_group` | text | οδός χορήγησης (κόκκινη επικεφαλίδα) |
+| `therapeutic_group` | text? | ομάδα «G01 …» μέσα σε ATC4 (πράσινη επικεφαλίδα), αν υπάρχει |
+| `restrictions` | list[text] | όλες οι σημειώσεις περιορισμού που ισχύουν, από το εξωτερικό επίπεδο προς το εσωτερικό· στο CSV ενωμένες με ` \|\| ` |
+| `page` | int | σελίδα του pdf (από 1) |
+| `source_file`, `moh_article`, `published` | text | μόνο στο CSV: αρχείο, άρθρο και ημερομηνία δημοσίευσης |
+
 ### Document
 
 `document_id`, `eof_code` ή `product_id`, `type` (`smpc`/`pil`/`label`), `language`, `version_date`, `url_original`, `sha256`, `source_id`, `sections` (μελλοντικό: δομημένες ενότητες 4.1–4.9 κ.λπ., συμβατές με ePI).
