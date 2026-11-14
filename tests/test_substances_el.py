@@ -43,3 +43,15 @@ def test_greek_names_need_atc_and_name(tmp_path):
     assert got["PARACETAMOL"] == ("Παρακεταμόλη", "name")  # only in a combination: exact English label
     assert "CAFFEINE" not in got  # an ATC code alone is not enough
     assert got["ATORVASTATIN CALCIUM TRIHYDRATE"] == ("Ατορβαστατίνη", "salt of ATORVASTATIN")
+
+
+def test_pil_greek_name():
+    from ingest.substances_el import pil_greek_name
+
+    assert (
+        pil_greek_name("Τι περιέχει το Zyprexa - Η δραστική ουσία είναι η ολανζαπίνη. Κάθε δισκίο")
+        == "ολανζαπίνη"
+    )
+    assert pil_greek_name("Η δραστική ουσία είναι η Ιντερφερόνη βήτα-1a 30 μικρογραμμάρια/0,5 ml") is None
+    assert pil_greek_name("Η δραστική ουσία είναι η nonacog alfa (ανασυνδυασμένος παράγοντας)") is None
+    assert pil_greek_name("Η δραστική ουσία είναι η λαμιβουδίνη 150 mg") == "λαμιβουδίνη"

@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import json
 import re
 import unicodedata
 from collections import Counter, defaultdict
@@ -177,9 +178,77 @@ def greek_names(packages: Path, by_atc: dict[str, list[dict]]) -> list[dict]:
     return sorted(out, key=lambda r: r["inn"])
 
 
+_PIL_INN = re.compile(
+    r"(?:Η|Οι)\s+δραστικ(?:ή|ές)\s+ουσί(?:α|ες)\s+(?:είναι:?)\s+(?:η\s+|οι\s+|το\s+|ο\s+)?([^.;:\n]{3,80})"
+)
+_GREEK_CHAR = re.compile("[Ͱ-Ͽ]")
+_GREEK_SALT = re.compile(
+    r"^(?:οξικ|υδροχλωρικ|υδροβρωμικ|θειικ|φωσφορικ|μηλεϊνικ|φουμαρικ|τρυγικ|κιτρικ|μεσυλικ|βεσυλικ|"
+    r"βρωμιούχ|χλωριούχ|νατριούχ|καλιούχ|ασβεστιούχ|μαγνησιούχ|μονοένυδρ|διένυδρ|τριένυδρ)\w*\s+",
+    re.IGNORECASE,
+)
+
+
+def pil_greek_name(pil_section_6_text: str) -> str | None:
+    """'Η δραστική ουσία είναι η ολανζαπίνη. …' -> 'ολανζαπίνη'. Strengths, brackets and
+    anything without Greek letters are dropped (None)."""
+    m = _PIL_INN.search(pil_section_6_text)
+    if not m:
+        return None
+    if re.search(r"[^\s\d,.(]\d|-\d", m.group(1).split(" (")[0]):
+        return None  # a number inside the name ('βήτα-1a', 'άλφα1-…'): cutting it would leave half a name
+    name = re.split(r"\s*[\(\d,]", m.group(1))[0].strip()
+    name = re.sub(r"\s+(?:σε|ως|με|που|ισοδύναμ\w*).*$", "", name).strip()
+    if not name or not _GREEK_CHAR.search(name) or re.search("[A-Za-z]", name) or len(name.split()) > 4:
+        return None
+    return name
+
+
+def ema_greek_names(ema_pi: Path, ema_links: Path, packages: Path) -> dict[str, str]:
+    """INN -> Greek name from the EMA package leaflets ('Η δραστική ουσία είναι η …').
+
+    Only single-substance packages linked to an EMA product count, and a
+    substance gets a name only if its leaflets agree (one clear winner)."""
+    product_of: dict[str, str] = {}
+    with ema_links.open(encoding="utf-8") as fh:
+        for r in csv.DictReader(fh):
+            product_of[r["eof_code"]] = r["ema_product_number"]
+    names: dict[str, str | None] = {}
+    for f in ema_pi.glob("*.json"):
+        d = json.loads(f.read_text(encoding="utf-8"))
+        found = None
+        for pil in d.get("pil", [])[:1]:
+            for s in pil.get("sections", []):
+                if str(s.get("number")) == "6":
+                    text = " ".join(
+                        b.get("text") or " ".join(b.get("items", [])) for b in s.get("blocks", [])
+                    )
+                    found = pil_greek_name(text)
+        names[d["product_number"]] = found
+    votes: dict[str, Counter] = defaultdict(Counter)
+    with packages.open(encoding="utf-8") as fh:
+        for r in csv.DictReader(fh):
+            subs = [x for x in r["substances"].split("|") if x]
+            el = names.get(product_of.get(r["eof_code"], ""))
+            if len(subs) == 1 and el:
+                if not any(_norm(w) in SALT_WORDS for w in subs[0].split()):
+                    el = _GREEK_SALT.sub(
+                        "", el
+                    ).strip()  # INN without salt: 'Οξική αμπιρατερόνη' -> 'αμπιρατερόνη'
+                votes[subs[0]][el.lower()] += 1
+    out = {}
+    for inn, c in votes.items():
+        (best, n), total = c.most_common(1)[0], sum(c.values())
+        if n / total >= 0.8:
+            out[inn] = best[:1].upper() + best[1:]
+    return out
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--wikidata", type=Path, required=True, help="CSV export (item, atc, en, el)")
+    ap.add_argument("--ema-pi", type=Path, help="parsed EMA product information (data/current/ema_pi)")
+    ap.add_argument("--ema-links", type=Path, default=Path("data/current/ema_links.csv"))
     ap.add_argument("--fetch", action="store_true", help="query Wikidata into --wikidata first")
     ap.add_argument("--packages", type=Path, default=Path("data/current/packages.csv"))
     ap.add_argument("--out", type=Path, default=Path("reference/substances_el.csv"))
@@ -187,6 +256,13 @@ def main() -> None:
     if a.fetch:
         fetch(a.wikidata)
     rows = greek_names(a.packages, load_wikidata(a.wikidata))
+    if a.ema_pi:
+        # EMA leaflets fill the gaps Wikidata leaves (Wikidata wins where both exist)
+        have = {r["inn"] for r in rows}
+        for inn, el in sorted(ema_greek_names(a.ema_pi, a.ema_links, a.packages).items()):
+            if inn not in have:
+                rows.append({"inn": inn, "name_el": el, "wikidata": "", "atc": "", "matched_by": "ema-pil"})
+        rows.sort(key=lambda r: r["inn"])
     a.out.parent.mkdir(parents=True, exist_ok=True)
     with a.out.open("w", newline="", encoding="utf-8") as fh:
         w = csv.DictWriter(fh, fieldnames=["inn", "name_el", "wikidata", "atc", "matched_by"])

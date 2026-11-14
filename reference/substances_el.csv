@@ -1,20 +1,35 @@
 inn,name_el,wikidata,atc,matched_by
 ABACAVIR,Αβακαβίρη,Q304330,J05AF06,atc+name
+ABALOPARATIDE,Αμπαλοπαρατίδη,,,ema-pil
+ABEMACICLIB,Αμπεμασικλίμπη,,,ema-pil
+ABIRATERONE,Αμπιρατερόνη,,,ema-pil
+ABROCITINIB,Αμπροσιτινίμπη,,,ema-pil
+ACALABRUTINIB,Ακαλαβρουτινίμπη,,,ema-pil
 ACENOCOUMAROL,Ασενοκουμαρόλη,Q304088,B01AA07,atc+name
 ACETAZOLAMIDE,Ακεταζολαμίδη,Q413690,S01EC01,atc+name
 ACETIC ACID,Αιθανικό οξύ,Q47512,,name
 ACETYLCHOLINE,Ακετυλοχολίνη,Q180623,S01EB09,atc+name
 ACICLOVIR,Ακικλοβίρη,Q147101,J05AB01,atc+name
+ACLIDINIUM BROMIDE,Βρωμιούχο ακλιδίνιο,,,ema-pil
+ACORAMIDIS,Ακοραμίδη,,,ema-pil
+ADAGRASIB,Ανταγκρασίμπη,,,ema-pil
 ADALIMUMAB,Aδαλιμουμάμπη,Q348260,L04AB04,atc+name
 ADAPALENE,Ανταπαλένη,Q352348,D10AD03,atc+name
 ADENOSINE,Αδενοσίνη,Q190012,C01EB10,atc+name
+AFLIBERCEPT,Αφλιβερσέπτη,,,ema-pil
+AGALSIDASE ALFA,Αγαλσιδάση άλφα,,,ema-pil
+AGALSIDASE BETA,Αγαλσιδάση βήτα,,,ema-pil
 AGOMELATINE,Αγομελατίνη,Q395229,N06AX22,atc+name
+ALEMTUZUMAB,Αλεμτουζουμάμπη,,,ema-pil
 ALFUZOSIN,Αλφουζοσίνη,Q2736873,G04CA01,atc+name
+ALGLUCOSIDASE ALFA,Αλγλυκοσιδάση άλφα,,,ema-pil
+ALIROCUMAB,Αλιροκουμάμπη,,,ema-pil
 ALLOPURINOL,Αλλοπουρινόλη,Q412486,M04AA01,atc+name
 ALOGLIPTIN,Αλογλιπτίνη,Q4734170,A10BH04,atc+name
 ALPRAZOLAM,Αλπραζολάμη,Q319877,N05BA12,atc+name
 ALPROSTADIL,Αλπροσταδίλη,Q579348,C01EA01,atc+name
 ALTEPLASE,Αλτεπλάση,Q45769835,B01AD02,atc+name
+AMIFAMPRIDINE,Αμιφαμπριδίνη,,,ema-pil
 AMIKACIN,Αμικασίνη,Q408529,D06AX12,atc+name
 AMILORIDE,Αμιλορίδη,Q419995,,name
 AMINOPHYLLINE,Αμινοφυλλίνη,Q471763,R03DA05,atc+name
@@ -26,25 +41,46 @@ AMOXICILLIN,Αμοξυκιλλίνη,Q201928,J01CA04,atc+name
 AMPHOTERICIN B,Αμφοτερικίνη β,Q412223,J02AA01,atc+name
 AMPICILLIN,Αμπικιλλίνη,Q244150,J01CA01,atc+name
 AMPICILLIN SODIUM,Αμπικιλλίνη,Q244150,J01CA01,atc+name
+ANAGRELIDE,Αναγρελίδη,,,ema-pil
 ANASTROZOLE,Αναστροζόλη,Q419143,L02BG03,atc+name
+ANGIOTENSIN II,Αγγειοτενσίνη ιι,,,ema-pil
+ANIFROLUMAB,Ανιφρολουμάμπη,,,ema-pil
 APIXABAN,Απιξαμπάνη,Q414462,B01AF02,atc+name
 APREMILAST,Απρεμιλάστη,Q2858961,L04AA32,atc+name
+APREPITANT,Απρεπιτάντη,,,ema-pil
 ARIPIPRAZOLE,Αριπιπραζόλη,Q411188,N05AX12,atc+name
+ARSENIC,Τριοξείδιο του αρσενικού,,,ema-pil
 ARSENIC TRIOXIDE,Τριοξείδιο του αρσενικού,Q7739,L01XX27,atc+name
+ASCIMINIB,Ασιμινίμπη,,,ema-pil
 ASENAPINE,Ασεναπίνη,Q416545,N05AH05,atc+name
 ATAZANAVIR SULPHATE,Αταζαναβίρη,Q423467,J05AE08,atc+name
 ATENOLOL,Ατενολόλη,Q411325,C07AB03,atc+name
+ATEZOLIZUMAB,Ατεζολιζουμάμπη,,,ema-pil
+ATOGEPANT,Ατογκεπάντη,,,ema-pil
 ATOMOXETINE,Ατομοξετίνη,Q417240,N06BA09,atc+name
 ATORVASTATIN,Ατορβαστατίνη,Q668093,C10AA05,atc+name
 ATORVASTATIN CALCIUM TRIHYDRATE,Ατορβαστατίνη,Q668093,C10AA05,salt of ATORVASTATIN
+ATOSIBAN,Ατοσιμπάνη,,,ema-pil
 ATROPINE,Ατροπίνη,Q26272,S01FA01,atc+name
 ATROPINE SULFATE,Ατροπίνη,Q26272,A03BA01,atc+name
+AVALGLUCOSIDASE ALFA,Αβαλγλυκοσιδάση άλφα,,,ema-pil
+AVANAFIL,Αβαναφίλη,,,ema-pil
+AVATROMBOPAG,Αβατρομβοπάγη,,,ema-pil
+AVELUMAB,Αβελουμάμπη,,,ema-pil
+AXITINIB,Την αξιτινίμπη,,,ema-pil
+AZACITIDINE,Αζακιτιδίνη,,,ema-pil
 AZATHIOPRINE,Αζαθειοπρίνη,Q18939,L04AX01,atc+name
 AZIDAMFENICOL,Αζιδαμφενικόλη,Q425029,S01AA25,atc+name
+AZILSARTAN MEDOXOMIL,Μεδοξομιλική αζιλσαρτάνη,,,ema-pil
 AZITHROMYCIN,Αζιθρομυκίνη,Q165399,S01AA26,atc+name
 AZTREONAM,Αζτρεονάμη,Q418546,J01DF01,atc+name
+BARICITINIB,Μπαρισιτινίμπη,,,ema-pil
 BCG VACCINE,Εμβόλιο BCG,Q798309,L03AX03,atc+name
+BELIMUMAB,Μπελιμουμάμπη,,,ema-pil
+BELUMOSUDIL,Μπελουμοσουδίλη,,,ema-pil
+BELZUTIFAN,Μπελζουτιφάνη,,,ema-pil
 BENDAMUSTINE,Βενδαμουστίνη,Q425745,L01AA09,atc+name
+BENRALIZUMAB,Μπενραλιζουμάμπη,,,ema-pil
 BENZOYL PEROXIDE,Υπεροξείδιο του βενζολίου,Q411424,,name
 BENZYL BENZOATE,Βενζοϊκό βενζύλιο,Q413755,P03AX01,atc+name
 BENZYLPENICILLIN,Βενζυλοπενικιλλίνη,Q258450,J01CE01,atc+name
@@ -53,25 +89,39 @@ BETAMETHASONE,Βηταμεθαζόνη,Q416132,H02AB01,atc+name
 BEVACIZUMAB,Βεβασιζουμάμπη,Q413299,L01XC07,atc+name
 BICALUTAMIDE,Βικαλουταμίδη,Q1988832,L02BB03,atc+name
 BILASTINE,Μπιλαστίνη,Q2902977,R06AX29,atc+name
+BIMEKIZUMAB,Μπιμεκιζουμάμπη,,,ema-pil
 BIOTIN,Βιοτίνη,Q181354,,name
 BIPERIDEN,Βιπεριδένη,Q414914,N04AA02,atc+name
 BISOPROLOL,Βισοπρολόλη,Q412515,C07AB07,atc+name
 BISOPROLOL FUMARATE,Βισοπρολόλη,Q412515,C07AB07,salt of BISOPROLOL
+BLINATUMOMAB,Μπλινατουμομάμπη,,,ema-pil
+BORTEZOMIB,Βορτεζομίμπη,,,ema-pil
+BOSUTINIB,Βοσουτινίμπη,,,ema-pil
+BRENTUXIMAB VEDOTIN,Μπρεντουξιμάβη βεδοτίνη,,,ema-pil
+BRIGATINIB,Μπριγκατινίμπη,,,ema-pil
 BRINZOLAMIDE,Βρινζολαμίδη,Q411517,S01EC04,atc+name
+BRIVARACETAM,Μπριβαρακετάμη,,,ema-pil
 BROMAZEPAM,Βρωμαζεπάμη,Q422435,N05BA08,atc+name
+BROMFENAC,Βρωμφενάκη,,,ema-pil
 BUDESONIDE,Βουδεσονίδη,Q422212,A07EA06,atc+name
 BUPRENORPHINE,Βουπρενορφίνη,Q407721,N07BC01,atc+name
 BUPROPION,Βουπροπιόνη,Q834280,N06AX12,atc+name
 BUSPIRONE,Βουσπιρόνη,Q412194,N05BE01,atc+name
+BUSULFAN,Βουσουλφάνη,,,ema-pil
 CABAZITAXEL,Καμπαζιταξέλη,Q412963,L01CD04,atc+name
+CABOTEGRAVIR,Καμποτεγκραβίρη,,,ema-pil
+CABOZANTINIB,Καβοζαντινίβη,,,ema-pil
 CAFFEINE,Καφεΐνη,Q60235,N06BC01,atc+name
 CALCIUM CHLORIDE,Χλωριούχο ασβέστιο,Q208451,B05XA07,atc+name
 CALCIUM GLUCONATE,Γλυκονικό ασβέστιο,Q413739,,name
+CANAGLIFLOZIN,Καναγλιφλοζίνη,,,ema-pil
+CANGRELOR,Κανγρελόρη,,,ema-pil
 CANNABIDIOL,Κανναβιδιόλη (CBD),Q422917,N03AX24,atc+name
 CAPECITABINE,Καπεσιταβίνη,Q420207,L01BC06,atc+name
 CAPSAICIN,Καψαϊκίνη,Q273169,N01BX04,atc+name
 CAPTOPRIL,Καπτοπρίλη,Q421119,C09AA01,atc+name
 CARBOPLATIN,Καρβοπλατίνη,Q415588,L01XA02,atc+name
+CARIPRAZINE,Καριπραζίνη,,,ema-pil
 CARVEDILOL,Καρβεδιλόλη,Q412534,C07AG02,atc+name
 CEFACLOR,Κεφακλόρη,Q415167,J01DC04,atc+name
 CEFAZOLIN,Κεφαζολίνη,Q415739,J01DB04,atc+name
@@ -91,13 +141,17 @@ CHLORAMPHENICOL,Χλωραμφενικόλη,Q274515,S01AA01,atc+name
 CHLOROQUINE,Χλωροκίνη,Q422438,P01BA01,atc+name
 CHLORPROMAZINE,Χλωροπρομαζίνη,Q407972,N05AA01,atc+name
 CHOLECALCIFEROL,Χοληκαλσιφερόλη,Q139347,A11CC05,atc+name
+CHORIOGONADOTROPIN ALFA,Χοριακή γοναδοτροπίνη άλφα,,,ema-pil
+CICLOSPORIN,Κυκλοσπορίνη,,,ema-pil
 CILOSTAZOL,Σιλοσταζόλη,Q258591,B01AC23,atc+name
 CIMETIDINE,Σιμετιδίνη,Q409492,A02BA01,atc+name
 CIPROFLOXACIN,Σιπροφλοξασίνη,Q256602,S02AA15,atc+name
 CISPLATIN,Σισπλατίνη,Q412415,L01XA01,atc+name
 CLADRIBINE,Κλαδριβίνη,Q414030,L01BB04,atc+name
 CLARITHROMYCIN,Κλαριθρομυκίνη,Q118551,J01FA09,atc+name
+CLASCOTERONE,Κλασκοτερόνη,,,ema-pil
 CLINDAMYCIN,Κλινδαμυκίνη,Q422273,D10AF01,atc+name
+CLOFARABINE,Κλοφαραβίνη,,,ema-pil
 CLOMIFENE,Κλομιφαίνη,Q418730,G03GB02,atc+name
 CLOMIPRAMINE,Κλομιπραμίνη,Q58713,N06AA04,atc+name
 CLONIDINE,Κλονιδίνη,Q412221,C02AC01,atc+name
@@ -106,23 +160,40 @@ CLOTRIMAZOLE,Κλοτριμαζόλη,Q413546,G01AF02,atc+name
 CLOXACILLIN,Κλοξακιλλίνη,Q422219,J01CF02,atc+name
 CLOZAPINE,Κλοζαπίνη,Q221361,N05AH02,atc+name
 COAL TAR,Πίσσα λιθανθράκων,Q948232,,name
+COBIMETINIB,Κομπιμετινίμπη,,,ema-pil
 CODEINE,Κωδεΐνη,Q174723,,name
 COLISTIN,Κολιστίνη,Q418946,J01XB01,atc+name
+CONCIZUMAB,Κονσιζουμάμπη,,,ema-pil
+CROVALIMAB,Κροβαλιμάμπη,,,ema-pil
 CYTARABINE,Κυταραβίνη,Q180983,L01BC01,atc+name
 DABRAFENIB,Dabrafenib,Q3011604,L01XE23,atc+name
+DAMOCTOCOG ALFA PEGOL,Πεγκυλιωμένος,,,ema-pil
+DANICOPAN,Δανικοπάνη,,,ema-pil
 DAPAGLIFLOZIN,Δαπαγλιφλοζίνη,Q409898,A10BK01,atc+name
+DAPTOMYCIN,Δαπτομυκίνη,,,ema-pil
+DARIFENACIN HYDROBROMIDE,Δαριφενασίνη,,,ema-pil
+DAROLUTAMIDE,Δαρολουταμίδη,,,ema-pil
 DARUNAVIR,Δαρουναβίρη,Q3765251,J05AE10,atc+name
 DASATINIB,Δασατινίμπη,Q419940,L01XE06,atc+name
 DAUNORUBICIN,Δαουνορουβικίνη,Q411659,,name
+DECITABINE,Δεσιταβίνη,,,ema-pil
+DEFERASIROX,Δεφερασιρόξη,,,ema-pil
+DEFERIPRONE,Δεφεριπρόνη,,,ema-pil
 DEFEROXAMINE,Δεφεροξαμίνη,Q419618,V03AC01,atc+name
+DEGARELIX,Δεγαρελίξη,,,ema-pil
+DELAFLOXACIN,Δελαφλοξασίνη,,,ema-pil
+DELGOCITINIB,Δελγοσιτινίμπη,,,ema-pil
 DENOSUMAB,Δενοσουμάμπη,Q408283,M05BX04,atc+name
 DESLORATADINE,Δεσλοραταδίνη,Q418060,R06AX27,atc+name
 DESMOPRESSIN,Δεσμοπρεσσίνη,Q241006,H01BA02,atc+name
 DESOGESTREL,Δεσογεστρέλη,Q415304,G03AC09,atc+name
 DEXAMETHASONE,Δεξαμεθαζόνη,Q422252,S01BA01,atc+name
+DEXMEDETOMIDINE,Δεξμεδετομιδίνη,,,ema-pil
 DEXPANTHENOL,Δεξπανθενόλη,Q47495755,,name
+DEXRAZOXANE (BASE),Δεξραζοξάνη,,,ema-pil
 DIAZEPAM,Διαζεπάμη,Q210402,N05BA01,atc+name
 DICLOFENAC,Δικλοφαινάκη,Q244408,D11AX18,atc+name
+DIFELIKEFALIN,Διφελικεφαλίνη,,,ema-pil
 DIGOXIN,Διγοξίνη,Q422222,C01AA05,atc+name
 DILTIAZEM,Διλτιαζέμη,Q422229,C08DB01,atc+name
 DIMETHYL FUMARATE,Φουμαρικός διμεθυλεστέρας,Q418123,L04AX07,atc+name
@@ -131,38 +202,72 @@ DOLUTEGRAVIR,Ντολουτεγκραβίρη,Q937224,,name
 DONEPEZIL,Δονεπεζίλη,Q415081,N06DA02,atc+name
 DONEPEZIL HYDROCHLORIDE MONOHYDRATE,Δονεπεζίλη,Q415081,N06DA02,salt of DONEPEZIL
 DOPAMINE,Ντοπαμίνη,Q170304,C01CA04,atc+name
+DOSTARLIMAB,Ντοσταρλιμάμπη,,,ema-pil
 DOXORUBICIN,Δοξορουβικίνη,Q18936,L01DB01,atc+name
 DOXYCYCLINE,Δοξυκυκλίνη,Q422442,J01AA02,atc+name
 DULAGLUTIDE,Ντουλαγλουτίδη,Q21011228,A10BJ05,atc+name
+DULOXETINE,Ντουλοξετίνη,,,ema-pil
 DURVALUMAB,Δουρβαλουμάμπη,Q19904005,L01FF03,atc+name
+ECULIZUMAB,Εκουλιζουμάμπη,,,ema-pil
 EDOXABAN,Εδοξαμπάνη,Q21011234,B01AF03,atc+name
 EDOXABAN TOSYLATE MONOHYDRATE,Εδοξαμπάνη,Q21011234,B01AF03,atc+name
+EFANESOCTOCOG ALFA,Εφανεσοκτοκόγη άλφα,,,ema-pil
 EFAVIRENZ,Εφαβιρένζη,Q422645,,name
+EFGARTIGIMOD ALFA,Εφγαρτιγιμόδη άλφα,,,ema-pil
+EFMOROCTOCOG ALFA,Εφμοροκτοκόγη άλφα,,,ema-pil
+EFTRENONACOG ALFA,Εφτρενονακόγη άλφα,,,ema-pil
+EICOSAPENTAENOIC ACID ETHYL ESTER,Εικοσιπενταενοϊκό αιθύλιο,,,ema-pil
+ELAFIBRANOR,Ελαφιμπρανόρη,,,ema-pil
+ELIGLUSTAT,Ελιγλουστάτη,,,ema-pil
+ELRANATAMAB,Ελραναταμάμπη,,,ema-pil
+ELTROMBOPAG,Ελτρομβοπάγη,,,ema-pil
 EMPAGLIFLOZIN,Εμπαγλιφλοζίνη,Q5373824,A10BK03,atc+name
 EMTRICITABINE,Εμτρισιταβίνη,Q422604,J05AF09,atc+name
 ENALAPRIL,Εναλαπρίλη,Q422185,C09AA02,atc+name
 ENCORAFENIB,Encorafenib,Q15409405,,name
+ENFUVIRTIDE,Ενφουβιρτίδη,,,ema-pil
 ENOXAPARIN,Ενοξαπαρίνη,Q416516,B01AB05,atc+name
+ENTACAPONE,Εντακαπόνη,,,ema-pil
 ENTECAVIR,Εντεκαβίρη,Q418586,J05AF10,atc+name
 ENTECAVIR MONOHYDRATE,Εντεκαβίρη,Q418586,J05AF10,atc+name
+ENZALUTAMIDE,Ενζαλουταμίδη,,,ema-pil
+EPCORITAMAB,Επκοριταμάμπη,,,ema-pil
 EPHEDRINE,Εφεδρίνη,Q219626,,name
 EPINEPHRINE,Αδρεναλίνη,Q132621,C01CA24,atc+name
 EPINEPHRINE BITARTRATE,Αδρεναλίνη,Q132621,C01CA24,atc+name
+EPLONTERSEN,Επλοντερσένη,,,ema-pil
+EPOETIN THETA,Εποετίνη θήτα,,,ema-pil
+EPOETIN ZETA,Εποετίνη ζήτα,,,ema-pil
+EPTINEZUMAB,Επτινεζουμάμπη,,,ema-pil
+ERAVACYCLINE,Εραβακυκλίνη,,,ema-pil
+ERENUMAB,Ερενουμάμπη,,,ema-pil
 ERGOCALCIFEROL,Εργοκαλσιφερόλη,Q139200,,name
 ERGOMETRINE,Εργομητρίνη,Q424508,G02AB03,atc+name
+ERIBULIN,Εριβουλίνη,,,ema-pil
 ERYTHROMYCIN,Ερυθρομυκίνη,Q213511,D10AF02,atc+name
 ESCITALOPRAM,Εσκιταλοπράμη,Q423757,N06AB10,atc+name
+ESKETAMINE,Εσκεταμίνη,,,ema-pil
+ESLICARBAZEPINE ACETATE,Οξική εσλικαρβαζεπίνη,,,ema-pil
 ESOMEPRAZOLE,Εσομεπραζόλη,Q553223,A02BC05,atc+name
 ETANERCEPT,Ετανερσέπτη,Q415343,L04AB01,atc+name
 ETORICOXIB,Ετορικοξίμπη,Q631202,M01AH05,atc+name
+ETRASIMOD,Ετρασιμόδη,,,ema-pil
+ETRAVIRINE,Ετραβιρίνη,,,ema-pil
 EZETIMIBE,Εζετιμίμπη,Q417997,C10AX09,atc+name
 FAMOTIDINE,Φαμοτιδίνη,Q411159,A02BA03,atc+name
+FAMPRIDINE,Φαμπριδίνη,,,ema-pil
+FARICIMAB,Φαρισιμάμπη,,,ema-pil
 FEBUXOSTAT,Φεμπουξοστάτη,Q417296,M04AA03,atc+name
 FEBUXOSTAT HEMIHYDRATE,Φεμπουξοστάτη,Q417296,M04AA03,atc+name
+FEDRATINIB,Φεντρατινίμπη,,,ema-pil
+FENFLURAMINE,Φενφλουραμίνη,,,ema-pil
 FENOFIBRATE,Φαινοφιμπράτη,Q419724,C10AB05,atc+name
 FENTANYL,Φαιντανύλη,Q407541,N01AH01,atc+name
+FESOTERODINE FUMARATE,Φουμαρική φεσοτεροδίνη,,,ema-pil
+FEZOLINETANT,Φεζολινετάντη,,,ema-pil
 FILGRASTIM,Φιλγραστίμη,Q3151081,L03AA02,atc+name
 FINASTERIDE,Φιναστερίδη,Q424167,D11AX10,atc+name
+FINERENONE,Φινερενόνη,,,ema-pil
 FINGOLIMOD,Φινγκολιμόδη,Q425137,L04AA27,atc+name
 FINGOLIMOD HYDROCHLORIDE,Φινγκολιμόδη,Q425137,L04AA27,salt of FINGOLIMOD
 FLECAINIDE,Φλεκαϊνίδη,Q421381,C01BC04,atc+name
@@ -178,45 +283,81 @@ FLUOXETINE HYDROCHLORIDE,Φλουοξετίνη,Q422244,N06AB03,atc+name
 FLUTICASONE,Φλουτικαζόνη,Q1002165,R01AD08,atc+name
 FLUTICASONE PROPIONATE,Φλουτικαζόνη,Q1002165,R01AD08,salt of FLUTICASONE
 FOLIC ACID,Φυλλικό οξύ,Q127060,B03BB01,atc+name
+FOLLITROPIN ALFA,Θυλακιοτροπίνη άλφα,,,ema-pil
+FOLLITROPIN DELTA,Θυλακιοτροπίνη δέλτα,,,ema-pil
+FOSAPREPITANT,Φοσαπρεπιτάντη,,,ema-pil
 FOSFOMYCIN,Φωσφομυκίνη,Q183554,J01XX01,atc+name
+FOSTEMSAVIR,Φοστεμσαβίρη,,,ema-pil
+FREMANEZUMAB,Φρεμανεζουμάμπη,,,ema-pil
 FULVESTRANT,Φουλβεστράντη,Q5508491,L02BA03,atc+name
 FUROSEMIDE,Φουροσεμίδη,Q388801,C03CA01,atc+name
 FUSIDIC ACID,Φουσιδικό οξύ,Q259930,D06AX01,atc+name
 GABAPENTIN,Γκαμπαπεντίνη,Q410352,,name
+GADOPICLENOL,Γαδοπικλενόλη,,,ema-pil
+GALCANEZUMAB,Γκαλκανεζουμάμπη,,,ema-pil
+GANIRELIX,Γκανιρελίξη,,,ema-pil
 GEMCITABINE,Γεµσιταβίνη,Q414143,L01BC05,atc+name
+GEMTUZUMAB OZOGAMICIN,Γεμτουζουμάμπη οζογαμικίνη,,,ema-pil
 GENTAMICIN,Γενταμυκίνη,Q422482,S01AA11,atc+name
+GIVINOSTAT,Γκιβινοστάτη,,,ema-pil
+GLASDEGIB,Γκλασδεγκίμπη,,,ema-pil
 GLICLAZIDE,Γλικλαζίδη,Q290001,A10BB09,atc+name
 GLIMEPIRIDE,Γλιμεπιρίδη,Q106029845,A10BB12,atc+name
 GLUCAGON,Γλυκαγόνη,Q170617,H04AA01,atc+name
 GLYCINE,Γλυκίνη,Q620730,,name
+GLYCOPYRRONIUM,Γλυκοπυρρόνιο,,,ema-pil
 GOSERELIN,Γοσερελίνη,Q1992653,L02AE03,atc+name
+GRANISETRON HYDROCHLORIDE,Γρανισετρόνη,,,ema-pil
 HALOPERIDOL,Αλοπεριδόλη,Q251347,N05AD01,atc+name
 HEPARIN,Ηπαρίνη,Q190016,B01AB01,atc+name
+HUMAN FIBRINOGEN,Ινωδογόνο ανθρώπινο,,,ema-pil
 HYDROCHLOROTHIAZIDE,Υδροχλωροθειαζίδη,Q423930,C03AA03,atc+name
 HYDROXOCOBALAMIN,Υδροξοκοβαλαμίνη,Q73972,B03BA03,atc+name
 HYDROXYCARBAMIDE,Υδροξυκαρβαμίδιο,Q212272,L01XX05,atc+name
 HYDROXYCHLOROQUINE,Υδροξυχλωροκίνη,Q421094,P01BA02,atc+name
+IBANDRONIC,Ιβανδρονικό οξύ,,,ema-pil
 IBUPROFEN,Ιβουπροφαίνη,Q186969,G02CC01,atc+name
 IBUPROFEN SODIUM DIHYDRATE,Ιβουπροφαίνη,Q186969,G02CC01,salt of IBUPROFEN
+ICATIBANT,Ικατιβάντη,,,ema-pil
+IDARUCIZUMAB,Ιδαρουσιζουμάμπη,,,ema-pil
+IDEBENONE,Ιδεβενόνη,,,ema-pil
 IMATINIB,Ιματινίμπη,Q177094,L01XE01,atc+name
+IMIQUIMOD,Ιμικιμόδη,,,ema-pil
+IMMUNOGLOBULIN HUMAN NORMAL,Ανθρώπινη φυσιολογική ανοσοσφαιρίνη,,,ema-pil
+INAVOLISIB,Ιναβολισίμπη,,,ema-pil
+INCLISIRAN,Ινκλισιράνη,,,ema-pil
 INFLIXIMAB,Ινφλιξιμάμπη,Q415264,L04AB02,atc+name
+INOTERSEN,Ινοτερσένη,,,ema-pil
+INOTUZUMAB OZOGAMICIN,Ινοτουζουμάμπη οζογαμικίνη,,,ema-pil
 INTERFERON,Ιντερφερόνη,Q188269,,name
 IPRATROPIUM,Βρωμιούχο ιπρατρόπιο,Q424294,R03BB01,atc+name
+IPTACOPAN,Ιπτακοπάνη,,,ema-pil
 IRBESARTAN,Ιρβεσαρτάνη,Q947266,C09CA04,atc+name
 IRINOTECAN,Ιρινοτεκάνη,Q412197,L01XX19,atc+name
+ISAVUCONAZOLE,Ισαβουκοναζόλη,,,ema-pil
 ISONIAZID,Ισονιαζίδη,Q423169,J04AC01,atc+name
 ISOPRENALINE HYDROCHLORIDE,Ισοπροτερενόλη,Q415550,C01CA02,atc+name
 ISOPROPYL ALCOHOL,2-προπανόλη,Q16392,,name
 ISOTRETINOIN,Ισοτρετινοΐνη,Q287029,D10AD04,atc+name
 ITRACONAZOLE,Ιτρακοναζόλη,Q411229,J02AC02,atc+name
 IVERMECTIN,Ιβερμεκτίνη,Q415178,P02CF01,atc+name
+IVOSIDENIB,Ιβοσιδενίμπη,,,ema-pil
+IXAZOMIB,Ιξαζομίμπη,,,ema-pil
+IXEKIZUMAB,Ιξεκιζουμάμπη,,,ema-pil
 KETOCONAZOLE,Κετοκοναζόλη,Q407883,D01AC08,atc+name
 LACOSAMIDE,Λακοσαμίδη,Q420077,N03AX18,atc+name
 LAMIVUDINE,Λαμιβουδίνη,Q422631,J05AF05,atc+name
 LAMOTRIGINE,Λαμοτριγίνη,Q410346,N03AX09,atc+name
 LANSOPRAZOLE,Λανσοπραζόλη,Q254296,A02BC03,atc+name
+LAROTRECTINIB,Λαροτρεκτινίμπη,,,ema-pil
+LASMIDITAN,Λασμιδιτάνη,,,ema-pil
 LATANOPROST,Λατανοπρόστη,Q634959,S01EE01,atc+name
+LEFLUNOMIDE,Λεφλουνομίδη,,,ema-pil
+LENALIDOMIDE,Λεναλιδομίδη,,,ema-pil
+LENVATINIB,Λενβατινίμπη,,,ema-pil
+LETERMOVIR,Λετερμοβίρη,,,ema-pil
 LETROZOLE,Λετροζόλη,Q194974,L02BG04,atc+name
+LEUPRORELIN,Λευπρορελίνη,,,ema-pil
 LEVOCETIRIZINE DIHYDROCHLORIDE,Λεβοσετιριζίνη,Q421091,R06AE09,atc+name
 LEVODOPA,Λεβοντόπα,Q300989,,name
 LEVOFLOXACIN,Λεβοφλοξασίνη,Q424193,S01AE05,atc+name
@@ -224,9 +365,11 @@ LEVONORGESTREL,Λεβονοργεστρέλη,Q416950,,name
 LIDOCAINE,Λιδοκαΐνη,Q216935,C01BB01,atc+name
 LINAGLIPTIN,Λιναγλιπτίνη,Q909745,A10BH05,atc+name
 LINEZOLID,Λινεζολίδη,Q411377,J01XX08,atc+name
+LIPEGFILGRASTIM,Λιπεγκφιλγραστίμη,,,ema-pil
 LIRAGLUTIDE,Λιραγλουτίδη,Q2526479,A10BJ02,atc+name
 LISINOPRIL,Λισινοπρίλη,Q412208,C09AA03,atc+name
 LITHIUM,Κατιόν λιθίου,Q152763,N05AN01,atc+name
+LONCASTUXIMAB TESIRINE,Λονκαστουξιμάμπη τεσιρίνη,,,ema-pil
 LOPERAMIDE,Λοπεραμίδη,Q423751,A07DA03,atc+name
 LORATADINE,Λοραταδίνη,Q424049,R06AX13,atc+name
 LORAZEPAM,Λοραζεπάμη,Q408265,N05BA06,atc+name
@@ -234,16 +377,23 @@ LORLATINIB,Λορλατινίμπη,Q27285820,L01ED05,atc+name
 LORNOXICAM,Λορνοξικάμη,Q2734874,M01AC05,atc+name
 LOSARTAN,Λοσαρτάνη,Q410074,C09CA01,atc+name
 LOVASTATIN,Λοβαστατίνη,Q417740,C10AA02,atc+name
+LOXAPINE,Λοξαπίνη,,,ema-pil
+LURASIDONE,Λουρασιδόνη,,,ema-pil
+MACITENTAN,Μακιτεντάνη,,,ema-pil
 MAGNESIUM,Θειικό μαγνήσιο,Q288266,B05XA05,atc+name
 MAGNESIUM OXIDE,Οξείδιο του μαγνησίου,Q214769,A12CC10,atc+name
 MANIDIPINE DIHYDROCHLORIDE,Μανιδιπίνη,Q921133,C08CA11,atc+name
+MARSTACIMAB,Μαρστασιμάμπη,,,ema-pil
 MEBENDAZOLE,Μεμπενδαζόλη,Q422194,P02CA01,atc+name
 MEBEVERINE,Μεμπεβερίνη,Q418167,A03AA04,atc+name
+MECASERMIN,Μεκασερμίνη,,,ema-pil
 MEFENAMIC ACID,Μεφαιναμικό οξύ,Q284321,M01AG01,atc+name
 MELATONIN,Μελατονίνη,Q180912,N05CH01,atc+name
 MELOXICAM,Μελοξικάμη,Q414028,M01AC06,atc+name
+MELPHALAN,Μελφαλάνη,,,ema-pil
 MEMANTINE,Μεμαντίνη,Q412189,N06DX01,atc+name
 MEMANTINE HYDROCHLORIDE,Μεμαντίνη,Q412189,N06DX01,salt of MEMANTINE
+MEPOLIZUMAB,Μεπολιζουμάμπη,,,ema-pil
 MEROPENEM,Μεροπενέμη,Q421670,J01DH02,atc+name
 MEROPENEM TRIHYDRATE,Μεροπενέμη,Q421670,J01DH02,atc+name
 METFORMIN,Μετφορμίνη,Q19484,A10BA02,atc+name
@@ -251,20 +401,30 @@ METFORMIN HYDROCHLORIDE,Μετφορμίνη,Q19484,A10BA02,salt of METFORMIN
 METHOTREXATE,Μεθοτρεξάτη,Q422232,L01BA01,atc+name
 METHYLPHENIDATE,Μεθυλφαινιδάτη,Q422112,N06BA04,atc+name
 METHYLPREDNISOLONE,Μεθυλπρεδνιζολόνη,Q417222,H02AB04,atc+name
+METHYLTHIONINIUM,Χλωριούχο,,,ema-pil
 METOCLOPRAMIDE,Μετοκλοπραμίδη,Q421095,A03FA01,atc+name
 METRONIDAZOLE,Μετρονιδαζόλη,Q169569,G01AF01,atc+name
+MICAFUNGIN,Μικαφουγκίνη,,,ema-pil
 MIDAZOLAM,Μιδαζολάμη,Q423071,N05CD08,atc+name
+MIDOSTAURIN,Μιντοσταυρίνη,,,ema-pil
 MIFEPRISTONE,Μιφεπριστόνη,Q411240,G03XB01,atc+name
+MIGALASTAT,Μιγαλαστάτη,,,ema-pil
+MIGLUSTAT,Μιγλουστάτη,,,ema-pil
 MIRABEGRON,Μιραβεργόνη,Q3702534,G04BD12,atc+name
+MIRIKIZUMAB,Μιρικιζουμάμπη,,,ema-pil
 MIRTAZAPINE,Μιρταζαπίνη,Q421930,N06AX11,atc+name
+MIRVETUXIMAB SORAVTANSINE,Μιρβετουξιμάμπη σοραβτανσίνη,,,ema-pil
 MISOPROSTOL,Μισοπροστόλη,Q416025,G02AD06,atc+name
 MITOXANTRONE,Μιτοξανδρόνη,Q239426,L01DB07,atc+name
 MODAFINIL,Μονταφινίλη,Q410441,N06BA07,atc+name
+MOMELOTINIB,Μομελοτινίμπη,,,ema-pil
 MOMETASONE,Μομεταζόνη,Q1044248,R01AD09,atc+name
 MONTELUKAST,Μοντελουκάστη,Q417767,R03DC03,atc+name
 MOXIFLOXACIN,Μοξιφλοξασίνη,Q424940,S01AE07,atc+name
 MOXIFLOXACIN HYDROCHLORIDE,Μοξιφλοξασίνη,Q424940,S01AE07,atc+name
 MUPIROCIN,Μουπιροσίνη,Q413578,R01AX06,atc+name
+MYCOPHENOLATE MOFETIL,Μυκοφαινολάτη μοφετίλ,,,ema-pil
+NALOXEGOL,Ναλοξεγκόλη,,,ema-pil
 NALOXONE,Ναλοξόνη,Q282902,V03AB15,atc+name
 NALTREXONE,Ναλτρεξόνη,Q409587,,name
 NAPROXEN,Ναπροξένη,Q1215575,M01AE02,atc+name
@@ -272,10 +432,16 @@ NATALIZUMAB,Ναταλιζουμάμπη,Q386119,,name
 NEBIVOLOL,Νεμπιβολόλη,Q418130,C07AB12,atc+name
 NEBIVOLOL HYDROCHLORIDE,Νεμπιβολόλη,Q418130,C07AB12,salt of NEBIVOLOL
 NEOSTIGMINE,Νεοστιγμίνη,Q410546,N07AA01,atc+name
+NEPAFENAC,Νεπαφενάκη,,,ema-pil
+NERATINIB,Νερατινίμπη,,,ema-pil
 NEVIRAPINE,Νεβιραπίνη,Q263713,J05AG01,atc+name
 NIFEDIPINE,Νιφεδιπίνη,Q39111,C08CA05,atc+name
+NILOTINIB,Νιλοτινίμπη,,,ema-pil
 NIMESULIDE,Νιμεσουλίδη,Q20994,M01AX17,atc+name
 NINTEDANIB,Νιντεδανίμπη,Q15149723,L01EX09,atc+name
+NIPOCALIMAB,Νιποκαλιμάμπη,,,ema-pil
+NIRAPARIB,Νιραπαρίμπη,,,ema-pil
+NIRSEVIMAB,Νιρσεβιμάμπη,,,ema-pil
 NITRIC OXIDE,Μονοξείδιο του αζώτου,Q207843,R07AX01,atc+name
 NITROFURANTOIN,Νιτροφουραντοΐνη,Q422669,J01XE01,atc+name
 NITROFURANTOIN MONOHYDRATE,Νιτροφουραντοΐνη,Q422669,J01XE01,atc+name
@@ -284,29 +450,48 @@ NIVOLUMAB,Nivolumab,Q7041828,L01FF01,atc+name
 NOREPINEPHRINE,Νορεπινεφρίνη,Q186242,C01CA03,atc+name
 NOREPINEPHRINE BITARTRATE MONOHYDRATE,Νορεπινεφρίνη,Q186242,C01CA03,atc+name
 NORFLOXACIN,Νορφλοξασίνη,Q417897,J01MA06,atc+name
+NUSINERSEN,Νουσινερσένη,,,ema-pil
 NYSTATIN,Νυστατίνη,Q251005,,name
+OBINUTUZUMAB,Ομπινουτουζουμάμπη,,,ema-pil
+OCRELIZUMAB,Οκρελιζουμάμπη,,,ema-pil
 OCTREOTIDE,Οκτρεοτίδη,Q419935,H01CB02,atc+name
+OFATUMUMAB,Οφατουμουμάμπη,,,ema-pil
 OLANZAPINE,Ολανζαπίνη,Q201872,N05AH03,atc+name
+OLAPARIB,Ολαπαρίμπη,,,ema-pil
+OLEZARSEN,Ολεζαρσένη,,,ema-pil
 OLMESARTAN MEDOXOMIL,Ολμεσαρτάνη,Q421156,C09CA08,atc+name
 OMALIZUMAB,Ομαλιζουμάμπη,Q415392,R03DX05,atc+name
 OMEPRAZOLE,Ομεπραζόλη,Q422210,A02BC01,atc+name
 OMEPRAZOLE SODIUM,Ομεπραζόλη,Q422210,A02BC01,atc+name
 ONDANSETRON,Ονδανσετρόνη,Q410011,A04AA01,atc+name
+ORITAVANCIN,Οριταβανκίνη,,,ema-pil
+ORLISTAT,Ορλιστάτη,,,ema-pil
 ORPHENADRINE,Ορφεναδρίνη,Q3292273,N04AB02,atc+name
 OSELTAMIVIR,Οσελταμιβίρη,Q211509,J05AH02,atc+name
+OSILODROSTAT,Οσιλοδροστάτη,,,ema-pil
 OSIMERTINIB,Οσιμερτινίμπη,Q21506464,L01EB04,atc+name
 OXALIPLATIN,Οξαλιπλατίνη,Q422327,L01XA03,atc+name
 OXYCODONE,Οξυκωδόνη,Q407535,N02AA05,atc+name
 OXYGEN,Οξυγόνο,Q629,,name
 OXYTETRACYCLINE,Οξυτετρακυκλίνη,Q411646,,name
 OXYTOCIN,Ωκυτοκίνη,Q169960,H01BB02,atc+name
+OZANIMOD,Οζανιμόδη,,,ema-pil
 PACLITAXEL,Πακλιταξέλη,Q423762,L01CD01,atc+name
 PALIPERIDONE,Παλιπεριδόνη,Q423292,N05AX13,atc+name
+PALIVIZUMAB,Παλιβιζουμάμπη,,,ema-pil
+PALONOSETRON,Παλονοσετρόνη,,,ema-pil
 PANTOPRAZOLE,Παντοπραζόλη,Q286846,A02BC02,atc+name
 PARACETAMOL,Παρακεταμόλη,Q57055,N02BE01,atc+name
+PARECOXIB,Παρεκοξίμπη,,,ema-pil
 PAROXETINE,Παροξετίνη,Q408471,N06AB05,atc+name
+PASIREOTIDE,Πασιρεοτίδη,,,ema-pil
+PEGASPARGASE,Πεγασπαργάση,,,ema-pil
+PEGCETACOPLAN,Πεγκσετακοπλάνη,,,ema-pil
+PEGUNIGALSIDASE ALFA,Πεγουνιγαλσιδάση άλφα,,,ema-pil
 PEMBROLIZUMAB,Πεμπρολιζουμάμπη,Q13896859,,name
 PEMETREXED,Πεμετρεξίδη,Q415220,L01BA04,atc+name
+PEMIGATINIB,Πεμιγατινίμπη,,,ema-pil
+PERAMPANEL,Περαμπανέλη,,,ema-pil
 PERPHENAZINE,Περφαιναζίνη,Q423520,,name
 PHENOBARBITAL,Φαινοβαρβιτάλη,Q407241,N03AA02,atc+name
 PHENYLEPHRINE,Φαινυλεφρίνη,Q421910,C01CA06,atc+name
@@ -314,7 +499,11 @@ PHENYTOIN,Φαινυτοΐνη,Q410400,N03AB02,atc+name
 PILOCARPINE,Πιλοκαρπίνη,Q411461,S01EB01,atc+name
 PIPERACILLIN,Πιπερακιλλίνη,Q423787,,name
 PIRACETAM,Πιρακετάμη,Q410069,N06BX03,atc+name
+PIRFENIDONE,Πιρφενιδόνη,,,ema-pil
 PIROXICAM,Πιροξικάμη,Q408676,M01AC01,atc+name
+PLERIXAFOR,Πλεριξαφόρη,,,ema-pil
+POMALIDOMIDE,Πομαλιδομίδη,,,ema-pil
+POSACONAZOLE,Ποσακοναζόλη,,,ema-pil
 POTASSIUM,Χλωριούχο κάλιο,Q184630,B05XA01,atc+name
 POTASSIUM CHLORIDE,Χλωριούχο κάλιο,Q184630,,name
 POVIDONE-IODINE,Ιωδιούχος ποβιδόνη,Q241516,D08AG02,atc+name
@@ -335,29 +524,53 @@ PYRAZINAMIDE,Πυραζιναμίδη,Q417571,J04AK01,atc+name
 PYRIDOSTIGMINE,Πυριδοστιγμίνη,Q419472,N07AA02,atc+name
 PYRIDOXINE,Πυριδοξίνη,Q423746,,name
 QUETIAPINE,Κουετιαπίνη,Q408535,N05AH04,atc+name
+QUIZARTINIB,Κουιζαρτινίμπη,,,ema-pil
+RALOXIFENE,Ραλοξιφαίνη,,,ema-pil
 RALTEGRAVIR,Ραλτεγκραβίρη,Q421552,J05AX08,atc+name
 RAMIPRIL,Ραμιπρίλη,Q412666,C09AA05,atc+name
+RAMUCIRUMAB,Ραμουσιρουμάμπη,,,ema-pil
+RANIBIZUMAB,Ρανιμπιζουμάμπη,,,ema-pil
 RASAGILINE,Ρασαγιλίνη,Q420685,N04BD02,atc+name
+RAVULIZUMAB,Ραβουλιζουμάμπη,,,ema-pil
+REGORAFENIB,Ρεγοραφενίμπη,,,ema-pil
+RELUGOLIX,Ρελουγκολίξη,,,ema-pil
+REMIMAZOLAM,Ρεμιμαζολάμη,,,ema-pil
+REPAGLINIDE,Ρεπαγλινίδη,,,ema-pil
 RETINOL,Ρετινόλη,Q424976,,name
+RIBOCICLIB,Ριμποσικλίμπη,,,ema-pil
 RIBOFLAVIN,Ριβοφλαβίνη,Q130365,,name
 RIFAMPICIN,Ριφαμπικίνη,Q422652,,name
 RIFAXIMIN,Ριφαξιμίνη,Q416073,A07AA11,atc+name
+RILPIVIRINE,Ριλπιβιρίνη,,,ema-pil
 RILUZOLE,Ριλουζόλη,Q415744,N07XX02,atc+name
+RIMEGEPANT,Ριμεγκεπάντη,,,ema-pil
+RIOCIGUAT,Ριοσιγουάτη,,,ema-pil
+RISANKIZUMAB,Ρισανκιζουμάμπη,,,ema-pil
 RISEDRONIC ACID,Ρισεδρονικό οξύ,Q408724,M05BA07,atc+name
 RISPERIDONE,Ρισπεριδόνη,Q412443,N05AX08,atc+name
 RITONAVIR,Ριτοναβίρη,Q422618,J05AE03,atc+name
 RITUXIMAB,Ριτουξιμάμπη,Q412323,L01XC02,atc+name
 RIVAROXABAN,Ριβαροξαμπάνη,Q420262,B01AF01,atc+name
 RIVASTIGMINE,Ριβαστιγμίνη,Q411887,N06DA03,atc+name
+ROFLUMILAST,Ροφλουμιλάστη,,,ema-pil
 ROSUVASTATIN,Ροσουβαστατίνη,Q415159,C10AA07,atc+name
 ROSUVASTATIN CALCIUM,Ροσουβαστατίνη,Q415159,C10AA07,atc+name
 ROXITHROMYCIN,Ροξιθρομυκίνη,Q424037,J01FA06,atc+name
+ROZANOLIXIZUMAB,Ροζανολιξιζουμάμπη,,,ema-pil
+RUFINAMIDE,Ρουφιναμίδη,,,ema-pil
+RUXOLITINIB,Ρουξολιτινίμπη,,,ema-pil
+SAFINAMIDE,Σαφιναμίδη,,,ema-pil
 SALICYLIC ACID,Σαλικυλικό οξύ,Q193572,D01AE12,atc+name
+SAXAGLIPTIN,Σαξαγλιπτίνη,,,ema-pil
 SECUKINUMAB,Σεκουκινουμάμπη,Q7444755,L04AC10,atc+name
 SEMAGLUTIDE,Σεμαγλουτίδη,Q27261089,A10BJ06,atc+name
 SERTRALINE,Σερτραλίνη,Q407617,N06AB06,atc+name
+SEVELAMER,Υδροχλωρική,,,ema-pil
 SILDENAFIL,Σιλδεναφίλη,Q191521,G04BE03,atc+name
+SILODOSIN,Σιλοδοσίνη,,,ema-pil
 SIMVASTATIN,Σιμβαστατίνη,Q670131,C10AA01,atc+name
+SIPONIMOD,Σιπονιμόδη,,,ema-pil
+SIROLIMUS,Σιρόλιμους,,,ema-pil
 SITAGLIPTIN,Σιταγλιπτίνη,Q419832,A10BH01,atc+name
 SITAGLIPTIN PHOSPHATE,Σιταγλιπτίνη,Q419832,A10BH01,atc+name
 SODIUM BICARBONATE,Όξινο ανθρακικό νάτριο,Q179731,B05XA02,atc+name
@@ -365,37 +578,61 @@ SODIUM CHLORIDE,Χλωριούχο νάτριο,Q2314,B05XA03,atc+name
 SODIUM FLUORIDE,Φθοριούχο Νάτριο,Q407520,A01AA01,atc+name
 SODIUM ZIRCONIUM CYCLOSILICATE,Κυκλοπυριτικό ζιρκόνιο νάτριο,Q17091153,V03AE10,atc+name
 SOFOSBUVIR,Σοφοσμπουβίρη,Q2502747,J05AX15,atc+name
+SOLRIAMFETOL,Σολριαμφετόλη,,,ema-pil
 SOMATOSTATIN,Σωματοστατίνη,Q22075835,H01CB01,atc+name
+SORAFENIB,Σοραφενίμπη,,,ema-pil
+SOTATERCEPT,Σοτατερσέπτη,,,ema-pil
+SPARSENTAN,Σπαρσεντάνη,,,ema-pil
+SPESOLIMAB,Σπεσολιμάμπη,,,ema-pil
 SPIRONOLACTONE,Σπειρονολακτόνη,Q422188,C03DA01,atc+name
 SULFADIAZINE,Σουλφαδιαζίνη,Q2555060,,name
 SULFASALAZINE,Σουλφασαλαζίνη,Q420035,A07EC01,atc+name
 SUMATRIPTAN,Σουματριπτάνη,Q416978,N02CC01,atc+name
+SUNITINIB,Σουνιτινίμπη,,,ema-pil
+TACROLIMUS,Τακρόλιμους μονοϋδρική,,,ema-pil
 TADALAFIL,Ταδαλαφίλη,Q424156,G04BE08,atc+name
+TALAZOPARIB,Ταλαζοπαρίμπη,,,ema-pil
 TAMOXIFEN,Ταμοξιφαίνη,Q412178,L02BA01,atc+name
 TAMSULOSIN,Ταμσουλοσίνη,Q418480,G04CA02,atc+name
 TAPENTADOL,Ταπενταδόλη,Q414463,N02AX06,atc+name
 TEDIZOLID PHOSPHATE,Τεντιζολίδη,Q7825683,J01XX11,atc+name
+TEDUGLUTIDE,Τεδουγλουτίδη,,,ema-pil
 TELMISARTAN,Τελμισαρτάνη,Q733186,C09CA07,atc+name
 TEMOZOLOMIDE,Τεμοζολομίδη,Q425088,L01AX03,atc+name
+TENECTEPLASE,Τενεκτεπλάση,,,ema-pil
 TERBINAFINE,Τερβιναφίνη,Q415259,D01AE15,atc+name
 TERIFLUNOMIDE,Τεριφλουνομίδη,Q3077133,L04AA31,atc+name
+TERIPARATIDE,Τεριπαρατίδη,,,ema-pil
 TESTOSTERONE,Τεστοστερόνη,Q1318776,G03BA03,atc+name
 TETRACAINE,Τετρακαΐνη,Q419608,S01HA03,atc+name
 TETRACYCLINE,Τετρακυκλίνη,Q193045,D06AA04,atc+name
+TEZEPELUMAB,Τεζεπελουμάμπη,,,ema-pil
 THALIDOMIDE,Θαλιδομίδη,Q203174,L04AX02,atc+name
 THEOPHYLLINE,Θεοφυλλίνη,Q407308,R03DA04,atc+name
+THIOTEPA,Θειοτέπα,,,ema-pil
+TICAGRELOR,Τικαγρελόρη,,,ema-pil
+TIGECYCLINE,Τιγεκυκλίνη,,,ema-pil
 TIOTROPIUM,Τιοτρόπιο,Q424316,R03BB04,atc+name
 TIRZEPATIDE,Τιρζεπατίδη,Q108324770,A10BX16,atc+name
+TISLELIZUMAB,Τισλελιζουμάμπη,,,ema-pil
 TIZANIDINE,Τιζανιδίνη,Q423538,M03BX02,atc+name
+TOBRAMYCIN,Τομπραμυκίνη,,,ema-pil
+TOCILIZUMAB,Τοσιλιζουμάμπη,,,ema-pil
+TOFACITINIB,Τοφασιτινίμπη,,,ema-pil
 TOLTERODINE,Τολτεροδίνη,Q424312,G04BD07,atc+name
 TOPIRAMATE,Τοπιραμάτη,Q221174,N03AX11,atc+name
+TOPOTECAN,Τοποτεκάνη,,,ema-pil
+TRABECTEDIN,Τραβεκτεδίνη,,,ema-pil
 TRAMADOL,Τραμαδόλη,Q407592,N02AX02,atc+name
 TRANEXAMIC ACID,Τρανεξαμικό οξύ,Q418666,B02AA02,atc+name
 TRASTUZUMAB,Τραστουζουμάμπη,Q412616,L01XC03,atc+name
+TRASTUZUMAB DERUXTECAN,Τραστουζουµάµπη δερουξτεκάνη,,,ema-pil
 TRAVOPROST,Τραβοπρόστη,Q2193376,S01EE04,atc+name
 TRAZODONE,Τραζοδόνη,Q411457,N06AX05,atc+name
+TREMELIMUMAB,Τρεμελιμουμάμπη,,,ema-pil
 TRETINOIN,Τρετινοΐνη,Q29417,,name
 TRIAMCINOLONE,Τριαμσινολόνη,Q1074056,A01AC01,atc+name
+TRIENTINE,Τριεντίνη,,,ema-pil
 TRIFAROTENE,Τριφαροτένη,Q27236856,D10AD06,atc+name
 TRIFLUOPERAZINE,Τριφθοροπεραζίνη,Q1752915,N05AB06,atc+name
 TRIMEBUTINE,Τριμεμπουτίνη,Q2569888,A03AA05,atc+name
@@ -403,18 +640,35 @@ TRIMETAZIDINE,Τριμεταζιδίνη,Q674703,C01EB15,atc+name
 TRIMETHOPRIM,Τριμεθοπρίμη,Q422665,,name
 TROPICAMIDE,Τροπικαμίδη,Q29310,S01FA06,atc+name
 TRYPTOPHAN,Τρυπτοφάνη,Q181003,,name
+TUCATINIB,Τουκατινίμπη,,,ema-pil
 TYROTHRICIN,Τυροθρισίνη,Q419421,D06AX08,atc+name
+UBLITUXIMAB,Ουμπλιτουξιμάμπη,,,ema-pil
+UMECLIDINIUM BROMIDE,Ουμεκλιδίνιο,,,ema-pil
+UPADACITINIB,Ουπαδασιτινίμπη,,,ema-pil
+USTEKINUMAB,Ουστεκινουμάμπη,,,ema-pil
+VADADUSTAT,Βαδαδουστάτη,,,ema-pil
 VALGANCICLOVIR,Βαλγκανκυκλοβίρη,Q423384,J05AB14,atc+name
 VALSARTAN,Βαλσαρτάνη,Q155472,C09CA03,atc+name
 VALSARTAN DISODIUM,Βαλσαρτάνη,Q155472,C09CA03,salt of VALSARTAN
 VANCOMYCIN,Βανκομυκίνη,Q424027,J01XA01,atc+name
+VANDETANIB,Βανδετανίμπη,,,ema-pil
+VARICELLA ZOSTER VIRUS (VZV) GLYCOPROTEIN E ANTIGEN,Μετά την ανασύσταση,,,ema-pil
+VELAGLUCERASE ALFA,Βελαγλουκεράση άλφα,,,ema-pil
+VEMURAFENIB,Βεμουραφενίμπη,,,ema-pil
 VENLAFAXINE,Βενλαφαξίνη,Q898407,N06AX16,atc+name
 VERAPAMIL,Βεραπαμίλη,Q410291,C08DA01,atc+name
+VERICIGUAT,Βερισιγουάτη,,,ema-pil
+VERNAKALANT HYDROCHLORIDE,Υδροχλωρική βερνακαλάντη,,,ema-pil
+VERTEPORFIN,Βερτεπορφίνη,,,ema-pil
+VILDAGLIPTIN,Βιλνταγλιπτίνη,,,ema-pil
 VINORELBINE,Βινορελμπίνη,Q420532,L01CA04,atc+name
+VORASIDENIB,Βορασιδενίμπη,,,ema-pil
 VORICONAZOLE,Βορικοναζόλη,Q412236,J02AC03,atc+name
 VORTIOXETINE,Βορτιοξετίνη,Q3563148,N06AX26,atc+name
 VORTIOXETINE HYDROBROMIDE,Βορτιοξετίνη,Q3563148,N06AX26,atc+name
+ZANUBRUTINIB,Ζανουμπρουτινίμπη,,,ema-pil
 ZIDOVUDINE,Ζιδοβουδίνη,Q198504,J05AF01,atc+name
+ZILUCOPLAN,Ζιλουκοπλάνιο,,,ema-pil
 ZINC,Θειικός ψευδάργυρος,Q204954,A12CB01,atc+name
 ZOLEDRONIC ACID,Ζολεδρονικό οξύ,Q218507,M05BA08,atc+name
 ZOLPIDEM,Ζολπιδέμη,Q218842,N05CF02,atc+name
