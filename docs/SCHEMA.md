@@ -40,9 +40,21 @@ Source ──< (κάθε εγγραφή γεγονότος έχει source_id)
 
 ### PriceEvent (ιστορικό τιμών, append-only)
 
-`eof_code`, `published` (date), `effective` (date, nullable μέχρι να λυθεί το Α-5), `price_exfactory`, `price_wholesale`, `price_retail`, `non_reimbursed` (bool), `source_id`, `change` (`new`/`update`).
+`eof_code`, `published` (date), `effective` (date, nullable μέχρι να λυθεί το Α-5), `price_exfactory`, `price_wholesale`, `price_retail`, `non_reimbursed` (bool), `source_id`, `change`.
 
 Η «τρέχουσα τιμή» είναι view: το τελευταίο γεγονός ανά `eof_code`.
+
+Στο `price_history.csv` (στήλες `eof_code, field, old, new, change, published, moh_article`) κάθε γεγονός γράφεται ως μία γραμμή ανά πεδίο (`price_exfactory`, `price_wholesale`, `price_retail`, `non_reimbursed`). Κενό `old`/`new` σημαίνει «δεν είναι στον κατάλογο». Ανά (`eof_code`, `field`) το `old` κάθε γραμμής είναι το `new` της προηγούμενης, οπότε η σειρά των `new` είναι η σειρά τιμών (με κενά όσο η συσκευασία είναι αποσυρμένη).
+
+| `change` | πότε | `old` | `new` |
+|---|---|---|---|
+| `first_seen` | ο κωδικός εμφανίζεται πρώτη φορά, σε πλήρη κατάλογο (`full`)· όλοι οι κωδικοί του παλαιότερου `full` | κενό | τιμή |
+| `new` | ο κωδικός εμφανίζεται πρώτη φορά, σε δελτίο αλλαγών (`delta`), π.χ. νέα γενόσημα | κενό | τιμή |
+| `update` | άλλαξε τιμή: με `delta`, ή στη σύγκριση της κατάστασης με το επόμενο `full` | προηγούμενη | νέα |
+| `withdrawn` | λείπει από `full` ενώ υπήρχε στην κατάσταση (Α-4) | τελευταία | κενό |
+| `reappeared` | αποσυρμένος κωδικός ξαναβγαίνει, σε `full` ή `delta` | κενό | τιμή |
+
+Ένα γράφημα τιμής ξεκινά από το `first_seen` ή το `new` της συσκευασίας.
 
 ### ReimbursementEvent
 

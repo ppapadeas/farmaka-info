@@ -69,13 +69,28 @@ def test_merge_applies_deltas_in_order():
         {
             "eof_code": "312080101",
             "field": "price_retail",
+            "old": None,
+            "new": 823.64,
+            "change": "first_seen",  # the series starts at the oldest full list
+            "published": "2026-10-05",
+            "moh_article": 14818,
+        },
+        {
+            "eof_code": "312080101",
+            "field": "price_retail",
             "old": 823.64,
             "new": 547.94,
             "change": "update",
             "published": "2026-11-06",
             "moh_article": 14930,
-        }
+        },
     ]
+    first_seen = [h for h in history if h["change"] == "first_seen"]
+    assert len({h["eof_code"] for h in first_seen}) == 8917 and len(first_seen) == 8917 * 4
+    assert {h["moh_article"] for h in first_seen} == {14818}
+    # the August generics are introduced by a delta: "new", as before
+    new = [h for h in history if h["change"] == "new"]
+    assert len({h["eof_code"] for h in new}) == 5 and {h["moh_article"] for h in new} == {14872}
     problems = validate(rows)
     assert not [p for p in problems if "EAN" in p or "embed" in p or "ordering" in p]
 
