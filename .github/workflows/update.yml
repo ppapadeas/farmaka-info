@@ -29,6 +29,12 @@ jobs:
           path: data
           key: moh-data-${{ github.run_id }}
           restore-keys: moh-data-
+      - name: Backfill the complete price lists (once; the marker lives in the cache)
+        continue-on-error: true
+        run: |
+          if [ ! -f data/.backfill-done ]; then
+            python -m ingest.fetch --section prices --out data --backfill full && touch data/.backfill-done
+          fi
       - name: Fetch new price bulletins
         # The ministry site is sometimes down; build with what we have.
         continue-on-error: true
