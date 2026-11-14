@@ -17,6 +17,7 @@ from .drug import (
     dispensing_label,
     form_kind,
     inn_label,
+    pack_count,
     short_mah,
     split_name,
     strength,
@@ -366,7 +367,17 @@ def equivalents_card(ctx: Context, p: dict) -> str:
     st = strength(p["name"])
     rows = [ctx.by_code[c] for c in codes]
     counts = {q["eof_code"]: unit_count(q["name"]) for q in rows}
-    per_unit = all(counts.values())
+    # Compare like with like: per unit when the number of tablets/capsules is
+    # known; otherwise only boxes of the same size. Never box against box of
+    # different sizes (a 28-pack is not "62% cheaper" than a 56-pack).
+    per_unit = counts[p["eof_code"]] is not None
+    if per_unit:
+        rows = [q for q in rows if counts[q["eof_code"]]]
+    else:
+        n = pack_count(p["name"])
+        rows = [q for q in rows if n is not None and pack_count(q["name"]) == n]
+    if len(rows) < 2:
+        return ""
 
     def key(q: dict) -> float:
         return q["prices"]["retail"] / counts[q["eof_code"]] if per_unit else q["prices"]["retail"]
@@ -379,7 +390,7 @@ def equivalents_card(ctx: Context, p: dict) -> str:
         shown.append(p)
     lis = []
     for q in shown:
-        n = counts[q["eof_code"]]
+        n = counts.get(q["eof_code"]) or pack_count(q["name"])
         extra = " · ".join(x for x in ((f"×{n}" if n else ""), short_mah(q["mah"])) if x)
         label = f"<b>{e(split_name(q['name'])[0])}</b> <span>· {e(extra)}</span>"
         u = f'<span class="u">{eur(key(q))}/τεμ.</span>' if per_unit else ""
@@ -396,7 +407,7 @@ def equivalents_card(ctx: Context, p: dict) -> str:
             else '<span class="pill same">ίδια</span>'
         )
         lis.append(f'<li><a class="nm" href="/farmako/{e(q["eof_code"])}/">{label}</a>{u}{price}{rel}</li>')
-    basis = "ανά τεμάχιο" if per_unit else "ανά συσκευασία"
+    basis = "ανά τεμάχιο" if per_unit else "για ίδιο μέγεθος συσκευασίας"
     if cheaper:
         best = (mine - key(cheaper[0])) / mine * 100
         word = "φθηνότερη" if len(cheaper) == 1 else "φθηνότερες"

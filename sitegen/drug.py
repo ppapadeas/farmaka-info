@@ -108,6 +108,12 @@ def strength(name: str) -> tuple[str, str] | None:
 _COUNT = re.compile(r"[BΒ][TΤ]\s*[xXΧ×]\s*(\d{1,4})(?!\s*[,.]\d)")
 
 
+def pack_count(name: str) -> int | None:
+    """Number of containers/units in the box for any form ('BTx10 VIALS' -> 10), or None."""
+    m = _COUNT.search(name)
+    return int(m.group(1)) if m and int(m.group(1)) > 0 else None
+
+
 def unit_count(name: str) -> int | None:
     """Tablets/capsules in the pack ('BTx30', 'ΒTx 14', 'BT X 100 X 1'); None for other forms."""
     if form_group(name) != "oral-solid":
