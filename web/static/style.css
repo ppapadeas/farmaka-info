@@ -394,3 +394,14 @@ a.stat-link span { text-decoration: underline; text-decoration-color: var(--line
 /* non-prescription (ΜΗΣΥΦΑ) */
 .chip.otc { background: var(--new-bg); color: var(--new-ink); }
 .tag.otc { background: var(--new-bg); color: var(--new-ink); }
+
+/* easter egg: /perierga/ */
+.facts-grid { margin-top: 28px; display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+.fact { border: 1px solid var(--line); border-radius: 16px; padding: 20px 22px; display: flex; flex-direction: column; gap: 8px; }
+.fact h2 { font-size: 14px; font-weight: 600; color: var(--muted); }
+.fact .fv { font-size: 34px; line-height: 1.1; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; color: var(--accent); }
+.fact p { font-size: 14px; color: var(--ink-2); overflow-wrap: anywhere; }
+.fact .chips { margin-top: auto; padding-top: 4px; font-size: 13px; }
+.foot-legal a.egg { color: inherit; text-decoration: none; }
+.foot-legal a.egg:hover { color: var(--accent); text-decoration: underline; }
+.suggest a.egg-hit .nm b { color: var(--up-ink); }

@@ -25,7 +25,7 @@ from collections import defaultdict
 from datetime import UTC, datetime
 from pathlib import Path
 
-from . import pages
+from . import pages, trivia
 from .drug import form_group, strength
 from .text import skeleton, slugify
 
@@ -571,6 +571,12 @@ def build(data: Path, out: Path, built_at: str) -> dict:
         ("dedomena", pages.data_page(ctx)),
         ("sxetika", pages.about(ctx)),
         ("ousies", pages.substances_index(ctx)),
+        (
+            "perierga",
+            pages.trivia_page(
+                ctx, trivia.compute(pkgs, history, ctx.equiv, min(s["published"] for s in sources))
+            ),
+        ),
     ):
         (out / path).mkdir()
         (out / path / "index.html").write_text(html, encoding="utf-8")

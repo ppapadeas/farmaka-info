@@ -108,6 +108,31 @@ def test_module_imports_carry_the_build_version(site):
     assert '"./search-core.js"' not in app
 
 
+def test_unit_counts_and_strengths():
+    from sitegen.drug import form_group, strength, unit_count
+
+    assert unit_count("SEVELAMER/FARAN F.C.TAB 800MG/TAB BTx 2 BOTTLE (HDPE) x 180 TABS") == 360
+    assert unit_count("ZYTIGA F.C.TAB 500MG/TAB BTx5 BLISTERS θήκες x12 δισκία (60 δισκία)") == 60
+    assert unit_count("AVOMIN F.C.TAB 1MG/TAB BTx2 BL x14 TABS") == 28
+    assert unit_count("ZARASTIN F.C.TAB 20MG/TAB BTx14 BLIST (2x7)") == 14  # blister layout, not 2 x 7 packs
+    assert unit_count("ATORVAL F.C.TAB 20MG/TAB BTx30 (BLIST 3x10)") == 30
+    assert (
+        strength("UVICALDE CHW.TAB (600MG+2000 IU)/TAB BT X 30")[0]
+        != strength("CAL+D CHW.TAB (600MG+400 IU)/TAB BTx60")[0]
+    )
+    assert strength("COVERAM TABLET (10+5)MG/TAB BT x 30")[0] == "10+5MG"
+    # Directive 2001/83/EC art. 10: immediate- and modified-release forms never compare
+    assert form_group("GLUCOPHAGE PR.TAB 500MG/TAB BTx30") == "oral-mr"
+    assert form_group("GLUCOPHAGE F.C.TAB 500MG/TAB BTx30") == "oral-ir"
+
+
+def test_trivia_page(site):
+    out, _ = site
+    html = (out / "perierga" / "index.html").read_text(encoding="utf-8")
+    assert html.count('class="fact"') >= 10
+    assert "Η ακριβότερη συσκευασία" in html and "nan" not in html
+
+
 def test_meta_lists_pending_bulletins(site):
     out, _ = site
     meta = json.loads((out / "api" / "meta.json").read_text(encoding="utf-8"))

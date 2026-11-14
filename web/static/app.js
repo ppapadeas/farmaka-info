@@ -8,6 +8,7 @@ import {
   parseSubstances,
   search,
   searchSubstances,
+  skeleton,
   splitName,
 } from "./search-core.js";
 import { initScan } from "./scan.js";
@@ -83,8 +84,24 @@ function setup(form) {
     }
     if (input.value.trim() !== q) return;
     const subHits = searchSubstances(subs, q, 3);
+    const sk = skeleton(q);
+    const egg = sk.startsWith("pirirg") || sk === "trivia" || sk === "iastir ig";
     const { total, results } = search(rows, q, subHits.length ? 6 : 8);
     box.replaceChildren();
+    if (egg) {
+      box.append(
+        el(
+          "a",
+          { href: "/perierga/", role: "option", "aria-selected": "false", class: "egg-hit" },
+          el(
+            "span",
+            { class: "t" },
+            el("span", { class: "nm" }, el("b", {}, "Περίεργα από τα δεδομένα")),
+            el("span", { class: "sub" }, "Το βρήκατε. Ό,τι πιο παράξενο κρύβουν οι κατάλογοι."),
+          ),
+        ),
+      );
+    }
     if (subHits.length) {
       box.append(el("div", { class: "grp" }, "Δραστικές ουσίες"));
       for (const s of subHits) {

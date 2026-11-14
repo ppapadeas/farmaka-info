@@ -67,7 +67,15 @@ def form_group(name: str) -> str | None:
     if any(k in f for k in ("INJ", "INF", "VIAL", "IV", "IN.", "S.IN", "C/S", "PD.C", "SOL.IN")):
         return "parenteral"
     if "TAB" in f or "CAP" in f:
-        return "oral-solid"
+        # Directive 2001/83/EC art. 10(2)(b): immediate-release oral forms count as one form;
+        # modified-release (prolonged, gastro-resistant) and sublingual ones do not.
+        if any(
+            k in f for k in ("PR.", "MOD.R", "CON.R", "SR.", "S.R", "CO.R", "E.C.", "GASTR")
+        ) or f.startswith("GR."):
+            return "oral-mr"
+        if any(k in f for k in ("SUBL", "LING")):
+            return "oral-sublingual"
+        return "oral-ir"
     if any(k in f for k in ("ORAL", "OR.", "SUS", "SYR", "DRO")):
         return "oral-liquid"
     if any(k in f for k in ("CREAM", "OINT", "GEL", "LOT", "PATCH", "CUT", "SHAMP")):
@@ -84,10 +92,27 @@ _STRENGTH = re.compile(
 )
 
 
+_COMBO = re.compile(
+    r"\(\s*(\d[\d.,]*\s*(?:MCG|MG|G|IU|%)\s*(?:\+\s*\d[\d.,]*\s*(?:MCG|MG|G|IU|%)\s*)+)\)",
+    re.IGNORECASE,
+)
+
+
 def strength(name: str) -> tuple[str, str] | None:
     """(key, label): '20MG/TAB' -> ('20MG', '20 mg'); '(10+5)MG/TAB' -> ('10+5MG', '10+5 mg');
-    '20MG/0,2 ML' -> ('20MG/0.2ML', '20 mg/0,2 ml'). Keys compare packages, labels are for people."""
-    m = _STRENGTH.search(split_name(name)[1])
+    '20MG/0,2 ML' -> ('20MG/0.2ML', '20 mg/0,2 ml'). Keys compare packages, labels are for people.
+
+    Combinations with a unit per part, '(600MG+2000 IU)/TAB', keep every part:
+    ('600MG+2000IU', '600 mg + 2000 IU'), so they never match '(600MG+400 IU)'."""
+    rest = split_name(name)[1]
+    combo = _COMBO.search(rest)
+    if combo:
+        parts = [re.sub(r"\s+", "", x).upper().replace(",", ".") for x in combo.group(1).split("+")]
+        label = " + ".join(
+            re.sub(r"(\d)([A-Z%])", r"\1 \2", x).replace("MG", "mg").replace("MCG", "mcg") for x in parts
+        )
+        return "+".join(parts), label.replace(".", ",")
+    m = _STRENGTH.search(rest)
     if not m:
         return None
     amount = re.sub(r"[()\s]", "", m.group(1)).replace(",", ".")
@@ -114,10 +139,28 @@ def pack_count(name: str) -> int | None:
     return int(m.group(1)) if m and int(m.group(1)) > 0 else None
 
 
+_MULTI = re.compile(
+    r"[BΒ][TΤ]\s*[xXΧ×]\s*(\d{1,3})\s*"
+    r"(?:BOTTLES?|ΦΙΑΛ\w*|TUBES?|CONTAINERS?|BLISTERS?|BLISTS?|BL\.?|STRIPS?|ΚΥΨΕΛ\w*)(?![A-Za-z])"
+    r".{0,80}?(?:(\d{1,3})\s*)?[xXΧ×]\s*(\d{1,4})(?!\s*[,.]\d)(?!\s*(?:ML|MG|G)\b)",
+    re.IGNORECASE,
+)
+
+
 def unit_count(name: str) -> int | None:
-    """Tablets/capsules in the pack ('BTx30', 'ΒTx 14', 'BT X 100 X 1'); None for other forms."""
-    if form_group(name) != "oral-solid":
+    """Tablets/capsules in the pack ('BTx30', 'ΒTx 14', 'BT X 100 X 1'); None for other forms.
+
+    Multi-packs count every unit: 'BTx 2 BOTTLE (HDPE) x 180 TABS' is 360, not 2."""
+    if form_group(name) not in ("oral-ir", "oral-mr", "oral-sublingual"):
         return None
+    multi = _MULTI.search(name)
+    if multi:
+        n, a, m = int(multi.group(1)), multi.group(2), int(multi.group(3))
+        if a is None:
+            return n * m
+        if int(a) * m == n:  # 'BTx14 BLIST (2x7)': the blister layout of 14 tablets
+            return n
+        # 'BTx30 (2 BLISTERS x15)' style layouts that don't multiply out: trust the box count
     m = _COUNT.search(name)
     n = int(m.group(1)) if m else 0
     return n if n > 1 else None

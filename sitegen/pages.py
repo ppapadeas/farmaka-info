@@ -148,7 +148,7 @@ def layout(
       <button type="button" class="install">Εγκατάσταση</button>
     </div>
   </div>
-  <div class="wrap foot-legal">Δεδομένα CC0 · Κώδικας AGPL-3.0 · Χωρίς cookies και παρακολούθηση</div>
+  <div class="wrap foot-legal">Δεδομένα CC0 · Κώδικας AGPL-3.0 · Χωρίς cookies και παρακολούθηση · <a class="egg" href="/perierga/" title="Περίεργα από τα δεδομένα">περίεργα</a></div>
 </footer>
 </body>
 </html>
@@ -876,6 +876,46 @@ def substances_index(ctx: Context) -> str:
         "/ousies/",
         "Όλες οι δραστικές ουσίες φαρμάκων στην Ελλάδα.",
         search_box=False,
+    )
+
+
+def _fact_value(f: dict) -> str:
+    v, k = f["value"], f["kind"]
+    if k == "eur":
+        return eur(v)
+    if k == "pct":
+        return f"{'−' if v < 0 else '+'}{num(abs(v), 0)}%"
+    if k == "times":
+        return f"×{num(v, 1)}"
+    return num(v, 0)
+
+
+def trivia_page(ctx: Context, facts: list[dict]) -> str:
+    """The easter egg: curiosities computed from the data on every build."""
+    cards = []
+    for f in facts:
+        links = "".join(f'<a class="chip" href="{e(h)}">{e(label)}</a>' for label, h in f["links"])
+        cards.append(
+            f'<section class="fact"><h2>{e(f["title"])}</h2><div class="fv">{_fact_value(f)}</div>'
+            f"<p>{e(f['text'])}</p>{f'<div class=chips>{links}</div>' if links else ''}</section>"
+        )
+    body = f"""
+<div class="wrap">
+<div class="page-head">
+  <h1>Περίεργα από τα δεδομένα</h1>
+  <p>Όσα μας έκαναν να σηκώσουμε το φρύδι ψάχνοντας τους καταλόγους. Υπολογίζονται από τα ίδια στοιχεία με το
+  υπόλοιπο site, σε κάθε ενημέρωση· τίποτα δεν γράφεται με το χέρι.</p>
+</div>
+<div class="facts-grid">{"".join(cards)}</div>
+<p class="small">Βρήκατε κάτι ακόμη πιο περίεργο; <a href="{REPO}/issues">Πείτε μας</a>.</p>
+</div>
+"""
+    return layout(
+        ctx,
+        "Περίεργα από τα δεδομένα · farmaka.info",
+        body,
+        "/perierga/",
+        "Παράξενα ευρήματα από τους επίσημους καταλόγους φαρμάκων στην Ελλάδα.",
     )
 
 
