@@ -25,6 +25,9 @@ from .normalize import PriceRow, ean13_ok, read_bulletin
 
 ROOT = Path(__file__).resolve().parent.parent
 
+SCHEMA_VERSION = 1
+SAMPLES_MANIFEST = ROOT / "samples/manifests/moh_prices_listing_2026-11-14.json"
+
 # Offline sample set: (iso_date, article_id, kind, file)
 SAMPLES = [
     ("2026-10-05", 14818, "full", "moh_14818_epikairopoihsh_2026-09.xlsx"),
@@ -35,7 +38,13 @@ SAMPLES = [
 PRICE_FIELDS = ("price_exfactory", "price_wholesale", "price_retail", "non_reimbursed")
 
 
-def merge(sources: list[tuple[str, int, str, Path]], issues: list[dict] | None = None):
+def merge(
+    sources: list[tuple[str, int, str, Path]],
+    issues: list[dict] | None = None,
+    provenance: dict[str, dict] | None = None,
+):
+    """Merge baseline + deltas. If `provenance` is given, it is filled with the
+    bulletin that set each package's current prices: {eof_code: {published, moh_article}}."""
     fulls = [s for s in sources if s[2] == "full"]
     if not fulls:
         raise SystemExit("no baseline (kind=full) bulletin found")
@@ -44,6 +53,8 @@ def merge(sources: list[tuple[str, int, str, Path]], issues: list[dict] | None =
     history: list[dict] = []
     for r in read_bulletin(base[3], issues):
         current[r.eof_code] = r
+        if provenance is not None:
+            provenance[r.eof_code] = {"published": base[0], "moh_article": base[1]}
     deltas = sorted(
         (s for s in sources if s[2] == "delta" and (s[0], s[1]) > (base[0], base[1])),
         key=lambda s: (s[0], s[1]),
@@ -75,6 +86,8 @@ def merge(sources: list[tuple[str, int, str, Path]], issues: list[dict] | None =
                 if not r.substances:
                     r.substances = old.substances
             current[r.eof_code] = r
+            if provenance is not None:
+                provenance[r.eof_code] = {"published": date, "moh_article": aid}
     return base, deltas, current, history
 
 
@@ -98,27 +111,59 @@ def validate(rows: dict[str, PriceRow]) -> list[str]:
     return problems
 
 
-def write(out: Path, base, deltas, rows: dict[str, PriceRow], history, problems, issues=()) -> None:
+PACKAGE_FIELDS = [
+    "eof_code",
+    "barcode",
+    "name",
+    "atc",
+    "substances",
+    "mah",
+    "non_reimbursed",
+    "price_exfactory",
+    "price_wholesale",
+    "price_retail",
+    "vat",
+    "price_published",
+    "price_moh_article",
+]
+
+
+def article_index(manifest: list[dict]) -> dict[int, dict]:
+    """article_id -> {published, title, url, kind} from a crawl manifest."""
+    out = {}
+    for art in manifest:
+        d, m, y = art["date"].split("/")
+        out[art["article_id"]] = {
+            "moh_article": art["article_id"],
+            "published": f"{y}-{m}-{d}",
+            "title": art["title"],
+            "url": art["url"],
+            "kind": art["kind"],
+        }
+    return out
+
+
+def write(
+    out: Path,
+    base,
+    deltas,
+    rows: dict[str, PriceRow],
+    history,
+    problems,
+    issues=(),
+    provenance: dict[str, dict] | None = None,
+    articles: dict[int, dict] | None = None,
+    pending: list[dict] | None = None,
+) -> None:
+    provenance = provenance or {}
+    articles = articles or {}
     out.mkdir(parents=True, exist_ok=True)
     with (out / "packages.csv").open("w", newline="", encoding="utf-8") as fh:
         w = csv.writer(fh)
-        w.writerow(
-            [
-                "eof_code",
-                "barcode",
-                "name",
-                "atc",
-                "substances",
-                "mah",
-                "non_reimbursed",
-                "price_exfactory",
-                "price_wholesale",
-                "price_retail",
-                "vat",
-            ]
-        )
+        w.writerow(PACKAGE_FIELDS)
         for code in sorted(rows):
             r = rows[code]
+            src = provenance.get(code, {})
             w.writerow(
                 [
                     r.eof_code,
@@ -132,6 +177,8 @@ def write(out: Path, base, deltas, rows: dict[str, PriceRow], history, problems,
                     r.price_wholesale,
                     r.price_retail,
                     r.vat,
+                    src.get("published", ""),
+                    src.get("moh_article", ""),
                 ]
             )
     with (out / "price_history.csv").open("w", newline="", encoding="utf-8") as fh:
@@ -140,12 +187,26 @@ def write(out: Path, base, deltas, rows: dict[str, PriceRow], history, problems,
         )
         w.writeheader()
         w.writerows(history)
+    packages = []
+    for c in sorted(rows):
+        rec = asdict(rows[c])
+        rec["price_source"] = provenance.get(c)
+        packages.append(rec)
     (out / "packages.json").write_text(
-        json.dumps([asdict(rows[c]) for c in sorted(rows)], ensure_ascii=False, indent=1), encoding="utf-8"
+        json.dumps({"schema_version": SCHEMA_VERSION, "packages": packages}, ensure_ascii=False, indent=1),
+        encoding="utf-8",
     )
+    used = [base] + list(deltas)
+    sources = []
+    for d in used:
+        meta = dict(articles.get(d[1], {}))
+        meta.update({"moh_article": d[1], "published": d[0], "kind": d[2], "file": d[3].name})
+        sources.append(meta)
+    (out / "sources.json").write_text(json.dumps(sources, ensure_ascii=False, indent=2), encoding="utf-8")
     (out / "build_report.json").write_text(
         json.dumps(
             {
+                "schema_version": SCHEMA_VERSION,
                 "baseline": {"published": base[0], "moh_article": base[1], "file": base[3].name},
                 "deltas_applied": [
                     {"published": d[0], "moh_article": d[1], "file": d[3].name} for d in deltas
@@ -154,6 +215,7 @@ def write(out: Path, base, deltas, rows: dict[str, PriceRow], history, problems,
                 "history_events": len(history),
                 "validation_problems": problems,
                 "review_queue": list(issues),
+                "pending_bulletins": pending or [],
             },
             ensure_ascii=False,
             indent=2,
@@ -162,37 +224,64 @@ def write(out: Path, base, deltas, rows: dict[str, PriceRow], history, problems,
     )
 
 
+def pending_bulletins(sources, base, articles: dict[int, dict]) -> list[dict]:
+    """Bulletins known from the listing, published on/after the baseline, not applied.
+
+    Deltas whose files are not downloaded yet, and amendments (never applied
+    automatically). Shown publicly so the gap is visible, not hidden."""
+    applied = {s[1] for s in sources if (s[0], s[1]) >= (base[0], base[1])}
+    out = []
+    for aid, a in sorted(articles.items(), key=lambda kv: (kv[1]["published"], kv[0])):
+        if a["kind"] not in ("full", "delta", "revision", "amendment") or aid in applied:
+            continue
+        if (a["published"], aid) <= (base[0], base[1]):
+            continue
+        out.append(dict(a, reason="not downloaded yet" if a["kind"] == "delta" else "needs manual review"))
+    return out
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--samples", action="store_true", help="offline run on samples/raw")
+    ap.add_argument("--samples", action="store_true", help="offline run on samples/raw only")
     ap.add_argument("--manifest", type=Path)
     ap.add_argument("--raw", type=Path, default=ROOT / "data/raw")
     ap.add_argument("--out", type=Path, default=ROOT / "data/current")
     a = ap.parse_args()
 
+    # The sample bulletins are official files kept in git; they also seed a
+    # production build, so a run never depends on the ministry site being up.
+    sample_sources = [(d, i, k, ROOT / "samples/raw" / f) for d, i, k, f in SAMPLES]
+    articles = article_index(json.loads(SAMPLES_MANIFEST.read_text(encoding="utf-8")))
     if a.samples:
-        sources = [(d, i, k, ROOT / "samples/raw" / f) for d, i, k, f in SAMPLES]
+        sources = sample_sources
     else:
         if not a.manifest:
             ap.error("--manifest or --samples required")
         sources = []
-        for art in json.loads(a.manifest.read_text(encoding="utf-8")):
-            if art["kind"] not in ("full", "delta"):
-                continue
-            d, m, y = art["date"].split("/")
-            for att in art["attachments"]:
-                p = a.raw / f"moh_{art['article_id']}_{att['fdl']}.xlsx"
-                if p.exists():
-                    sources.append((f"{y}-{m}-{d}", art["article_id"], art["kind"], p))
+        if a.manifest.exists():
+            manifest = json.loads(a.manifest.read_text(encoding="utf-8"))
+            articles.update(article_index(manifest))
+            for art in manifest:
+                if art["kind"] not in ("full", "delta"):
+                    continue
+                d, m, y = art["date"].split("/")
+                for att in art["attachments"]:
+                    p = a.raw / f"moh_{art['article_id']}_{att['fdl']}.xlsx"
+                    if p.exists():
+                        sources.append((f"{y}-{m}-{d}", art["article_id"], art["kind"], p))
+        have = {s[1] for s in sources}
+        sources += [s for s in sample_sources if s[1] not in have]
 
     issues: list[dict] = []
-    base, deltas, rows, history = merge(sources, issues)
+    provenance: dict[str, dict] = {}
+    base, deltas, rows, history = merge(sources, issues, provenance)
     problems = validate(rows)
-    write(a.out, base, deltas, rows, history, problems, issues)
+    pending = pending_bulletins(sources, base, articles)
+    write(a.out, base, deltas, rows, history, problems, issues, provenance, articles, pending)
     print(
         f"baseline {base[3].name}; {len(deltas)} deltas; {len(rows)} packages; "
         f"{len(history)} changes; {len(problems)} validation problems; "
-        f"{len(issues)} rows for manual review -> {a.out}"
+        f"{len(issues)} rows for manual review; {len(pending)} bulletins pending -> {a.out}"
     )
 
 

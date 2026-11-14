@@ -99,6 +99,7 @@ class Article:
     url: str
     kind: str
     attachments: list[Attachment] = field(default_factory=list)
+    checked: bool = False  # article page was read (it may have no attachments)
 
     @property
     def iso_date(self) -> str:
@@ -133,10 +134,12 @@ class Client:
                 time.sleep(5 * 2**attempt)
         raise AssertionError("unreachable")
 
-    def list_articles(self, section: str = PRICE_BULLETINS, max_pages: int = 50) -> list[Article]:
+    def list_articles(
+        self, section: str = PRICE_BULLETINS, max_pages: int = 50, first_page: int = 1
+    ) -> list[Article]:
         out: list[Article] = []
         seen: set[str] = set()
-        for page in range(1, max_pages + 1):
+        for page in range(first_page, first_page + max_pages):
             r = self.get(f"{section}?page={page}")
             items = list(_ITEM_RE.finditer(r.text))
             new = 0
@@ -175,6 +178,16 @@ class Client:
 
 def sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def read_manifest(path: Path) -> list[Article]:
+    if not path.exists():
+        return []
+    out = []
+    for a in json.loads(path.read_text(encoding="utf-8")):
+        atts = [Attachment(**x) for x in a.pop("attachments", [])]
+        out.append(Article(**a, attachments=atts))
+    return out
 
 
 def write_manifest(articles: list[Article], path: Path) -> None:
