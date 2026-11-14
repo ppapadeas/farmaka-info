@@ -98,6 +98,16 @@ def test_greek_substance_names_and_substance_index(site):
     assert (out / "ousies" / "index.html").exists()
 
 
+def test_module_imports_carry_the_build_version(site):
+    # a new app.js must never run against an old cached search-core.js
+    out, _ = site
+    from sitegen.pages import ASSET_VERSION
+
+    app = (out / "static" / "app.js").read_text(encoding="utf-8")
+    assert f'"./search-core.js?v={ASSET_VERSION}"' in app
+    assert '"./search-core.js"' not in app
+
+
 def test_meta_lists_pending_bulletins(site):
     out, _ = site
     meta = json.loads((out / "api" / "meta.json").read_text(encoding="utf-8"))

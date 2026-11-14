@@ -13,6 +13,11 @@ import {
 import { initScan } from "./scan.js";
 import "./register-sw.js";
 
+// Same build version as this module (?v=… added by sitegen), so the indexes
+// a page loads always match the code that parses them.
+const V = new URL(import.meta.url).searchParams.get("v");
+const versioned = (path) => (V ? `${path}?v=${V}` : path);
+
 let indexPromise = null;
 // Both indexes load on first focus: packages and substances.
 function loadIndex() {
@@ -23,8 +28,8 @@ function loadIndex() {
         return r.text().then(parse);
       });
     indexPromise = Promise.all([
-      get("/search-index.tsv", parseIndex),
-      get("/substance-index.tsv", parseSubstances).catch(() => []),
+      get(versioned("/search-index.tsv"), parseIndex),
+      get(versioned("/substance-index.tsv"), parseSubstances).catch(() => []),
     ]).catch((err) => {
       indexPromise = null;
       throw err;
@@ -220,19 +225,19 @@ document.querySelectorAll("form.search").forEach((form) => {
 // "Install app" button: only where the browser offers installation (Chrome,
 // Edge, Android). iPhone users get the hint on the About page instead.
 let installEvent = null;
-const installBtn = document.querySelector("button.install");
+const appBox = document.querySelector(".foot-app");
 window.addEventListener("beforeinstallprompt", (ev) => {
   ev.preventDefault();
   installEvent = ev;
-  if (installBtn) installBtn.hidden = false;
+  if (appBox) appBox.hidden = false;
 });
-installBtn?.addEventListener("click", async () => {
+appBox?.querySelector(".install")?.addEventListener("click", async () => {
   if (!installEvent) return;
   installEvent.prompt();
   await installEvent.userChoice.catch(() => null);
   installEvent = null;
-  installBtn.hidden = true;
+  appBox.hidden = true;
 });
 window.addEventListener("appinstalled", () => {
-  if (installBtn) installBtn.hidden = true;
+  if (appBox) appBox.hidden = true;
 });

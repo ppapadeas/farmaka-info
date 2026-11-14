@@ -18,6 +18,7 @@ import argparse
 import csv
 import hashlib
 import json
+import re
 import shutil
 import sqlite3
 from collections import defaultdict
@@ -117,6 +118,19 @@ def load_ema(data: Path) -> tuple[dict[str, list[dict]], dict | None]:
         "terms": "https://www.ema.europa.eu/en/about-us/legal-notice",
     }
     return out, meta
+
+
+_IMPORT = re.compile(r"""((?:from|import)\s*["'])(\./[\w.-]+\.js)(["'])""")
+
+
+def version_imports(static: Path, version: str) -> None:
+    """Pages load /static/app.js?v=<hash>; give its relative imports the same
+    ?v so a browser never mixes a new app.js with an old cached module."""
+    for f in static.glob("*.js"):
+        text = f.read_text(encoding="utf-8")
+        new = _IMPORT.sub(lambda m: f"{m.group(1)}{m.group(2)}?v={version}{m.group(3)}", text)
+        if new != text:
+            f.write_text(new, encoding="utf-8")
 
 
 def load_otc(data: Path, ema: dict[str, list[dict]] | None = None) -> tuple[list[dict], dict | None]:
@@ -481,6 +495,7 @@ def build(data: Path, out: Path, built_at: str) -> dict:
     for f in STATIC.iterdir():
         if f.is_file():
             shutil.copy2(f, out / "static" / f.name)
+    version_imports(out / "static", pages.ASSET_VERSION)
     shutil.copy2(STATIC / "favicon.svg", out / "favicon.svg")
     shutil.copy2(STATIC / "sw.js", out / "sw.js")  # a service worker controls only paths below its own
 

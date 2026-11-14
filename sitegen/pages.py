@@ -131,10 +131,24 @@ def layout(
 {body}
 </main>
 <footer class="foot">
-  <div class="wrap">
-    <span>Ενημερωτικό· δεν αντικαθιστά γιατρό ή φαρμακοποιό. Πηγή: Υπουργείο Υγείας.</span>
-    <nav aria-label="Υποσέλιδο"><button type="button" class="install" hidden>Εγκατάσταση εφαρμογής</button><a href="/dedomena/">Δεδομένα CC0</a><a href="{REPO}">Κώδικας</a><a href="{REPO}/issues">Αναφορά λάθους</a></nav>
+  <div class="wrap foot-grid">
+    <div class="foot-about">
+      <a class="brand" href="/">{LOGO}<span>farmaka<span class="tld">.info</span></span></a>
+      <p>Ενημερωτικό· δεν αντικαθιστά γιατρό ή φαρμακοποιό. Πηγές: Υπουργείο Υγείας, EMA.</p>
+    </div>
+    <nav class="foot-links" aria-label="Υποσέλιδο">
+      <a href="/ousies/">Δραστικές ουσίες</a>
+      <a href="/dedomena/">Δεδομένα &amp; API</a>
+      <a href="/sxetika/">Σχετικά</a>
+      <a href="{REPO}">Κώδικας</a>
+      <a href="{REPO}/issues">Αναφορά λάθους</a>
+    </nav>
+    <div class="foot-app" hidden>
+      <p><strong>Εφαρμογή</strong>Στην οθόνη σας, ανοίγει και χωρίς σύνδεση.</p>
+      <button type="button" class="install">Εγκατάσταση</button>
+    </div>
   </div>
+  <div class="wrap foot-legal">Δεδομένα CC0 · Κώδικας AGPL-3.0 · Χωρίς cookies και παρακολούθηση</div>
 </footer>
 </body>
 </html>
