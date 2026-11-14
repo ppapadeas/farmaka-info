@@ -169,7 +169,7 @@ async function searchPage(url, env) {
       .join("");
     results = subHtml + (total
       ? `<p class="count">${total} συσκευασίες${total > rows.length ? `, οι πρώτες ${rows.length}` : ""}</p><ul class="rows">${items}</ul>`
-      : subs.length ? "" : `<p class="empty">Το «${esc(q)}» δεν υπάρχει στο δελτίο τιμών του Υπουργείου. Πολλά μη συνταγογραφούμενα (π.χ. Depon, Panadol) έχουν ελεύθερη τιμή και δεν περιλαμβάνονται. Δοκιμάστε τη δραστική ουσία, π.χ. <a href="/anazitisi?q=%CF%80%CE%B1%CF%81%CE%B1%CE%BA%CE%B5%CF%84%CE%B1%CE%BC%CF%8C%CE%BB%CE%B7">παρακεταμόλη</a>.</p>`);
+      : subs.length ? "" : `<p class="empty">Το «${esc(q)}» δεν βρέθηκε στα δελτία τιμών του Υπουργείου. Δοκιμάστε τη δραστική ουσία, π.χ. <a href="/anazitisi?q=%CF%80%CE%B1%CF%81%CE%B1%CE%BA%CE%B5%CF%84%CE%B1%CE%BC%CF%8C%CE%BB%CE%B7">παρακεταμόλη</a>.</p>`);
   }
   const tpl = await (await asset(env, "/_templates/search.html")).text();
   const html = tpl.replace("{{QUERY}}", esc(q)).replace("{{RESULTS}}", results);

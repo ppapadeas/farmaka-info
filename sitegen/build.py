@@ -119,6 +119,62 @@ def load_ema(data: Path) -> tuple[dict[str, list[dict]], dict | None]:
     return out, meta
 
 
+def load_otc(data: Path, ema: dict[str, list[dict]] | None = None) -> tuple[list[dict], dict | None]:
+    """Non-prescription medicines (ΜΗ.ΣΥ.ΦΑ.) from `python -m ingest.otc` (optional).
+
+    Same record shape as the regulated list, with kind "otc" and only an
+    indicative retail price (not binding; pharmacies may sell lower)."""
+    path = data / "otc_packages.csv"
+    if not path.exists():
+        return [], None
+    ema = ema or {}
+    rp = data / "otc_report.json"
+    report = json.loads(rp.read_text(encoding="utf-8")) if rp.exists() else {}
+    by_article = {s["moh_article"]: s for s in report.get("sources", [])}
+    out = []
+    with path.open(encoding="utf-8") as fh:
+        for r in csv.DictReader(fh):
+            src = by_article.get(int(r["moh_article"]), {}) if r["moh_article"] else {}
+            out.append(
+                {
+                    "eof_code": r["eof_code"],
+                    "barcode": r["barcode"],
+                    "name": r["name"],
+                    "atc": r["atc"] or None,
+                    "substances": [x for x in r["substances"].split("|") if x],
+                    "mah": r["mah"],
+                    "vat": _float(r["vat"]) or 0.0,
+                    "non_reimbursed": True,
+                    "kind": "otc",
+                    "prices": {
+                        "exfactory": None,
+                        "wholesale": None,
+                        "retail": _float(r["price_retail_indicative"]),
+                    },
+                    "price_source": {
+                        "publisher": "Υπουργείο Υγείας",
+                        "moh_article": int(r["moh_article"]) if r["moh_article"] else None,
+                        "published": r["published"],
+                        "title": src.get("title"),
+                        "url": src.get("url"),
+                        "file": (src.get("files") or [None])[0],
+                    },
+                    "price_history": [],
+                    "reimbursement": [],
+                    "product_information": ema.get(r["eof_code"], []),
+                    "url": f"{SITE}/farmako/{r['eof_code']}/",
+                }
+            )
+    meta = {
+        "packages": len(out),
+        "sources": [
+            {k: s.get(k) for k in ("moh_article", "published", "kind", "title", "url")}
+            for s in report.get("sources", [])
+        ],
+    }
+    return [p for p in out if p["prices"]["retail"]], meta
+
+
 GREEK_NAMES = ROOT / "reference" / "substances_el.csv"
 
 
@@ -172,6 +228,7 @@ def enrich(packages, sources, history, reimb, ema=None) -> list[dict]:
                 "mah": p["mah"],
                 "vat": p["vat"],
                 "non_reimbursed": p["non_reimbursed"],
+                "kind": "regulated",
                 "prices": {
                     "exfactory": p["price_exfactory"],
                     "wholesale": p["price_wholesale"],
@@ -225,7 +282,7 @@ def equivalents(pkgs: list[dict]) -> dict[str, list[str]]:
     for p in pkgs:
         st, fg = strength(p["name"]), form_group(p["name"])
         if p["substances"] and st and fg:
-            groups[(tuple(p["substances"]), st[0], fg)].append(p["eof_code"])
+            groups[(tuple(p["substances"]), st[0], fg, p.get("kind"))].append(p["eof_code"])
     return {c: codes for codes in groups.values() if len(codes) > 1 for c in codes}
 
 
@@ -279,7 +336,7 @@ def write_sqlite(pkgs: list[dict], history, sources, path: Path) -> None:
         CREATE TABLE package (eof_code TEXT PRIMARY KEY, barcode TEXT UNIQUE, name TEXT, atc TEXT,
             substances TEXT, mah TEXT, vat REAL, non_reimbursed INTEGER, price_exfactory REAL,
             price_wholesale REAL, price_retail REAL, price_published TEXT,
-            price_moh_article INTEGER REFERENCES source(moh_article));
+            price_moh_article INTEGER REFERENCES source(moh_article), kind TEXT);
         CREATE TABLE price_event (eof_code TEXT REFERENCES package(eof_code), field TEXT, old REAL,
             new REAL, change TEXT, published TEXT, moh_article INTEGER REFERENCES source(moh_article));
         CREATE TABLE reimbursement (eof_code TEXT REFERENCES package(eof_code), list TEXT,
@@ -297,7 +354,7 @@ def write_sqlite(pkgs: list[dict], history, sources, path: Path) -> None:
         ],
     )
     con.executemany(
-        "INSERT INTO package VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        "INSERT INTO package VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
         [
             (
                 p["eof_code"],
@@ -313,6 +370,7 @@ def write_sqlite(pkgs: list[dict], history, sources, path: Path) -> None:
                 p["prices"]["retail"],
                 p["price_source"]["published"],
                 p["price_source"]["moh_article"],
+                p.get("kind", "regulated"),
             )
             for p in pkgs
         ],
@@ -406,6 +464,10 @@ def build(data: Path, out: Path, built_at: str) -> dict:
     reimb = load_reimbursement(data)
     ema, ema_meta = load_ema(data)
     pkgs = enrich(packages, sources, history, reimb, ema)
+    have = {p["eof_code"] for p in pkgs}
+    otc, otc_meta = load_otc(data, ema)
+    pkgs += [p for p in otc if p["eof_code"] not in have]  # the regulated list wins on overlap
+    pkgs.sort(key=lambda p: p["eof_code"])
     el = load_greek_names()
     for p in pkgs:
         p["substances_el"] = [el.get(x) for x in p["substances"]]
@@ -433,6 +495,8 @@ def build(data: Path, out: Path, built_at: str) -> dict:
         "sources": sources,
         "reimbursement_source": REIMBURSEMENT_SOURCE if reimb else None,
         "product_information_source": ema_meta,
+        "otc_source": otc_meta,
+        "otc_packages": sum(1 for p in pkgs if p.get("kind") == "otc"),
         "pending_bulletins": report.get("pending_bulletins", []),
         "validation_problems": len(report.get("validation_problems", [])),
         "review_queue": report.get("review_queue", []),
@@ -444,8 +508,9 @@ def build(data: Path, out: Path, built_at: str) -> dict:
     dl.mkdir()
     for name in ("packages.csv", "price_history.csv", "sources.json", "build_report.json"):
         shutil.copy2(data / name, dl / name)
-    if (data / "ema_links.csv").exists():
-        shutil.copy2(data / "ema_links.csv", dl / "ema_links.csv")
+    for name in ("ema_links.csv", "otc_packages.csv"):
+        if (data / name).exists():
+            shutil.copy2(data / name, dl / name)
     (dl / "farmaka.json").write_text(
         json.dumps({"meta": meta, "packages": pkgs}, ensure_ascii=False, separators=(",", ":")),
         encoding="utf-8",

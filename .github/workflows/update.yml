@@ -39,12 +39,21 @@ jobs:
         # The ministry site is sometimes down; build with what we have.
         continue-on-error: true
         run: python -m ingest.fetch --section prices --out data --max-pages 2
+      - name: Fetch new OTC (ΜΗ.ΣΥ.ΦΑ.) bulletins
+        continue-on-error: true
+        run: python -m ingest.fetch --section otc --out data --max-pages 3
       - name: Build data
         run: |
           python -m ingest.build --manifest data/manifest_prices.json --raw data/raw --out data/current
           if [ -f ingest/reimbursement.py ]; then
             python -m ingest.reimbursement --pdf samples/raw/katalogos_2026-10.pdf --list main --decimal . --article 14875 --published 2026-10-22 --out data/current/reimbursement_main.csv
             python -m ingest.reimbursement --pdf samples/raw/katalogos_n3816_2026-10.pdf --list n3816 --decimal , --article 14875 --published 2026-10-22 --out data/current/reimbursement_n3816.csv
+          fi
+      - name: Build OTC list (a failure here keeps the previous list)
+        continue-on-error: true
+        run: |
+          if [ -f data/manifest_otc.json ]; then
+            python -m ingest.otc --manifest data/manifest_otc.json --raw data/raw --out data/current
           fi
       - name: Link EMA product information (EMA files refreshed on Mondays)
         continue-on-error: true

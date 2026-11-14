@@ -382,3 +382,7 @@ a.stat-link span { text-decoration: underline; text-decoration-color: var(--line
 .foot .install:hover { background: var(--accent-soft); }
 .foot .install[hidden] { display: none; }
 @media (display-mode: standalone) { .foot .install { display: none; } }
+
+/* non-prescription (ΜΗΣΥΦΑ) */
+.chip.otc { background: var(--new-bg); color: var(--new-ink); }
+.tag.otc { background: var(--new-bg); color: var(--new-ink); }

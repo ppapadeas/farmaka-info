@@ -463,8 +463,27 @@ def docs_card(p: dict) -> str:
     </section>"""
 
 
+def price_card(p: dict, vat: str, was: str) -> str:
+    pr = p["prices"]
+    if p.get("kind") == "otc":
+        return f"""<section class="card price">
+      <div><div class="label">Ενδεικτική τιμή λιανικής</div><div class="big">{eur(pr["retail"])}</div>
+      <p class="was">Μη συνταγογραφούμενο (ΜΗΣΥΦΑ). Η τιμή είναι ενδεικτική· το φαρμακείο μπορεί να πουλά φθηνότερα.</p></div>
+      <dl class="kv"><dt>ΦΠΑ</dt><dd>{vat}</dd></dl>
+    </section>"""
+    return f"""<section class="card price">
+      <div><div class="label">Λιανική τιμή</div><div class="big">{eur(pr["retail"])}</div>{was}</div>
+      <dl class="kv">
+        <dt>Χονδρική</dt><dd>{eur(pr["wholesale"])}</dd>
+        <dt>Παραγωγού</dt><dd>{eur(pr["exfactory"])}</dd>
+        <dt>ΦΠΑ</dt><dd>{vat}</dd>
+      </dl>
+    </section>"""
+
+
 def package(ctx: Context, p: dict) -> str:
     pr = p["prices"]
+    otc = p.get("kind") == "otc"
     brand, rest = split_name(p["name"])
     subs = p["substances"]
     crumbs = (
@@ -482,7 +501,9 @@ def package(ctx: Context, p: dict) -> str:
     disp = dispensing_label(p["reimbursement"][0]["dispensing"]) if p["reimbursement"] else None
     if disp:
         chips.append(f'<span class="chip">{e(disp)}</span>')
-    if p["non_reimbursed"]:
+    if otc:
+        chips.append('<span class="chip otc">Χωρίς συνταγή (ΜΗΣΥΦΑ)</span>')
+    elif p["non_reimbursed"]:
         chips.append('<span class="chip warn">Μη αποζημιούμενο</span>')
     vat = f"{num(p['vat'] * 100, 0)}%" if p["vat"] else "—"
     was = ""
@@ -494,7 +515,7 @@ def package(ctx: Context, p: dict) -> str:
         was = f'<p class="was">Ήταν {eur(last["old"])} έως {date_gr(last["published"])}</p>'
     ps = p["price_source"]
     srcs = [
-        f'<li><a href="{e(ps["url"])}" rel="noopener">Δελτίο τιμών ↗</a><div>Υπουργείο Υγείας · {date_gr(ps["published"])}</div></li>'
+        f'<li><a href="{e(ps["url"])}" rel="noopener">{"Δελτίο τιμών ΜΗΣΥΦΑ" if otc else "Δελτίο τιμών"} ↗</a><div>Υπουργείο Υγείας · {date_gr(ps["published"])}</div></li>'
     ]
     if p["reimbursement"]:
         rs = p["reimbursement"][0]["source"]
@@ -512,17 +533,10 @@ def package(ctx: Context, p: dict) -> str:
 </div>
 <div class="cols">
   <div class="main">
-    <section class="card price">
-      <div><div class="label">Λιανική τιμή</div><div class="big">{eur(pr["retail"])}</div>{was}</div>
-      <dl class="kv">
-        <dt>Χονδρική</dt><dd>{eur(pr["wholesale"])}</dd>
-        <dt>Παραγωγού</dt><dd>{eur(pr["exfactory"])}</dd>
-        <dt>ΦΠΑ</dt><dd>{vat}</dd>
-      </dl>
-    </section>
-    {reimbursement_card(ctx, p)}
+    {price_card(p, vat, was)}
+    {"" if otc else reimbursement_card(ctx, p)}
     {equivalents_card(ctx, p)}
-    {history_card(ctx, p)}
+    {"" if otc else history_card(ctx, p)}
   </div>
   <aside>
     <section class="card side">
@@ -560,6 +574,8 @@ def package(ctx: Context, p: dict) -> str:
 def _row(p: dict) -> str:
     fam, label = form_kind(p["name"])
     tag = ' <span class="tag" title="Στον κατάλογο αποζημίωσης">Α</span>' if p["reimbursement"] else ""
+    if p.get("kind") == "otc":
+        tag = ' <span class="tag otc" title="Μη συνταγογραφούμενο, ενδεικτική τιμή">ΜΗΣΥΦΑ</span>'
     return (
         f'<li data-form="{fam}" data-price="{p["prices"]["retail"]:.2f}" data-name="{e(p["name"])}">'
         f'<a class="nm" href="/farmako/{e(p["eof_code"])}/">{name_html(p["name"])}</a>{tag}'
@@ -667,6 +683,7 @@ DOWNLOAD_INFO = {
     "sources.json": "Τα δελτία που χρησιμοποιήθηκαν",
     "build_report.json": "Έλεγχοι, ουρά ελέγχου, δελτία σε αναμονή",
     "ema_links.csv": "Σύνδεσμοι σε ΠΧΠ/ΦΟΧ της EMA (πηγή: EMA)",
+    "otc_packages.csv": "Μη συνταγογραφούμενα (ΜΗΣΥΦΑ) με ενδεικτική τιμή λιανικής",
 }
 
 PACKAGE_FIELDS = [
@@ -698,6 +715,8 @@ def data_page(ctx: Context) -> str:
     if m.get("reimbursement_source"):
         rs = m["reimbursement_source"]
         srcs += f'<li>{date_gr(rs["published"])} · <a href="{e(rs["url"])}" rel="noopener">{e(rs["title"])}</a></li>'
+    for o in (m.get("otc_source") or {}).get("sources", []):
+        srcs += f'<li>{date_gr(o["published"])} · <a href="{e(o["url"])}" rel="noopener">{e(o["title"])}</a> (ΜΗΣΥΦΑ)</li>'
     pis = m.get("product_information_source")
     if pis:
         srcs += (
