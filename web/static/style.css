@@ -163,7 +163,7 @@ a.chip:hover { color: var(--ink); background: var(--line); }
 .hero .chips { justify-content: center; margin-top: 18px; }
 .stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; }
 .stats div { padding: 18px 12px; text-align: center; }
-.stats div + div { border-left: 1px solid var(--line); }
+.stats > * + * { border-left: 1px solid var(--line); }
 .stats strong { display: block; font-size: 26px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
 .stats span { font-size: 14px; color: var(--muted); }
 .pending { margin-top: 12px; font-size: 14px; color: var(--faint); text-align: center; }
@@ -356,3 +356,19 @@ a.nm:hover b { text-decoration: underline; }
 .docs > div { color: var(--faint); margin-top: 2px; }
 .docs .small { margin-top: 10px; }
 .small.first { margin-top: 0; }
+
+/* substances: Greek name with INN, A–Ω index */
+.page-head .inn { margin-top: 2px; font-size: 18px; color: var(--muted); }
+a.stat-link { display: block; padding: 18px 12px; text-align: center; text-decoration: none; color: var(--ink); }
+a.stat-link:hover { background: var(--panel); }
+a.stat-link span { text-decoration: underline; text-decoration-color: var(--line); text-underline-offset: 3px; }
+.letter { margin-top: 28px; }
+.letter h2 { font-size: 20px; font-weight: 700; color: var(--accent); }
+.az { list-style: none; margin: 10px 0 0; padding: 0; columns: 3 240px; column-gap: 32px; }
+.az li { break-inside: avoid; padding: 4px 0; font-size: 15px; }
+.az a { color: var(--ink); text-decoration: none; }
+.az a:hover { text-decoration: underline; }
+.az .inn { color: var(--faint); font-size: 13px; }
+.az .n { color: var(--faint); font-size: 12px; font-variant-numeric: tabular-nums; }
+.suggest .grp { padding: 6px 10px 2px; font-size: 12px; font-weight: 600; color: var(--faint); text-transform: none; }
+.suggest a.sub-hit .nm b { color: var(--accent); }

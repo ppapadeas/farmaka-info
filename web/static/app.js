@@ -1,22 +1,34 @@
 // Instant search suggestions. Without JavaScript the forms still work: they
 // submit to /anazitisi, rendered by the worker.
-import { codeFromQuery, eur, parseIndex, search, splitName } from "./search-core.js";
+import {
+  codeFromQuery,
+  eur,
+  innLabel,
+  parseIndex,
+  parseSubstances,
+  search,
+  searchSubstances,
+  splitName,
+} from "./search-core.js";
 import { initScan } from "./scan.js";
 import "./register-sw.js";
 
 let indexPromise = null;
+// Both indexes load on first focus: packages and substances.
 function loadIndex() {
   if (!indexPromise) {
-    indexPromise = fetch("/search-index.tsv")
-      .then((r) => {
-        if (!r.ok) throw new Error(`search index: ${r.status}`);
-        return r.text();
-      })
-      .then(parseIndex)
-      .catch((err) => {
-        indexPromise = null;
-        throw err;
+    const get = (url, parse) =>
+      fetch(url).then((r) => {
+        if (!r.ok) throw new Error(`${url}: ${r.status}`);
+        return r.text().then(parse);
       });
+    indexPromise = Promise.all([
+      get("/search-index.tsv", parseIndex),
+      get("/substance-index.tsv", parseSubstances).catch(() => []),
+    ]).catch((err) => {
+      indexPromise = null;
+      throw err;
+    });
   }
   return indexPromise;
 }
@@ -58,16 +70,36 @@ function setup(form) {
   async function render() {
     const q = input.value.trim();
     if (q.length < 2) return close();
-    let rows;
+    let rows, subs;
     try {
-      rows = await loadIndex();
+      [rows, subs] = await loadIndex();
     } catch {
       return close();
     }
     if (input.value.trim() !== q) return;
-    const { total, results } = search(rows, q, 8);
+    const subHits = searchSubstances(subs, q, 3);
+    const { total, results } = search(rows, q, subHits.length ? 6 : 8);
     box.replaceChildren();
-    if (!total) {
+    if (subHits.length) {
+      box.append(el("div", { class: "grp" }, "Δραστικές ουσίες"));
+      for (const s of subHits) {
+        const main = s.name_el || innLabel(s.inn);
+        box.append(
+          el(
+            "a",
+            { href: `/ousia/${s.slug}/`, role: "option", "aria-selected": "false", class: "sub-hit" },
+            el(
+              "span",
+              { class: "t" },
+              el("span", { class: "nm" }, el("b", {}, main), " ", el("span", {}, s.name_el ? innLabel(s.inn) : "")),
+              el("span", { class: "sub" }, `${s.packages} συσκευασίες`),
+            ),
+          ),
+        );
+      }
+      if (results.length) box.append(el("div", { class: "grp" }, "Συσκευασίες"));
+    }
+    if (!total && !subHits.length) {
       box.append(
         el(
           "div",

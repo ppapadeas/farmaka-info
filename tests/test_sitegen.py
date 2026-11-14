@@ -88,6 +88,16 @@ def test_api_shard_and_search_index(site):
     assert all(len(x.split("\t")) == 11 for x in lines[1:])
 
 
+def test_greek_substance_names_and_substance_index(site):
+    out, _ = site
+    html = (out / "ousia" / "atorvastatin" / "index.html").read_text(encoding="utf-8")
+    assert "<h1>Ατορβαστατίνη</h1>" in html and '<p class="inn">Atorvastatin' in html
+    lines = (out / "substance-index.tsv").read_text(encoding="utf-8").splitlines()
+    row = next(x.split("	") for x in lines if x.startswith("atorvastatin	"))
+    assert row[1:3] == ["ATORVASTATIN", "Ατορβαστατίνη"]
+    assert (out / "ousies" / "index.html").exists()
+
+
 def test_meta_lists_pending_bulletins(site):
     out, _ = site
     meta = json.loads((out / "api" / "meta.json").read_text(encoding="utf-8"))

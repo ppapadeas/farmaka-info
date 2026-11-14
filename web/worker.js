@@ -2,7 +2,16 @@
 // this runs only for paths without a matching asset: the JSON API, the
 // no-JavaScript search page and 404s. Everything it reads comes from the same
 // static build (dist/), so there is no database and no state.
-import { codeFromQuery, eur, parseIndex, search, splitName } from "./static/search-core.js";
+import {
+  codeFromQuery,
+  eur,
+  innLabel,
+  parseIndex,
+  parseSubstances,
+  search,
+  searchSubstances,
+  splitName,
+} from "./static/search-core.js";
 
 const SHARDS = 256;
 const JSON_HEADERS = {
@@ -27,6 +36,7 @@ export function shardOf(code) {
 }
 
 let indexRows = null;
+let substanceRows = null;
 const shardCache = new Map();
 
 async function asset(env, path) {
@@ -39,6 +49,11 @@ async function getPackage(env, code) {
   const k = shardOf(code);
   if (!shardCache.has(k)) shardCache.set(k, await (await asset(env, `/api/pk/${k}.json`)).json());
   return shardCache.get(k)[code] ?? null;
+}
+
+async function getSubstances(env) {
+  if (!substanceRows) substanceRows = parseSubstances(await (await asset(env, "/substance-index.tsv")).text());
+  return substanceRows;
 }
 
 async function getIndex(env) {
@@ -108,7 +123,14 @@ async function api(url, env) {
     const q = (url.searchParams.get("q") || "").slice(0, 200);
     const limit = Math.min(Math.max(parseInt(url.searchParams.get("limit") || "50", 10) || 50, 1), 200);
     const { total, results } = search(await getIndex(env), q, limit);
-    return json({ query: q, total, results: results.map(summary) });
+    const subs = searchSubstances(await getSubstances(env), q, 5).map((x) => ({
+      slug: x.slug,
+      inn: x.inn,
+      name_el: x.name_el,
+      packages: x.packages,
+      url: `https://farmaka.info/ousia/${x.slug}/`,
+    }));
+    return json({ query: q, total, substances: subs, results: results.map(summary) });
   }
   if (what === "substances") {
     const all = await (await asset(env, "/api/substances.json")).json();
@@ -126,6 +148,17 @@ async function searchPage(url, env) {
   }
   let results = "";
   if (q) {
+    const subs = searchSubstances(await getSubstances(env), q, 5);
+    const subHtml = subs.length
+      ? `<section class="group"><h2>Δραστικές ουσίες</h2><ul class="rows">${subs
+          .map(
+            (x) =>
+              `<li><a class="nm" href="/ousia/${esc(x.slug)}/"><b>${esc(x.name_el || innLabel(x.inn))}</b> <span>${esc(
+                x.name_el ? innLabel(x.inn) : "",
+              )}</span></a><span class="p">${x.packages} συσκευασίες</span></li>`,
+          )
+          .join("")}</ul></section>`
+      : "";
     const { total, results: rows } = search(await getIndex(env), q, 200);
     const items = rows
       .map((r) => {
@@ -134,9 +167,9 @@ async function searchPage(url, env) {
         return `<li><a class="nm" href="/farmako/${esc(r.eof_code)}/"><b>${esc(brand)}</b> <span>${esc(rest)}</span></a>${tag}<span class="mah">${esc(r.substances.join(" + "))}</span><span class="p">${esc(eur(r.price_retail))}</span></li>`;
       })
       .join("");
-    results = total
+    results = subHtml + (total
       ? `<p class="count">${total} συσκευασίες${total > rows.length ? `, οι πρώτες ${rows.length}` : ""}</p><ul class="rows">${items}</ul>`
-      : `<p class="empty">Το «${esc(q)}» δεν υπάρχει στο δελτίο τιμών του Υπουργείου. Πολλά μη συνταγογραφούμενα (π.χ. Depon, Panadol) έχουν ελεύθερη τιμή και δεν περιλαμβάνονται. Δοκιμάστε τη δραστική ουσία, π.χ. <a href="/anazitisi?q=%CF%80%CE%B1%CF%81%CE%B1%CE%BA%CE%B5%CF%84%CE%B1%CE%BC%CF%8C%CE%BB%CE%B7">παρακεταμόλη</a>.</p>`;
+      : subs.length ? "" : `<p class="empty">Το «${esc(q)}» δεν υπάρχει στο δελτίο τιμών του Υπουργείου. Πολλά μη συνταγογραφούμενα (π.χ. Depon, Panadol) έχουν ελεύθερη τιμή και δεν περιλαμβάνονται. Δοκιμάστε τη δραστική ουσία, π.χ. <a href="/anazitisi?q=%CF%80%CE%B1%CF%81%CE%B1%CE%BA%CE%B5%CF%84%CE%B1%CE%BC%CF%8C%CE%BB%CE%B7">παρακεταμόλη</a>.</p>`);
   }
   const tpl = await (await asset(env, "/_templates/search.html")).text();
   const html = tpl.replace("{{QUERY}}", esc(q)).replace("{{RESULTS}}", results);

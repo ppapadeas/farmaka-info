@@ -60,6 +60,13 @@ class Context:
     equiv: dict = field(default_factory=dict)  # eof_code -> codes with same substances, strength, form
 
 
+def sname(ctx: Context, inn: str) -> str:
+    """Display name of a substance: Greek when known (Wikidata), else the INN."""
+    slug = ctx.slug_of.get(inn)
+    el = ctx.subst[slug].get("name_el") if slug else None
+    return el or inn_label(inn)
+
+
 def pct(new: float, old: float) -> str:
     if not old:
         return ""
@@ -193,7 +200,7 @@ def home(ctx: Context, history: list[dict]) -> str:
 <section class="wrap narrow" aria-label="Τι περιέχει">
   <div class="stats">
     <div><strong>{num(m["packages"], 0)}</strong><span>συσκευασίες</span></div>
-    <div><strong>{num(m["substances"], 0)}</strong><span>δραστικές ουσίες</span></div>
+    <a class="stat-link" href="/ousies/"><strong>{num(m["substances"], 0)}</strong><span>δραστικές ουσίες</span></a>
     <div><strong>{num(reimb, 0)}</strong><span>αποζημιώνονται</span></div>
   </div>
   {pending}
@@ -414,7 +421,7 @@ def equivalents_card(ctx: Context, p: dict) -> str:
         summary = f"{len(cheaper)} {word} {basis}, έως <b>{num(best, 0)}%</b> λιγότερο."
     else:
         summary = f"Η φθηνότερη επιλογή {basis}."
-    subs = " + ".join(inn_label(s) for s in p["substances"])
+    subs = " + ".join(sname(ctx, s) for s in p["substances"])
     more = (
         f'<a href="/ousia/{e(ctx.slug_of[p["substances"][0]])}/">Όλες οι {len(rows)}</a>'
         if len(rows) > len(shown)
@@ -456,10 +463,11 @@ def package(ctx: Context, p: dict) -> str:
     brand, rest = split_name(p["name"])
     subs = p["substances"]
     crumbs = (
-        f'<a href="/ousia/{e(ctx.slug_of[subs[0]])}/">{e(inn_label(subs[0]))}</a>' if subs else "Συσκευασία"
+        f'<a href="/ousia/{e(ctx.slug_of[subs[0]])}/">{e(sname(ctx, subs[0]))}</a>' if subs else "Συσκευασία"
     )
     chips = [
-        f'<a class="chip sub-link" href="/ousia/{e(ctx.slug_of[s])}/">{e(inn_label(s))}</a>' for s in subs
+        f'<a class="chip sub-link" href="/ousia/{e(ctx.slug_of[s])}/" title="{e(inn_label(s))}">{e(sname(ctx, s))}</a>'
+        for s in subs
     ]
     fam, form_label = form_kind(p["name"])
     if fam != "other":
@@ -530,7 +538,7 @@ def package(ctx: Context, p: dict) -> str:
 </div>
 </div>
 """
-    subst = ", ".join(inn_label(s) for s in subs) or "—"
+    subst = ", ".join(sname(ctx, s) for s in subs) or "—"
     return layout(
         ctx,
         f"{brand} {rest} · {eur(pr['retail'])} · farmaka.info",
@@ -606,7 +614,7 @@ def substance(ctx: Context, s: dict) -> str:
         cg.setdefault(tuple(p["substances"]), []).append(p)
     for names, ps in sorted(cg.items()):
         ps.sort(key=lambda p: (p["prices"]["retail"], p["name"]))
-        title = " + ".join(inn_label(n) for n in names)
+        title = " + ".join(sname(ctx, n) for n in names)
         parts.append(
             f'<section class="group"><h2>{e(title)} <span>{len(ps)}</span></h2>'
             f'<ul class="rows">{"".join(_row(p) for p in ps)}</ul></section>'
@@ -617,7 +625,8 @@ def substance(ctx: Context, s: dict) -> str:
 <div class="wrap">
 <nav class="crumbs" aria-label="Διαδρομή"><a href="/">Αρχική</a> / Δραστική ουσία</nav>
 <div class="page-head">
-  <h1>{e(inn_label(s["name"]))}</h1>
+  <h1>{e(sname(ctx, s["name"]))}</h1>
+  {f'<p class="inn">{e(inn_label(s["name"]))}</p>' if s.get("name_el") else ""}
   <p>{num(len(rows), 0)} συσκευασίες · {num(reimb, 0)} αποζημιώνονται · ATC {e(", ".join(atcs[:4]) or "—")}</p>
 </div>
 {_filters(rows)}
@@ -626,10 +635,12 @@ def substance(ctx: Context, s: dict) -> str:
 """
     return layout(
         ctx,
-        f"{inn_label(s['name'])} · συσκευασίες και τιμές · farmaka.info",
+        f"{sname(ctx, s['name'])} ({inn_label(s['name'])}) · συσκευασίες και τιμές · farmaka.info"
+        if s.get("name_el")
+        else f"{inn_label(s['name'])} · συσκευασίες και τιμές · farmaka.info",
         body,
         f"/ousia/{s['slug']}/",
-        f"Όλες οι συσκευασίες με {inn_label(s['name'])} στην Ελλάδα, με τιμή και αποζημίωση.",
+        f"Όλες οι συσκευασίες με {sname(ctx, s['name'])} ({inn_label(s['name'])}) στην Ελλάδα, με τιμή και αποζημίωση.",
     )
 
 
@@ -783,6 +794,45 @@ def about(ctx: Context) -> str:
         "/sxetika/",
         "Τι είναι το farmaka.info και από πού έρχονται τα δεδομένα.",
         nav="about",
+    )
+
+
+def substances_index(ctx: Context) -> str:
+    """All substances A–Ω (Greek names first, then INNs), each with its package count."""
+    items = []
+    for slug, v in ctx.subst.items():
+        name = v.get("name_el") or inn_label(v["name"])
+        items.append((name, slug, v))
+    items.sort(key=lambda t: (t[0][:1].isascii(), t[0].lower()))
+    groups: dict[str, list] = {}
+    for name, slug, v in items:
+        groups.setdefault(name[:1].upper(), []).append((name, slug, v))
+    parts = []
+    for letter, rows in groups.items():
+        lis = "".join(
+            f'<li><a href="/ousia/{e(slug)}/">{e(name)}</a>'
+            + (f' <span class="inn">{e(inn_label(v["name"]))}</span>' if v.get("name_el") else "")
+            + f' <span class="n">{len(v["codes"])}</span></li>'
+            for name, slug, v in rows
+        )
+        parts.append(f'<section class="letter"><h2>{e(letter)}</h2><ul class="az">{lis}</ul></section>')
+    body = f"""
+<div class="wrap">
+<div class="page-head">
+  <h1>Δραστικές ουσίες</h1>
+  <p>{num(len(ctx.subst), 0)} ουσίες. Ελληνικά ονόματα από το Wikidata όπου υπάρχουν· αλλιώς το διεθνές όνομα (INN).</p>
+</div>
+{search_form(autofocus=False)}
+{"".join(parts)}
+</div>
+"""
+    return layout(
+        ctx,
+        "Δραστικές ουσίες · farmaka.info",
+        body,
+        "/ousies/",
+        "Όλες οι δραστικές ουσίες φαρμάκων στην Ελλάδα.",
+        search_box=False,
     )
 
 

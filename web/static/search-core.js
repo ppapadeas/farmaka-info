@@ -140,3 +140,31 @@ export function splitName(name) {
   }
   return [(toks[0] || name).replace(/[®™]/g, ""), toks.slice(1).join(" ")];
 }
+
+// Substance index: slug, INN, Greek name, number of packages, skeleton.
+export function parseSubstances(tsv) {
+  const rows = [];
+  for (const line of tsv.split("\n")) {
+    if (!line || line.startsWith("#")) continue;
+    const f = line.split("\t");
+    rows.push({ slug: f[0], inn: f[1], name_el: f[2] || null, packages: Number(f[3]), sk: f[4] });
+  }
+  return rows;
+}
+
+export function searchSubstances(rows, q, limit = 3) {
+  const tokens = queryTokens(q);
+  if (!tokens.length || codeFromQuery(q)) return [];
+  const hits = [];
+  for (const r of rows) {
+    if (!tokens.every((t) => r.sk.includes(t))) continue;
+    const prefix = (" " + r.sk).includes(" " + tokens[0]) ? 0 : 1;
+    hits.push([prefix, -r.packages, r]);
+  }
+  hits.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  return hits.slice(0, limit).map((h) => h[2]);
+}
+
+export function innLabel(s) {
+  return /^[A-Z0-9 ,\-()/.']+$/.test(s) ? s[0] + s.slice(1).toLowerCase() : s;
+}

@@ -1,0 +1,409 @@
+inn,name_el,wikidata,atc,matched_by
+ABACAVIR,Αβακαβίρη,Q304330,J05AF06,atc+name
+ACENOCOUMAROL,Ασενοκουμαρόλη,Q304088,B01AA07,atc+name
+ACETAZOLAMIDE,Ακεταζολαμίδη,Q413690,S01EC01,atc+name
+ACETIC ACID,Αιθανικό οξύ,Q47512,,name
+ACETYLCHOLINE,Ακετυλοχολίνη,Q180623,S01EB09,atc+name
+ACICLOVIR,Ακικλοβίρη,Q147101,J05AB01,atc+name
+ADALIMUMAB,Aδαλιμουμάμπη,Q348260,L04AB04,atc+name
+ADAPALENE,Ανταπαλένη,Q352348,D10AD03,atc+name
+ADENOSINE,Αδενοσίνη,Q190012,C01EB10,atc+name
+AGOMELATINE,Αγομελατίνη,Q395229,N06AX22,atc+name
+ALFUZOSIN,Αλφουζοσίνη,Q2736873,G04CA01,atc+name
+ALLOPURINOL,Αλλοπουρινόλη,Q412486,M04AA01,atc+name
+ALOGLIPTIN,Αλογλιπτίνη,Q4734170,A10BH04,atc+name
+ALPRAZOLAM,Αλπραζολάμη,Q319877,N05BA12,atc+name
+ALPROSTADIL,Αλπροσταδίλη,Q579348,C01EA01,atc+name
+ALTEPLASE,Αλτεπλάση,Q45769835,B01AD02,atc+name
+AMIKACIN,Αμικασίνη,Q408529,D06AX12,atc+name
+AMILORIDE,Αμιλορίδη,Q419995,,name
+AMINOPHYLLINE,Αμινοφυλλίνη,Q471763,R03DA05,atc+name
+AMIODARONE,Αμιοδαρόνη,Q410061,C01BD01,atc+name
+AMITRIPTYLINE,Αμιτριπτυλίνη,Q58397,N06AA09,atc+name
+AMLODIPINE,Αμλοδιπίνη,Q411347,C08CA01,atc+name
+AMOXICILLIN,Αμοξυκιλλίνη,Q201928,J01CA04,atc+name
+AMPHOTERICIN B,Αμφοτερικίνη β,Q412223,J02AA01,atc+name
+AMPICILLIN,Αμπικιλλίνη,Q244150,J01CA01,atc+name
+AMPICILLIN SODIUM,Αμπικιλλίνη,Q244150,J01CA01,atc+name
+ANASTROZOLE,Αναστροζόλη,Q419143,L02BG03,atc+name
+APIXABAN,Απιξαμπάνη,Q414462,B01AF02,atc+name
+APREMILAST,Απρεμιλάστη,Q2858961,L04AA32,atc+name
+ARIPIPRAZOLE,Αριπιπραζόλη,Q411188,N05AX12,atc+name
+ARSENIC TRIOXIDE,Τριοξείδιο του αρσενικού,Q7739,L01XX27,atc+name
+ASENAPINE,Ασεναπίνη,Q416545,N05AH05,atc+name
+ATAZANAVIR SULPHATE,Αταζαναβίρη,Q423467,J05AE08,atc+name
+ATENOLOL,Ατενολόλη,Q411325,C07AB03,atc+name
+ATOMOXETINE,Ατομοξετίνη,Q417240,N06BA09,atc+name
+ATORVASTATIN,Ατορβαστατίνη,Q668093,C10AA05,atc+name
+ATROPINE,Ατροπίνη,Q26272,S01FA01,atc+name
+ATROPINE SULFATE,Ατροπίνη,Q26272,A03BA01,atc+name
+AZATHIOPRINE,Αζαθειοπρίνη,Q18939,L04AX01,atc+name
+AZIDAMFENICOL,Αζιδαμφενικόλη,Q425029,S01AA25,atc+name
+AZITHROMYCIN,Αζιθρομυκίνη,Q165399,S01AA26,atc+name
+AZTREONAM,Αζτρεονάμη,Q418546,J01DF01,atc+name
+BCG VACCINE,Εμβόλιο BCG,Q798309,L03AX03,atc+name
+BENDAMUSTINE,Βενδαμουστίνη,Q425745,L01AA09,atc+name
+BENZOYL PEROXIDE,Υπεροξείδιο του βενζολίου,Q411424,,name
+BENZYL BENZOATE,Βενζοϊκό βενζύλιο,Q413755,P03AX01,atc+name
+BENZYLPENICILLIN,Βενζυλοπενικιλλίνη,Q258450,J01CE01,atc+name
+BETAINE,Τριμεθυλογλυκίνη,Q10860583,,name
+BETAMETHASONE,Βηταμεθαζόνη,Q416132,H02AB01,atc+name
+BEVACIZUMAB,Βεβασιζουμάμπη,Q413299,L01XC07,atc+name
+BICALUTAMIDE,Βικαλουταμίδη,Q1988832,L02BB03,atc+name
+BILASTINE,Μπιλαστίνη,Q2902977,R06AX29,atc+name
+BIOTIN,Βιοτίνη,Q181354,,name
+BIPERIDEN,Βιπεριδένη,Q414914,N04AA02,atc+name
+BISOPROLOL,Βισοπρολόλη,Q412515,C07AB07,atc+name
+BRINZOLAMIDE,Βρινζολαμίδη,Q411517,S01EC04,atc+name
+BROMAZEPAM,Βρωμαζεπάμη,Q422435,N05BA08,atc+name
+BUDESONIDE,Βουδεσονίδη,Q422212,A07EA06,atc+name
+BUPRENORPHINE,Βουπρενορφίνη,Q407721,N07BC01,atc+name
+BUPROPION,Βουπροπιόνη,Q834280,N06AX12,atc+name
+BUSPIRONE,Βουσπιρόνη,Q412194,N05BE01,atc+name
+CABAZITAXEL,Καμπαζιταξέλη,Q412963,L01CD04,atc+name
+CAFFEINE,Καφεΐνη,Q60235,N06BC01,atc+name
+CALCIUM CHLORIDE,Χλωριούχο ασβέστιο,Q208451,B05XA07,atc+name
+CALCIUM GLUCONATE,Γλυκονικό ασβέστιο,Q413739,,name
+CANNABIDIOL,Κανναβιδιόλη (CBD),Q422917,N03AX24,atc+name
+CAPECITABINE,Καπεσιταβίνη,Q420207,L01BC06,atc+name
+CAPSAICIN,Καψαϊκίνη,Q273169,N01BX04,atc+name
+CAPTOPRIL,Καπτοπρίλη,Q421119,C09AA01,atc+name
+CARBOPLATIN,Καρβοπλατίνη,Q415588,L01XA02,atc+name
+CARVEDILOL,Καρβεδιλόλη,Q412534,C07AG02,atc+name
+CEFACLOR,Κεφακλόρη,Q415167,J01DC04,atc+name
+CEFAZOLIN,Κεφαζολίνη,Q415739,J01DB04,atc+name
+CEFAZOLIN SODIUM,Κεφαζολίνη,Q415739,J01DB04,atc+name
+CEFEPIME,Κεφεπίμη,Q2552927,J01DE01,atc+name
+CEFIXIME,Άνυδρη κεφιξίμη,Q163901,J01DD08,atc+name
+CEFOTAXIME,Κεφοταξίμη,Q417968,J01DD01,atc+name
+CEFTAZIDIME,Κεφταζιδίμη,Q808845,J01DD02,atc+name
+CEFTRIAXONE,Κεφτριαξόνη,Q421713,J01DD04,atc+name
+CEFTRIAXONE SODIUM,Κεφτριαξόνη,Q421713,J01DD04,atc+name
+CEFUROXIME,Κεφουροξίμη,Q413728,S01AA27,atc+name
+CEFUROXIME SODIUM,Κεφουροξίμη,Q413728,J01DC02,atc+name
+CELECOXIB,Σελεκοξίμπη,Q408801,M01AH01,atc+name
+CETIRIZINE,Σετιριζίνη,Q423075,R06AE07,atc+name
+CETUXIMAB,Κετουξιμάμπη,Q420296,,name
+CHLORAMPHENICOL,Χλωραμφενικόλη,Q274515,S01AA01,atc+name
+CHLOROQUINE,Χλωροκίνη,Q422438,P01BA01,atc+name
+CHLORPROMAZINE,Χλωροπρομαζίνη,Q407972,N05AA01,atc+name
+CHOLECALCIFEROL,Χοληκαλσιφερόλη,Q139347,A11CC05,atc+name
+CILOSTAZOL,Σιλοσταζόλη,Q258591,B01AC23,atc+name
+CIMETIDINE,Σιμετιδίνη,Q409492,A02BA01,atc+name
+CIPROFLOXACIN,Σιπροφλοξασίνη,Q256602,S02AA15,atc+name
+CISPLATIN,Σισπλατίνη,Q412415,L01XA01,atc+name
+CLADRIBINE,Κλαδριβίνη,Q414030,L01BB04,atc+name
+CLARITHROMYCIN,Κλαριθρομυκίνη,Q118551,J01FA09,atc+name
+CLINDAMYCIN,Κλινδαμυκίνη,Q422273,D10AF01,atc+name
+CLOMIFENE,Κλομιφαίνη,Q418730,G03GB02,atc+name
+CLOMIPRAMINE,Κλομιπραμίνη,Q58713,N06AA04,atc+name
+CLONIDINE,Κλονιδίνη,Q412221,C02AC01,atc+name
+CLOPIDOGREL,Κλοπιδογρέλη,Q410237,B01AC04,atc+name
+CLOTRIMAZOLE,Κλοτριμαζόλη,Q413546,G01AF02,atc+name
+CLOXACILLIN,Κλοξακιλλίνη,Q422219,J01CF02,atc+name
+CLOZAPINE,Κλοζαπίνη,Q221361,N05AH02,atc+name
+COAL TAR,Πίσσα λιθανθράκων,Q948232,,name
+CODEINE,Κωδεΐνη,Q174723,,name
+COLISTIN,Κολιστίνη,Q418946,J01XB01,atc+name
+CYTARABINE,Κυταραβίνη,Q180983,L01BC01,atc+name
+DABRAFENIB,Dabrafenib,Q3011604,L01XE23,atc+name
+DAPAGLIFLOZIN,Δαπαγλιφλοζίνη,Q409898,A10BK01,atc+name
+DARUNAVIR,Δαρουναβίρη,Q3765251,J05AE10,atc+name
+DASATINIB,Δασατινίμπη,Q419940,L01XE06,atc+name
+DAUNORUBICIN,Δαουνορουβικίνη,Q411659,,name
+DEFEROXAMINE,Δεφεροξαμίνη,Q419618,V03AC01,atc+name
+DENOSUMAB,Δενοσουμάμπη,Q408283,M05BX04,atc+name
+DESLORATADINE,Δεσλοραταδίνη,Q418060,R06AX27,atc+name
+DESMOPRESSIN,Δεσμοπρεσσίνη,Q241006,H01BA02,atc+name
+DESOGESTREL,Δεσογεστρέλη,Q415304,G03AC09,atc+name
+DEXAMETHASONE,Δεξαμεθαζόνη,Q422252,S01BA01,atc+name
+DEXPANTHENOL,Δεξπανθενόλη,Q47495755,,name
+DIAZEPAM,Διαζεπάμη,Q210402,N05BA01,atc+name
+DICLOFENAC,Δικλοφαινάκη,Q244408,D11AX18,atc+name
+DIGOXIN,Διγοξίνη,Q422222,C01AA05,atc+name
+DILTIAZEM,Διλτιαζέμη,Q422229,C08DB01,atc+name
+DIMETHYL FUMARATE,Φουμαρικός διμεθυλεστέρας,Q418123,L04AX07,atc+name
+DOCETAXEL,Ντοσεταξέλη,Q420436,L01CD02,atc+name
+DOLUTEGRAVIR,Ντολουτεγκραβίρη,Q937224,,name
+DONEPEZIL,Δονεπεζίλη,Q415081,N06DA02,atc+name
+DOPAMINE,Ντοπαμίνη,Q170304,C01CA04,atc+name
+DOXORUBICIN,Δοξορουβικίνη,Q18936,L01DB01,atc+name
+DOXYCYCLINE,Δοξυκυκλίνη,Q422442,J01AA02,atc+name
+DULAGLUTIDE,Ντουλαγλουτίδη,Q21011228,A10BJ05,atc+name
+DURVALUMAB,Δουρβαλουμάμπη,Q19904005,L01FF03,atc+name
+EDOXABAN,Εδοξαμπάνη,Q21011234,B01AF03,atc+name
+EDOXABAN TOSYLATE MONOHYDRATE,Εδοξαμπάνη,Q21011234,B01AF03,atc+name
+EFAVIRENZ,Εφαβιρένζη,Q422645,,name
+EMPAGLIFLOZIN,Εμπαγλιφλοζίνη,Q5373824,A10BK03,atc+name
+EMTRICITABINE,Εμτρισιταβίνη,Q422604,J05AF09,atc+name
+ENALAPRIL,Εναλαπρίλη,Q422185,C09AA02,atc+name
+ENCORAFENIB,Encorafenib,Q15409405,,name
+ENOXAPARIN,Ενοξαπαρίνη,Q416516,B01AB05,atc+name
+ENTECAVIR,Εντεκαβίρη,Q418586,J05AF10,atc+name
+ENTECAVIR MONOHYDRATE,Εντεκαβίρη,Q418586,J05AF10,atc+name
+EPHEDRINE,Εφεδρίνη,Q219626,,name
+EPINEPHRINE,Αδρεναλίνη,Q132621,C01CA24,atc+name
+EPINEPHRINE BITARTRATE,Αδρεναλίνη,Q132621,C01CA24,atc+name
+ERGOCALCIFEROL,Εργοκαλσιφερόλη,Q139200,,name
+ERGOMETRINE,Εργομητρίνη,Q424508,G02AB03,atc+name
+ERYTHROMYCIN,Ερυθρομυκίνη,Q213511,D10AF02,atc+name
+ESCITALOPRAM,Εσκιταλοπράμη,Q423757,N06AB10,atc+name
+ESOMEPRAZOLE,Εσομεπραζόλη,Q553223,A02BC05,atc+name
+ETANERCEPT,Ετανερσέπτη,Q415343,L04AB01,atc+name
+ETORICOXIB,Ετορικοξίμπη,Q631202,M01AH05,atc+name
+EZETIMIBE,Εζετιμίμπη,Q417997,C10AX09,atc+name
+FAMOTIDINE,Φαμοτιδίνη,Q411159,A02BA03,atc+name
+FEBUXOSTAT,Φεμπουξοστάτη,Q417296,M04AA03,atc+name
+FEBUXOSTAT HEMIHYDRATE,Φεμπουξοστάτη,Q417296,M04AA03,atc+name
+FENOFIBRATE,Φαινοφιμπράτη,Q419724,C10AB05,atc+name
+FENTANYL,Φαιντανύλη,Q407541,N01AH01,atc+name
+FILGRASTIM,Φιλγραστίμη,Q3151081,L03AA02,atc+name
+FINASTERIDE,Φιναστερίδη,Q424167,D11AX10,atc+name
+FINGOLIMOD,Φινγκολιμόδη,Q425137,L04AA27,atc+name
+FLECAINIDE,Φλεκαϊνίδη,Q421381,C01BC04,atc+name
+FLECAINIDE ACETATE,Φλεκαϊνίδη,Q421381,C01BC04,atc+name
+FLUCONAZOLE,Φλουκοναζόλη,Q411478,D01AC15,atc+name
+FLUDARABINE,Φωσφορική φλουνταραμπίνη,Q185916,L01BB05,atc+name
+FLUDROCORTISONE,Φλουδροκορτιζόνη,Q2697578,,name
+FLUMAZENIL,Φλουμαζενίλη,Q421920,V03AB25,atc+name
+FLUNITRAZEPAM,Φλουνιτραζεπάμη,Q62947,N05CD03,atc+name
+FLUOROURACIL,Φθοριοουρακίλη,Q238512,L01BC02,atc+name
+FLUOXETINE,Φλουοξετίνη,Q422244,N06AB03,atc+name
+FLUOXETINE HYDROCHLORIDE,Φλουοξετίνη,Q422244,N06AB03,atc+name
+FLUTICASONE,Φλουτικαζόνη,Q1002165,R01AD08,atc+name
+FOLIC ACID,Φυλλικό οξύ,Q127060,B03BB01,atc+name
+FOSFOMYCIN,Φωσφομυκίνη,Q183554,J01XX01,atc+name
+FULVESTRANT,Φουλβεστράντη,Q5508491,L02BA03,atc+name
+FUROSEMIDE,Φουροσεμίδη,Q388801,C03CA01,atc+name
+FUSIDIC ACID,Φουσιδικό οξύ,Q259930,D06AX01,atc+name
+GABAPENTIN,Γκαμπαπεντίνη,Q410352,,name
+GEMCITABINE,Γεµσιταβίνη,Q414143,L01BC05,atc+name
+GENTAMICIN,Γενταμυκίνη,Q422482,S01AA11,atc+name
+GLICLAZIDE,Γλικλαζίδη,Q290001,A10BB09,atc+name
+GLIMEPIRIDE,Γλιμεπιρίδη,Q106029845,A10BB12,atc+name
+GLUCAGON,Γλυκαγόνη,Q170617,H04AA01,atc+name
+GLYCINE,Γλυκίνη,Q620730,,name
+GOSERELIN,Γοσερελίνη,Q1992653,L02AE03,atc+name
+HALOPERIDOL,Αλοπεριδόλη,Q251347,N05AD01,atc+name
+HEPARIN,Ηπαρίνη,Q190016,B01AB01,atc+name
+HYDROCHLOROTHIAZIDE,Υδροχλωροθειαζίδη,Q423930,C03AA03,atc+name
+HYDROXOCOBALAMIN,Υδροξοκοβαλαμίνη,Q73972,B03BA03,atc+name
+HYDROXYCARBAMIDE,Υδροξυκαρβαμίδιο,Q212272,L01XX05,atc+name
+HYDROXYCHLOROQUINE,Υδροξυχλωροκίνη,Q421094,P01BA02,atc+name
+IBUPROFEN,Ιβουπροφαίνη,Q186969,G02CC01,atc+name
+IMATINIB,Ιματινίμπη,Q177094,L01XE01,atc+name
+INFLIXIMAB,Ινφλιξιμάμπη,Q415264,L04AB02,atc+name
+INTERFERON,Ιντερφερόνη,Q188269,,name
+IPRATROPIUM,Βρωμιούχο ιπρατρόπιο,Q424294,R03BB01,atc+name
+IRBESARTAN,Ιρβεσαρτάνη,Q947266,C09CA04,atc+name
+IRINOTECAN,Ιρινοτεκάνη,Q412197,L01XX19,atc+name
+ISONIAZID,Ισονιαζίδη,Q423169,J04AC01,atc+name
+ISOPRENALINE HYDROCHLORIDE,Ισοπροτερενόλη,Q415550,C01CA02,atc+name
+ISOPROPYL ALCOHOL,2-προπανόλη,Q16392,,name
+ISOTRETINOIN,Ισοτρετινοΐνη,Q287029,D10AD04,atc+name
+ITRACONAZOLE,Ιτρακοναζόλη,Q411229,J02AC02,atc+name
+IVERMECTIN,Ιβερμεκτίνη,Q415178,P02CF01,atc+name
+KETOCONAZOLE,Κετοκοναζόλη,Q407883,D01AC08,atc+name
+LACOSAMIDE,Λακοσαμίδη,Q420077,N03AX18,atc+name
+LAMIVUDINE,Λαμιβουδίνη,Q422631,J05AF05,atc+name
+LAMOTRIGINE,Λαμοτριγίνη,Q410346,N03AX09,atc+name
+LANSOPRAZOLE,Λανσοπραζόλη,Q254296,A02BC03,atc+name
+LATANOPROST,Λατανοπρόστη,Q634959,S01EE01,atc+name
+LETROZOLE,Λετροζόλη,Q194974,L02BG04,atc+name
+LEVOCETIRIZINE DIHYDROCHLORIDE,Λεβοσετιριζίνη,Q421091,R06AE09,atc+name
+LEVODOPA,Λεβοντόπα,Q300989,,name
+LEVOFLOXACIN,Λεβοφλοξασίνη,Q424193,S01AE05,atc+name
+LEVONORGESTREL,Λεβονοργεστρέλη,Q416950,,name
+LIDOCAINE,Λιδοκαΐνη,Q216935,C01BB01,atc+name
+LINAGLIPTIN,Λιναγλιπτίνη,Q909745,A10BH05,atc+name
+LINEZOLID,Λινεζολίδη,Q411377,J01XX08,atc+name
+LIRAGLUTIDE,Λιραγλουτίδη,Q2526479,A10BJ02,atc+name
+LISINOPRIL,Λισινοπρίλη,Q412208,C09AA03,atc+name
+LITHIUM,Κατιόν λιθίου,Q152763,N05AN01,atc+name
+LOPERAMIDE,Λοπεραμίδη,Q423751,A07DA03,atc+name
+LORATADINE,Λοραταδίνη,Q424049,R06AX13,atc+name
+LORAZEPAM,Λοραζεπάμη,Q408265,N05BA06,atc+name
+LORLATINIB,Λορλατινίμπη,Q27285820,L01ED05,atc+name
+LORNOXICAM,Λορνοξικάμη,Q2734874,M01AC05,atc+name
+LOSARTAN,Λοσαρτάνη,Q410074,C09CA01,atc+name
+LOVASTATIN,Λοβαστατίνη,Q417740,C10AA02,atc+name
+MAGNESIUM,Θειικό μαγνήσιο,Q288266,B05XA05,atc+name
+MAGNESIUM OXIDE,Οξείδιο του μαγνησίου,Q214769,A12CC10,atc+name
+MANIDIPINE DIHYDROCHLORIDE,Μανιδιπίνη,Q921133,C08CA11,atc+name
+MEBENDAZOLE,Μεμπενδαζόλη,Q422194,P02CA01,atc+name
+MEBEVERINE,Μεμπεβερίνη,Q418167,A03AA04,atc+name
+MEFENAMIC ACID,Μεφαιναμικό οξύ,Q284321,M01AG01,atc+name
+MELATONIN,Μελατονίνη,Q180912,N05CH01,atc+name
+MELOXICAM,Μελοξικάμη,Q414028,M01AC06,atc+name
+MEMANTINE,Μεμαντίνη,Q412189,N06DX01,atc+name
+MEROPENEM,Μεροπενέμη,Q421670,J01DH02,atc+name
+MEROPENEM TRIHYDRATE,Μεροπενέμη,Q421670,J01DH02,atc+name
+METFORMIN,Μετφορμίνη,Q19484,A10BA02,atc+name
+METHOTREXATE,Μεθοτρεξάτη,Q422232,L01BA01,atc+name
+METHYLPHENIDATE,Μεθυλφαινιδάτη,Q422112,N06BA04,atc+name
+METHYLPREDNISOLONE,Μεθυλπρεδνιζολόνη,Q417222,H02AB04,atc+name
+METOCLOPRAMIDE,Μετοκλοπραμίδη,Q421095,A03FA01,atc+name
+METRONIDAZOLE,Μετρονιδαζόλη,Q169569,G01AF01,atc+name
+MIDAZOLAM,Μιδαζολάμη,Q423071,N05CD08,atc+name
+MIFEPRISTONE,Μιφεπριστόνη,Q411240,G03XB01,atc+name
+MIRABEGRON,Μιραβεργόνη,Q3702534,G04BD12,atc+name
+MIRTAZAPINE,Μιρταζαπίνη,Q421930,N06AX11,atc+name
+MISOPROSTOL,Μισοπροστόλη,Q416025,G02AD06,atc+name
+MITOXANTRONE,Μιτοξανδρόνη,Q239426,L01DB07,atc+name
+MODAFINIL,Μονταφινίλη,Q410441,N06BA07,atc+name
+MOMETASONE,Μομεταζόνη,Q1044248,R01AD09,atc+name
+MONTELUKAST,Μοντελουκάστη,Q417767,R03DC03,atc+name
+MOXIFLOXACIN,Μοξιφλοξασίνη,Q424940,S01AE07,atc+name
+MOXIFLOXACIN HYDROCHLORIDE,Μοξιφλοξασίνη,Q424940,S01AE07,atc+name
+MUPIROCIN,Μουπιροσίνη,Q413578,R01AX06,atc+name
+NALOXONE,Ναλοξόνη,Q282902,V03AB15,atc+name
+NALTREXONE,Ναλτρεξόνη,Q409587,,name
+NAPROXEN,Ναπροξένη,Q1215575,M01AE02,atc+name
+NATALIZUMAB,Ναταλιζουμάμπη,Q386119,,name
+NEBIVOLOL,Νεμπιβολόλη,Q418130,C07AB12,atc+name
+NEOSTIGMINE,Νεοστιγμίνη,Q410546,N07AA01,atc+name
+NEVIRAPINE,Νεβιραπίνη,Q263713,J05AG01,atc+name
+NIFEDIPINE,Νιφεδιπίνη,Q39111,C08CA05,atc+name
+NIMESULIDE,Νιμεσουλίδη,Q20994,M01AX17,atc+name
+NINTEDANIB,Νιντεδανίμπη,Q15149723,L01EX09,atc+name
+NITRIC OXIDE,Μονοξείδιο του αζώτου,Q207843,R07AX01,atc+name
+NITROFURANTOIN,Νιτροφουραντοΐνη,Q422669,J01XE01,atc+name
+NITROFURANTOIN MONOHYDRATE,Νιτροφουραντοΐνη,Q422669,J01XE01,atc+name
+NITROUS OXIDE,Υποξείδιο του αζώτου,Q905750,,name
+NIVOLUMAB,Nivolumab,Q7041828,L01FF01,atc+name
+NOREPINEPHRINE,Νορεπινεφρίνη,Q186242,C01CA03,atc+name
+NOREPINEPHRINE BITARTRATE MONOHYDRATE,Νορεπινεφρίνη,Q186242,C01CA03,atc+name
+NORFLOXACIN,Νορφλοξασίνη,Q417897,J01MA06,atc+name
+NYSTATIN,Νυστατίνη,Q251005,,name
+OCTREOTIDE,Οκτρεοτίδη,Q419935,H01CB02,atc+name
+OLANZAPINE,Ολανζαπίνη,Q201872,N05AH03,atc+name
+OLMESARTAN MEDOXOMIL,Ολμεσαρτάνη,Q421156,C09CA08,atc+name
+OMALIZUMAB,Ομαλιζουμάμπη,Q415392,R03DX05,atc+name
+OMEPRAZOLE,Ομεπραζόλη,Q422210,A02BC01,atc+name
+OMEPRAZOLE SODIUM,Ομεπραζόλη,Q422210,A02BC01,atc+name
+ONDANSETRON,Ονδανσετρόνη,Q410011,A04AA01,atc+name
+ORPHENADRINE,Ορφεναδρίνη,Q3292273,N04AB02,atc+name
+OSELTAMIVIR,Οσελταμιβίρη,Q211509,J05AH02,atc+name
+OSIMERTINIB,Οσιμερτινίμπη,Q21506464,L01EB04,atc+name
+OXALIPLATIN,Οξαλιπλατίνη,Q422327,L01XA03,atc+name
+OXYCODONE,Οξυκωδόνη,Q407535,N02AA05,atc+name
+OXYGEN,Οξυγόνο,Q629,,name
+OXYTETRACYCLINE,Οξυτετρακυκλίνη,Q411646,,name
+OXYTOCIN,Ωκυτοκίνη,Q169960,H01BB02,atc+name
+PACLITAXEL,Πακλιταξέλη,Q423762,L01CD01,atc+name
+PALIPERIDONE,Παλιπεριδόνη,Q423292,N05AX13,atc+name
+PANTOPRAZOLE,Παντοπραζόλη,Q286846,A02BC02,atc+name
+PARACETAMOL,Παρακεταμόλη,Q57055,N02BE01,atc+name
+PAROXETINE,Παροξετίνη,Q408471,N06AB05,atc+name
+PEMBROLIZUMAB,Πεμπρολιζουμάμπη,Q13896859,,name
+PEMETREXED,Πεμετρεξίδη,Q415220,L01BA04,atc+name
+PERPHENAZINE,Περφαιναζίνη,Q423520,,name
+PHENOBARBITAL,Φαινοβαρβιτάλη,Q407241,N03AA02,atc+name
+PHENYLEPHRINE,Φαινυλεφρίνη,Q421910,C01CA06,atc+name
+PHENYTOIN,Φαινυτοΐνη,Q410400,N03AB02,atc+name
+PILOCARPINE,Πιλοκαρπίνη,Q411461,S01EB01,atc+name
+PIPERACILLIN,Πιπερακιλλίνη,Q423787,,name
+PIRACETAM,Πιρακετάμη,Q410069,N06BX03,atc+name
+PIROXICAM,Πιροξικάμη,Q408676,M01AC01,atc+name
+POTASSIUM,Χλωριούχο κάλιο,Q184630,B05XA01,atc+name
+POTASSIUM CHLORIDE,Χλωριούχο κάλιο,Q184630,,name
+POVIDONE-IODINE,Ιωδιούχος ποβιδόνη,Q241516,D08AG02,atc+name
+PRAMIPEXOLE,Πραμιπεξόλη,Q421304,N04BC05,atc+name
+PRASUGREL,Πρασουγρέλη,Q416232,B01AC22,atc+name
+PREDNISOLONE,Πρεδνιζολόνη,Q11426176,S01BA04,atc+name
+PREDNISOLONE SODIUM PHOSPHATE,Πρεδνιζολόνη,Q11426176,H02AB06,atc+name
+PREGABALIN,Πρεγκαμπαλίνη,Q412174,N02BF02,atc+name
+PROGESTERONE,Προγεστερόνη,Q26963,G03DA04,atc+name
+PROGUANIL,Προγουανίλη,Q420607,,name
+PROPOFOL,Προποφόλη,Q422740,N01AX10,atc+name
+PROPRANOLOL,Προπανολόλη,Q423364,C07AA05,atc+name
+PROPYLTHIOURACIL,Προπυλοθειοουρακίλη,Q377342,H03BA02,atc+name
+PROTAMINE,Πρωταμίνες,Q5449573,V03AB14,atc+name
+PRULIFLOXACIN,Προυλιφλοξασίνη,Q3924793,J01MA17,atc+name
+PSEUDOEPHEDRINE,Ψευδοεφεδρίνη,Q263958,,name
+PYRAZINAMIDE,Πυραζιναμίδη,Q417571,J04AK01,atc+name
+PYRIDOSTIGMINE,Πυριδοστιγμίνη,Q419472,N07AA02,atc+name
+PYRIDOXINE,Πυριδοξίνη,Q423746,,name
+QUETIAPINE,Κουετιαπίνη,Q408535,N05AH04,atc+name
+RALTEGRAVIR,Ραλτεγκραβίρη,Q421552,J05AX08,atc+name
+RAMIPRIL,Ραμιπρίλη,Q412666,C09AA05,atc+name
+RASAGILINE,Ρασαγιλίνη,Q420685,N04BD02,atc+name
+RETINOL,Ρετινόλη,Q424976,,name
+RIBOFLAVIN,Ριβοφλαβίνη,Q130365,,name
+RIFAMPICIN,Ριφαμπικίνη,Q422652,,name
+RIFAXIMIN,Ριφαξιμίνη,Q416073,A07AA11,atc+name
+RILUZOLE,Ριλουζόλη,Q415744,N07XX02,atc+name
+RISEDRONIC ACID,Ρισεδρονικό οξύ,Q408724,M05BA07,atc+name
+RISPERIDONE,Ρισπεριδόνη,Q412443,N05AX08,atc+name
+RITONAVIR,Ριτοναβίρη,Q422618,J05AE03,atc+name
+RITUXIMAB,Ριτουξιμάμπη,Q412323,L01XC02,atc+name
+RIVAROXABAN,Ριβαροξαμπάνη,Q420262,B01AF01,atc+name
+RIVASTIGMINE,Ριβαστιγμίνη,Q411887,N06DA03,atc+name
+ROSUVASTATIN,Ροσουβαστατίνη,Q415159,C10AA07,atc+name
+ROSUVASTATIN CALCIUM,Ροσουβαστατίνη,Q415159,C10AA07,atc+name
+ROXITHROMYCIN,Ροξιθρομυκίνη,Q424037,J01FA06,atc+name
+SALICYLIC ACID,Σαλικυλικό οξύ,Q193572,D01AE12,atc+name
+SECUKINUMAB,Σεκουκινουμάμπη,Q7444755,L04AC10,atc+name
+SEMAGLUTIDE,Σεμαγλουτίδη,Q27261089,A10BJ06,atc+name
+SERTRALINE,Σερτραλίνη,Q407617,N06AB06,atc+name
+SILDENAFIL,Σιλδεναφίλη,Q191521,G04BE03,atc+name
+SIMVASTATIN,Σιμβαστατίνη,Q670131,C10AA01,atc+name
+SITAGLIPTIN,Σιταγλιπτίνη,Q419832,A10BH01,atc+name
+SITAGLIPTIN PHOSPHATE,Σιταγλιπτίνη,Q419832,A10BH01,atc+name
+SODIUM BICARBONATE,Όξινο ανθρακικό νάτριο,Q179731,B05XA02,atc+name
+SODIUM CHLORIDE,Χλωριούχο νάτριο,Q2314,B05XA03,atc+name
+SODIUM FLUORIDE,Φθοριούχο Νάτριο,Q407520,A01AA01,atc+name
+SODIUM ZIRCONIUM CYCLOSILICATE,Κυκλοπυριτικό ζιρκόνιο νάτριο,Q17091153,V03AE10,atc+name
+SOFOSBUVIR,Σοφοσμπουβίρη,Q2502747,J05AX15,atc+name
+SOMATOSTATIN,Σωματοστατίνη,Q22075835,H01CB01,atc+name
+SPIRONOLACTONE,Σπειρονολακτόνη,Q422188,C03DA01,atc+name
+SULFADIAZINE,Σουλφαδιαζίνη,Q2555060,,name
+SULFASALAZINE,Σουλφασαλαζίνη,Q420035,A07EC01,atc+name
+SUMATRIPTAN,Σουματριπτάνη,Q416978,N02CC01,atc+name
+TADALAFIL,Ταδαλαφίλη,Q424156,G04BE08,atc+name
+TAMOXIFEN,Ταμοξιφαίνη,Q412178,L02BA01,atc+name
+TAMSULOSIN,Ταμσουλοσίνη,Q418480,G04CA02,atc+name
+TAPENTADOL,Ταπενταδόλη,Q414463,N02AX06,atc+name
+TEDIZOLID PHOSPHATE,Τεντιζολίδη,Q7825683,J01XX11,atc+name
+TELMISARTAN,Τελμισαρτάνη,Q733186,C09CA07,atc+name
+TEMOZOLOMIDE,Τεμοζολομίδη,Q425088,L01AX03,atc+name
+TERBINAFINE,Τερβιναφίνη,Q415259,D01AE15,atc+name
+TERIFLUNOMIDE,Τεριφλουνομίδη,Q3077133,L04AA31,atc+name
+TESTOSTERONE,Τεστοστερόνη,Q1318776,G03BA03,atc+name
+TETRACAINE,Τετρακαΐνη,Q419608,S01HA03,atc+name
+TETRACYCLINE,Τετρακυκλίνη,Q193045,D06AA04,atc+name
+THALIDOMIDE,Θαλιδομίδη,Q203174,L04AX02,atc+name
+THEOPHYLLINE,Θεοφυλλίνη,Q407308,R03DA04,atc+name
+TIOTROPIUM,Τιοτρόπιο,Q424316,R03BB04,atc+name
+TIRZEPATIDE,Τιρζεπατίδη,Q108324770,A10BX16,atc+name
+TIZANIDINE,Τιζανιδίνη,Q423538,M03BX02,atc+name
+TOLTERODINE,Τολτεροδίνη,Q424312,G04BD07,atc+name
+TOPIRAMATE,Τοπιραμάτη,Q221174,N03AX11,atc+name
+TRAMADOL,Τραμαδόλη,Q407592,N02AX02,atc+name
+TRANEXAMIC ACID,Τρανεξαμικό οξύ,Q418666,B02AA02,atc+name
+TRASTUZUMAB,Τραστουζουμάμπη,Q412616,L01XC03,atc+name
+TRAVOPROST,Τραβοπρόστη,Q2193376,S01EE04,atc+name
+TRAZODONE,Τραζοδόνη,Q411457,N06AX05,atc+name
+TRETINOIN,Τρετινοΐνη,Q29417,,name
+TRIAMCINOLONE,Τριαμσινολόνη,Q1074056,A01AC01,atc+name
+TRIFAROTENE,Τριφαροτένη,Q27236856,D10AD06,atc+name
+TRIFLUOPERAZINE,Τριφθοροπεραζίνη,Q1752915,N05AB06,atc+name
+TRIMEBUTINE,Τριμεμπουτίνη,Q2569888,A03AA05,atc+name
+TRIMETAZIDINE,Τριμεταζιδίνη,Q674703,C01EB15,atc+name
+TRIMETHOPRIM,Τριμεθοπρίμη,Q422665,,name
+TROPICAMIDE,Τροπικαμίδη,Q29310,S01FA06,atc+name
+TRYPTOPHAN,Τρυπτοφάνη,Q181003,,name
+TYROTHRICIN,Τυροθρισίνη,Q419421,D06AX08,atc+name
+VALGANCICLOVIR,Βαλγκανκυκλοβίρη,Q423384,J05AB14,atc+name
+VALSARTAN,Βαλσαρτάνη,Q155472,C09CA03,atc+name
+VANCOMYCIN,Βανκομυκίνη,Q424027,J01XA01,atc+name
+VENLAFAXINE,Βενλαφαξίνη,Q898407,N06AX16,atc+name
+VERAPAMIL,Βεραπαμίλη,Q410291,C08DA01,atc+name
+VINORELBINE,Βινορελμπίνη,Q420532,L01CA04,atc+name
+VORICONAZOLE,Βορικοναζόλη,Q412236,J02AC03,atc+name
+VORTIOXETINE,Βορτιοξετίνη,Q3563148,N06AX26,atc+name
+VORTIOXETINE HYDROBROMIDE,Βορτιοξετίνη,Q3563148,N06AX26,atc+name
+ZIDOVUDINE,Ζιδοβουδίνη,Q198504,J05AF01,atc+name
+ZINC,Θειικός ψευδάργυρος,Q204954,A12CB01,atc+name
+ZOLEDRONIC ACID,Ζολεδρονικό οξύ,Q218507,M05BA08,atc+name
+ZOLPIDEM,Ζολπιδέμη,Q218842,N05CF02,atc+name

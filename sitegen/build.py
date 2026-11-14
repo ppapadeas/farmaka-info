@@ -119,6 +119,17 @@ def load_ema(data: Path) -> tuple[dict[str, list[dict]], dict | None]:
     return out, meta
 
 
+GREEK_NAMES = ROOT / "reference" / "substances_el.csv"
+
+
+def load_greek_names(path: Path = GREEK_NAMES) -> dict[str, str]:
+    """INN -> Greek name (reference/substances_el.csv, from Wikidata, CC0)."""
+    if not path.exists():
+        return {}
+    with path.open(encoding="utf-8") as fh:
+        return {r["inn"]: r["name_el"] for r in csv.DictReader(fh) if r["name_el"]}
+
+
 def load(data: Path):
     pk = json.loads((data / "packages.json").read_text(encoding="utf-8"))
     packages = pk["packages"] if isinstance(pk, dict) else pk
@@ -183,8 +194,9 @@ def enrich(packages, sources, history, reimb, ema=None) -> list[dict]:
     return out
 
 
-def substance_index(pkgs: list[dict]) -> dict[str, dict]:
-    """slug -> {name, codes}; unique slugs even if two INNs fold the same."""
+def substance_index(pkgs: list[dict], el: dict[str, str] | None = None) -> dict[str, dict]:
+    """slug -> {name, name_el, codes}; unique slugs even if two INNs fold the same."""
+    el = el or {}
     names = sorted({s for p in pkgs for s in p["substances"]})
     slugs: dict[str, str] = {}
     used: set[str] = set()
@@ -197,7 +209,7 @@ def substance_index(pkgs: list[dict]) -> dict[str, dict]:
         slugs[n] = slug
     out: dict[str, dict] = {}
     for n, slug in slugs.items():
-        out[slug] = {"name": n, "slug": slug, "codes": []}
+        out[slug] = {"name": n, "name_el": el.get(n), "slug": slug, "codes": []}
     for p in pkgs:
         for s in p["substances"]:
             out[slugs[s]]["codes"].append(p["eof_code"])
@@ -217,7 +229,9 @@ def equivalents(pkgs: list[dict]) -> dict[str, list[str]]:
     return {c: codes for codes in groups.values() if len(codes) > 1 for c in codes}
 
 
-def write_search_index(pkgs: list[dict], path: Path) -> None:
+def write_search_index(pkgs: list[dict], path: Path, el: dict[str, str] | None = None) -> None:
+    el = el or {}
+
     def clean(s: str) -> str:
         return str(s or "").replace("\t", " ").replace("\n", " ").strip()
 
@@ -236,11 +250,21 @@ def write_search_index(pkgs: list[dict], path: Path) -> None:
                     "1" if p["non_reimbursed"] else "0",
                     "1" if p["reimbursement"] else "0",
                     skeleton(p["name"]),
-                    skeleton(" ".join(p["substances"])),
+                    skeleton(" ".join(p["substances"] + [el[x] for x in p["substances"] if x in el])),
                     skeleton(p["mah"]),
                 ]
             )
         )
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def write_substance_index(subst: dict[str, dict], path: Path) -> None:
+    """One substance per line: slug, INN, Greek name, packages, skeleton (see search-core.js)."""
+    lines = ["# farmaka.info substance index v1: slug, inn, name_el, packages, skeleton"]
+    for slug, v in sorted(subst.items(), key=lambda kv: -len(kv[1]["codes"])):
+        name_el = v.get("name_el") or ""
+        fields = [slug, v["name"], name_el, str(len(v["codes"])), skeleton(f"{v['name']} {name_el}")]
+        lines.append("\t".join(fields))
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
@@ -382,8 +406,11 @@ def build(data: Path, out: Path, built_at: str) -> dict:
     reimb = load_reimbursement(data)
     ema, ema_meta = load_ema(data)
     pkgs = enrich(packages, sources, history, reimb, ema)
+    el = load_greek_names()
+    for p in pkgs:
+        p["substances_el"] = [el.get(x) for x in p["substances"]]
     by_code = {p["eof_code"]: p for p in pkgs}
-    subst = substance_index(pkgs)
+    subst = substance_index(pkgs, el)
     slug_of = {v["name"]: k for k, v in subst.items()}
 
     if out.exists():
@@ -442,23 +469,28 @@ def build(data: Path, out: Path, built_at: str) -> dict:
         )
     (api / "substances.json").write_text(
         json.dumps(
-            {k: {"name": v["name"], "eof_codes": v["codes"]} for k, v in sorted(subst.items())},
+            {
+                k: {"name": v["name"], "name_el": v["name_el"], "eof_codes": v["codes"]}
+                for k, v in sorted(subst.items())
+            },
             ensure_ascii=False,
             separators=(",", ":"),
         ),
         encoding="utf-8",
     )
-    write_search_index(pkgs, out / "search-index.tsv")
+    write_search_index(pkgs, out / "search-index.tsv", el)
+    write_substance_index(subst, out / "substance-index.tsv")
 
     # pages
     ctx = pages.Context(
         meta=meta, by_code=by_code, subst=subst, slug_of=slug_of, downloads=downloads, equiv=equivalents(pkgs)
     )
-    urls = ["/", "/dedomena/", "/sxetika/"]
+    urls = ["/", "/dedomena/", "/sxetika/", "/ousies/"]
     (out / "index.html").write_text(pages.home(ctx, history), encoding="utf-8")
     for path, html in (
         ("dedomena", pages.data_page(ctx)),
         ("sxetika", pages.about(ctx)),
+        ("ousies", pages.substances_index(ctx)),
     ):
         (out / path).mkdir()
         (out / path / "index.html").write_text(html, encoding="utf-8")
