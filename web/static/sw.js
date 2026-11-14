@@ -3,17 +3,17 @@
 //
 // - pages: network first, cached copy when offline; every page opened is kept
 //   so that packages viewed before still open without a connection
-// - /static/* and /search-index.tsv: stale-while-revalidate
+// - /static/*, /search-index.tsv, /substance-index.tsv: stale-while-revalidate
 // - /api/* and /anazitisi: never cached
 
-const VERSION = "1";
+const VERSION = "2";
 const PREFIX = "farmaka-";
 const ASSETS = `${PREFIX}assets-v${VERSION}`;
 const PAGES = `${PREFIX}pages-v${VERSION}`;
 const MAX_PAGES = 300;
 const VERSION_HEADER = "x-farmaka-asset-version";
 
-const PRECACHE_PAGES = ["/"];
+const PRECACHE_PAGES = ["/", "/ousies/"];
 const PRECACHE_ASSETS = [
   "/static/style.css",
   "/static/app.js",
@@ -26,6 +26,9 @@ const PRECACHE_ASSETS = [
   "/favicon.svg",
   "/manifest.webmanifest",
   "/search-index.tsv",
+  "/substance-index.tsv",
+  "/static/icon-192.png",
+  "/static/apple-touch-icon.png",
 ];
 
 const OFFLINE_HTML = `<!doctype html>
@@ -168,7 +171,7 @@ self.addEventListener("fetch", (event) => {
     return;
   }
   if (search) return;
-  if (url.pathname.startsWith("/static/") || url.pathname === "/search-index.tsv" || PRECACHE_ASSETS.includes(url.pathname)) {
+  if (url.pathname.startsWith("/static/") || url.pathname.endsWith("-index.tsv") || PRECACHE_ASSETS.includes(url.pathname)) {
     event.respondWith(asset(event, url));
   }
 });

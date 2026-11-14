@@ -372,3 +372,13 @@ a.stat-link span { text-decoration: underline; text-decoration-color: var(--line
 .az .n { color: var(--faint); font-size: 12px; font-variant-numeric: tabular-nums; }
 .suggest .grp { padding: 6px 10px 2px; font-size: 12px; font-weight: 600; color: var(--faint); text-transform: none; }
 .suggest a.sub-hit .nm b { color: var(--accent); }
+
+/* install button in the footer */
+.foot .install {
+  font: inherit; font-size: 14px; font-weight: 600; cursor: pointer;
+  border: 1px solid var(--accent-line); border-radius: 999px; padding: 3px 12px;
+  background: var(--bg); color: var(--accent);
+}
+.foot .install:hover { background: var(--accent-soft); }
+.foot .install[hidden] { display: none; }
+@media (display-mode: standalone) { .foot .install { display: none; } }

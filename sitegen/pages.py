@@ -107,7 +107,12 @@ def layout(
 <link rel="canonical" href="{SITE}{e(path)}">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
 <meta name="theme-color" content="#0a6b5b">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="farmaka">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="preload" href="/static/inter-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/static/style.css?v={ASSET_VERSION}">
 <link rel="stylesheet" href="/static/scan.css?v={ASSET_VERSION}">
@@ -128,7 +133,7 @@ def layout(
 <footer class="foot">
   <div class="wrap">
     <span>Ενημερωτικό· δεν αντικαθιστά γιατρό ή φαρμακοποιό. Πηγή: Υπουργείο Υγείας.</span>
-    <nav aria-label="Υποσέλιδο"><a href="/dedomena/">Δεδομένα CC0</a><a href="{REPO}">Κώδικας</a><a href="{REPO}/issues">Αναφορά λάθους</a></nav>
+    <nav aria-label="Υποσέλιδο"><button type="button" class="install" hidden>Εγκατάσταση εφαρμογής</button><a href="/dedomena/">Δεδομένα CC0</a><a href="{REPO}">Κώδικας</a><a href="{REPO}/issues">Αναφορά λάθους</a></nav>
   </div>
 </footer>
 </body>
@@ -776,6 +781,11 @@ def about(ctx: Context) -> str:
 <h2>Τι δεν είναι</h2>
 <p>Ιατρική συμβουλή. Για την υγεία σας ρωτήστε γιατρό ή φαρμακοποιό. Αν κάτι διαφέρει από την επίσημη πηγή, ισχύει η πηγή.</p>
 
+<h2 id="egkatastasi">Εγκατάσταση στο κινητό</h2>
+<p>Το site εγκαθίσταται σαν εφαρμογή και ανοίγει και χωρίς σύνδεση για όσα έχετε ήδη δει.
+Android/Chrome: «Εγκατάσταση εφαρμογής» από το μενού ή το κουμπί στο κάτω μέρος της σελίδας.
+iPhone/Safari: Κοινοποίηση → «Προσθήκη στην οθόνη Αφετηρίας».</p>
+
 <h2>Ιδιωτικότητα</h2>
 <p>Χωρίς λογαριασμούς, cookies, analytics ή scripts τρίτων. Η αναζήτηση γίνεται στον browser σας.
 Φιλοξενία: Cloudflare, που κρατά τεχνικά logs ασφαλείας.</p>
@@ -885,17 +895,39 @@ HEADERS = """/*
 
 
 def webmanifest() -> str:
+    icons = [
+        {"src": "/static/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+        {"src": "/static/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+        {
+            "src": "/static/icon-maskable-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable",
+        },
+        {"src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any"},
+    ]
+    shortcut_icon = [{"src": "/static/icon-192.png", "sizes": "192x192", "type": "image/png"}]
     return json.dumps(
         {
-            "name": "farmaka.info",
+            "id": "/",
+            "name": "farmaka.info · Πληροφορίες φαρμάκων",
             "short_name": "farmaka",
-            "description": "Πληροφορίες φαρμάκων στην Ελλάδα",
+            "description": "Πληροφορίες φαρμάκων στην Ελλάδα: τιμές, αποζημίωση, δραστικές ουσίες, επίσημα κείμενα.",
             "lang": "el",
+            "dir": "ltr",
             "start_url": "/",
+            "scope": "/",
             "display": "standalone",
+            "orientation": "any",
             "background_color": "#ffffff",
             "theme_color": "#0a6b5b",
-            "icons": [{"src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml"}],
+            "categories": ["medical", "health", "reference"],
+            "icons": icons,
+            "shortcuts": [
+                {"name": "Αναζήτηση", "url": "/anazitisi", "icons": shortcut_icon},
+                {"name": "Δραστικές ουσίες", "url": "/ousies/", "icons": shortcut_icon},
+                {"name": "Δεδομένα & API", "url": "/dedomena/", "icons": shortcut_icon},
+            ],
         },
         ensure_ascii=False,
         indent=1,

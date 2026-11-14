@@ -216,3 +216,23 @@ document.querySelectorAll("form.search").forEach((form) => {
   setup(form);
   initScan(form); // adds a camera button only where barcode scanning is supported
 });
+
+// "Install app" button: only where the browser offers installation (Chrome,
+// Edge, Android). iPhone users get the hint on the About page instead.
+let installEvent = null;
+const installBtn = document.querySelector("button.install");
+window.addEventListener("beforeinstallprompt", (ev) => {
+  ev.preventDefault();
+  installEvent = ev;
+  if (installBtn) installBtn.hidden = false;
+});
+installBtn?.addEventListener("click", async () => {
+  if (!installEvent) return;
+  installEvent.prompt();
+  await installEvent.userChoice.catch(() => null);
+  installEvent = null;
+  installBtn.hidden = true;
+});
+window.addEventListener("appinstalled", () => {
+  if (installBtn) installBtn.hidden = true;
+});

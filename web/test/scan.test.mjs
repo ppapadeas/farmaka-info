@@ -205,7 +205,7 @@ test("sw: assets are keyed without ?v and refreshed when the build changes", asy
   const sw = loadSw({ body: "build-a" });
   // first sight: network, stored under the bare path
   assert.equal(await (await sw.dispatch("/static/app.js?v=a")).text(), "build-a");
-  const assets = sw.caches.stores.get("farmaka-assets-v1");
+  const assets = sw.caches.stores.get("farmaka-assets-v2");
   assert.ok(assets.m.has(`${ORIGIN}/static/app.js`));
   assert.equal(assets.m.has(`${ORIGIN}/static/app.js?v=a`), false);
 
@@ -234,9 +234,9 @@ test("sw: assets are keyed without ?v and refreshed when the build changes", asy
 
 test("sw: activate removes caches of older versions only", async () => {
   const sw = loadSw();
-  for (const n of ["farmaka-assets-v0", "farmaka-pages-v0", "farmaka-assets-v1", "other-app"]) await sw.caches.open(n);
+  for (const n of ["farmaka-assets-v0", "farmaka-pages-v1", "farmaka-assets-v2", "other-app"]) await sw.caches.open(n);
   let done;
   sw.handlers.activate({ waitUntil: (p) => (done = p) });
   await done;
-  assert.deepEqual((await sw.caches.keys()).sort(), ["farmaka-assets-v1", "other-app"]);
+  assert.deepEqual((await sw.caches.keys()).sort(), ["farmaka-assets-v2", "other-app"]);
 });
