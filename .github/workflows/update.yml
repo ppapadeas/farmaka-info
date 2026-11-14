@@ -37,8 +37,8 @@ jobs:
         run: |
           python -m ingest.build --manifest data/manifest_prices.json --raw data/raw --out data/current
           if [ -f ingest/reimbursement.py ]; then
-            python -m ingest.reimbursement --pdf samples/raw/katalogos_2026-10.pdf --list main --decimal . --out data/current/reimbursement_main.csv
-            python -m ingest.reimbursement --pdf samples/raw/katalogos_n3816_2026-10.pdf --list n3816 --decimal , --out data/current/reimbursement_n3816.csv
+            python -m ingest.reimbursement --pdf samples/raw/katalogos_2026-10.pdf --list main --decimal . --article 14875 --published 2026-10-22 --out data/current/reimbursement_main.csv
+            python -m ingest.reimbursement --pdf samples/raw/katalogos_n3816_2026-10.pdf --list n3816 --decimal , --article 14875 --published 2026-10-22 --out data/current/reimbursement_n3816.csv
           fi
       - name: Save downloaded bulletins
         if: always()
