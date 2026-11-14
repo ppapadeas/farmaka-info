@@ -548,7 +548,8 @@ def availability_card(ctx: Context, p: dict) -> str:
         if a.get("reason"):
             bits.append(EU_REASON.get(a["reason"], a["reason"]))
         if a.get("start"):
-            bits.append("από " + date_gr(a["start"]))
+            future = a["start"] > ctx.meta["built_at"][:10]
+            bits.append(("αναμένεται από " if future else "από ") + date_gr(a["start"]))
         if a.get("valid_until"):
             bits.append("έως " + date_gr(a["valid_until"]))
         detail = f"<span>{e(' · '.join(bits))}</span>" if bits else ""
@@ -1034,7 +1035,12 @@ def shortages_page(ctx: Context) -> str:
         for p in sorted(ps, key=lambda p: p["name"]):
             a = next(a for a in p["availability"] if a["type"] == t)
             why = EU_REASON.get(a.get("reason") or "", a.get("reason") or "")
-            start = date_gr(a["start"]) if a.get("start") else ""
+            today = ctx.meta["built_at"][:10]
+            span = ""
+            if a.get("start"):
+                span = ("αναμένεται " if a["start"] > today else "") + date_gr(a["start"])
+                span += f" – {date_gr(a['valid_until'])}" if a.get("valid_until") else ""
+            start = span
             lis.append(
                 f'<li><a class="nm" href="/farmako/{e(p["eof_code"])}/">{name_html(p["name"])}</a>'
                 f'<span class="mah">{e(why)}</span><span class="p">{start}</span></li>'
