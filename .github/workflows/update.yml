@@ -31,6 +31,16 @@ jobs:
             !data/eof
           key: moh-data-${{ github.run_id }}
           restore-keys: moh-data-
+      - name: EMA product information in sections (from the cache, else the data-ema-pi release)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ -z "$(ls -A data/current/ema_pi 2>/dev/null)" ]; then
+            mkdir -p data/current
+            gh release download data-ema-pi --pattern ema_pi.tar.gz --dir "$RUNNER_TEMP" --clobber
+            tar xzf "$RUNNER_TEMP/ema_pi.tar.gz" -C data/current
+          fi
+          ls data/current/ema_pi | wc -l
       - name: Restore EOF document links (from the nightly crawl)
         uses: actions/cache/restore@v4
         with:
