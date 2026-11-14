@@ -25,7 +25,7 @@ from collections import defaultdict
 from datetime import UTC, datetime
 from pathlib import Path
 
-from . import pages, trivia
+from . import leaflets, pages, trivia
 from .drug import form_group, strength
 from .text import skeleton, slugify
 
@@ -599,6 +599,8 @@ def build(data: Path, out: Path, built_at: str) -> dict:
     (out / "404.html").write_text(pages.not_found(ctx), encoding="utf-8")
     (out / "_templates").mkdir()
     (out / "_templates" / "search.html").write_text(pages.search_template(ctx), encoding="utf-8")
+    ctx.leaflets = leaflets.build(ctx, data / "ema_pi", out)
+    urls += [f"/fylla/{v['slug']}/" for v in ctx.leaflets.values()]
     for p in pkgs:
         d = out / "farmako" / p["eof_code"]
         d.mkdir(parents=True)

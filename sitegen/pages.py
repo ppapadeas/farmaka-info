@@ -58,6 +58,7 @@ class Context:
     slug_of: dict
     downloads: list
     equiv: dict = field(default_factory=dict)  # eof_code -> codes with same substances, strength, form
+    leaflets: dict = field(default_factory=dict)  # EMA product number -> {slug, name, pil, smpc}
 
 
 def sname(ctx: Context, inn: str) -> str:
@@ -454,12 +455,33 @@ def equivalents_card(ctx: Context, p: dict) -> str:
 </section>"""
 
 
-def docs_card(p: dict) -> str:
+def docs_card(ctx: Context, p: dict) -> str:
     """Official texts. EMA links for centrally authorised medicines; for the rest
     the EOF search (a link the visitor follows, not something we crawl)."""
     pis = [x for x in p.get("product_information", []) if x.get("smpc_pil_el_url") or x.get("epar_url")]
     if pis:
         x = pis[0]
+        lf = ctx.leaflets.get(x.get("product_number"))
+        if lf:
+            read = []
+            if lf["pil"]:
+                read.append(
+                    f'<a class="doc" href="/fylla/{e(lf["slug"])}/">Φύλλο οδηγιών χρήσης</a><div>Για τον ασθενή · σε ενότητες</div>'
+                )
+            if lf["smpc"]:
+                href = f"/fylla/{e(lf['slug'])}/pxp/" if lf["pil"] else f"/fylla/{e(lf['slug'])}/"
+                read.append(
+                    f'<a class="doc" href="{href}">Περίληψη χαρακτηριστικών (ΠΧΠ)</a><div>Για επαγγελματίες · σε ενότητες</div>'
+                )
+            pdf = (
+                f' · <a href="{e(x["smpc_pil_el_url"])}" rel="noopener">pdf ↗</a>'
+                if x.get("smpc_pil_el_url")
+                else ""
+            )
+            return f"""<section class="card side">
+      <h2>Επίσημα κείμενα</h2>
+      <div class="docs">{"".join(read)}<p class="small">Πηγή: EMA{pdf}</p></div>
+    </section>"""
         main = (
             f'<a class="doc" href="{e(x["smpc_pil_el_url"])}" rel="noopener">ΠΧΠ &amp; Φύλλο οδηγιών ↗</a>'
             "<div>Ελληνικά · pdf · European Medicines Agency</div>"
@@ -575,7 +597,7 @@ def package(ctx: Context, p: dict) -> str:
         <div><dt>Κάτοχος άδειας</dt><dd class="txt">{e(p["mah"] or "—")}</dd></div>
       </dl>
     </section>
-    {docs_card(p)}
+    {docs_card(ctx, p)}
     <section class="card side">
       <h2>Πηγές</h2>
       <ul class="srcs">{"".join(srcs)}</ul>
