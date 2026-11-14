@@ -15,8 +15,11 @@ ingest/            pipeline συλλογής και κανονικοποίηση
   moh.py           ανακάλυψη/λήψη δελτίων από moh.gov.gr
   normalize.py     ανάγνωση xlsx σε ενιαίο PriceRow, header map
   build.py         baseline + deltas -> data/current/*
-  fetch.py         CLI crawler
-samples/raw/       μικρό σταθερό σετ αρχείων για offline δοκιμές
+  fetch.py         CLI crawler (incremental, κρατά το manifest)
+  reimbursement.py parser του καταλόγου αποζημιούμενων (pdf)
+sitegen/           στατικό site, λήψεις, API shards -> dist/
+web/               worker (API, αναζήτηση χωρίς JS, 404), static (css, js), tests JS
+samples/raw/       μικρό σταθερό σετ επίσημων αρχείων: offline δοκιμές και αρχικό baseline
 tests/             pytest
 data/              παραγόμενα (δεν μπαίνουν στο git, εκτός από release dumps)
 docs/              τεκμηρίωση και αποφάσεις
@@ -30,6 +33,9 @@ python -m pytest -q                       # πρέπει να περνάει π�
 python -m ingest.build --samples          # offline build στα samples
 python -m ingest.fetch --section prices --out data --max-pages 2   # ημερήσια ενημέρωση
 python -m ingest.build --manifest data/manifest_prices.json --raw data/raw --out data/current
+python -m sitegen.build --data data/current --out dist
+node --test "web/test/*.test.mjs"         # αναζήτηση/shards ίδια σε Python και JS
+npx wrangler deploy                       # μόνο μετά από build με >10.000 αρχεία στο dist/
 ```
 
 ## Κανόνες δεδομένων (σημαντικοί)
