@@ -438,3 +438,22 @@ a.stat-link span { text-decoration: underline; text-decoration-color: var(--line
   .pi-toc { position: static; max-width: none; max-height: none; flex-basis: 100%; border: 1px solid var(--line); border-radius: 12px; padding: 12px; }
   .pi-layout { gap: 16px; }
 }
+
+/* availability (shortages) */
+.card.avail { padding: 14px 16px; display: grid; gap: 10px; }
+.av { border-left: 4px solid var(--gap-amber); padding: 4px 0 4px 12px; }
+.av.stop { border-left-color: #c2410c; }
+.av.eu { border-left-color: var(--new-ink); }
+.av strong { display: block; font-size: 16px; }
+.av > span { font-size: 14px; color: var(--ink-2); }
+.av .alt { margin-top: 4px; font-size: 14px; color: var(--ink-2); }
+.av .avsrc { margin-top: 4px; font-size: 13px; }
+.av .avsrc a { text-decoration: none; }
+.av-more { font-size: 14px; }
+.av-more a { font-weight: 600; text-decoration: none; }
+.tag.warn { background: var(--up-bg); color: var(--up-ink); }
+.tag.stop { background: #fde2d6; color: #8a2c0a; }
+@media (prefers-color-scheme: dark) {
+  .tag.stop { background: #3d1d12; color: #f6b39a; }
+  .av.stop { border-left-color: #f08a5d; }
+}

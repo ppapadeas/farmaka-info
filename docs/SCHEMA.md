@@ -169,3 +169,24 @@ Source ──< (κάθε εγγραφή γεγονότος έχει source_id)
 ## Σταθερότητα
 
 - Τα ονόματα πεδίων των εξαγωγών είναι δημόσιο API. Αλλαγή = νέα major έκδοση σχήματος (`schema_version` σε κάθε dump).
+
+## Ελλείψεις (`shortages.csv`)
+
+Μία γραμμή ανά συσκευασία και λίστα, από `python -m ingest.shortages build` (S9).
+
+| πεδίο | σημείωση |
+|---|---|
+| `eof_code` | κωδικός ΕΟΦ· κενό όταν η εγγραφή δεν αντιστοιχίζεται με σιγουριά |
+| `list_type` | `limited_availability` / `discontinuation` / `shortage` / `eu_shortage` (`export_ban` όταν γίνει διαθέσιμο σε κείμενο) |
+| `status` | αιτία όπως γράφεται στη λίστα (π.χ. «Καθυστέρηση παράδοσης») |
+| `published` | ημερομηνία της λίστας |
+| `start`, `valid_until` | έναρξη / λήξη όπως γράφονται στη λίστα |
+| `name`, `barcode` | όπως στη λίστα |
+| `alternatives` | πρόταση εναλλακτικής του ΕΟΦ (λίστα διακοπών) |
+| `matched_by` | `barcode`, `eof_code`, `brand+strength`, `ema_links` |
+| `in_catalogue` | `packages` / `otc` / κενό |
+| `source_url`, `source_file`, `source_title` | ανακοίνωση και αρχείο της πηγής |
+
+Στο API και στο `farmaka.json` κάθε συσκευασία έχει `availability`: τις τρέχουσες εγγραφές (`type`, `reason`,
+`published`, `start`, `valid_until`, `alternatives`, `source_url`, `source_title`). Εγγραφές περιορισμένης
+διαθεσιμότητας με ημερομηνία λήξης που πέρασε δεν εμφανίζονται.

@@ -139,6 +139,8 @@ def layout(
     </div>
     <nav class="foot-links" aria-label="Υποσέλιδο">
       <a href="/ousies/">Δραστικές ουσίες</a>
+      <a href="/elleipseis/">Ελλείψεις</a>
+      <a href="/fylla/">Φύλλα οδηγιών</a>
       <a href="/dedomena/">Δεδομένα &amp; API</a>
       <a href="/sxetika/">Σχετικά</a>
       <a href="{REPO}">Κώδικας</a>
@@ -210,6 +212,13 @@ def home(ctx: Context, history: list[dict]) -> str:
         if m["pending_bulletins"]
         else f'<p class="pending">Τελευταίο δελτίο {date_gr(m["data_published"])}</p>'
     )
+    la = (m.get("shortages") or {}).get("limited_availability") or {}
+    shortage_note = ""
+    if la.get("packages"):
+        shortage_note = (
+            f'<p class="pending"><a href="/elleipseis/">{num(la["packages"], 0)} φάρμακα σε περιορισμένη '
+            f"διαθεσιμότητα</a> · λίστα ΕΟΦ {date_gr(la['published'])}</p>"
+        )
     body = f"""
 <section class="wrap narrow hero">
   <h1>Πληροφορίες φαρμάκων στην Ελλάδα</h1>
@@ -224,6 +233,7 @@ def home(ctx: Context, history: list[dict]) -> str:
     <div><strong>{num(reimb, 0)}</strong><span>αποζημιώνονται</span></div>
   </div>
   {pending}
+  {shortage_note}
 </section>
 {recent}
 """
@@ -419,7 +429,7 @@ def equivalents_card(ctx: Context, p: dict) -> str:
     for q in shown:
         n = counts.get(q["eof_code"]) or pack_count(q["name"])
         extra = " · ".join(x for x in ((f"×{n}" if n else ""), short_mah(q["mah"])) if x)
-        label = f"<b>{e(split_name(q['name'])[0])}</b> <span>· {e(extra)}</span>"
+        label = f"<b>{e(split_name(q['name'])[0])}</b> <span>· {e(extra)}</span>{avail_tag(q)}"
         u = f'<span class="u">{eur(key(q))}/τεμ.</span>' if per_unit else ""
         price = f'<span class="p">{eur(q["prices"]["retail"])}</span>'
         if q is p:
@@ -447,7 +457,7 @@ def equivalents_card(ctx: Context, p: dict) -> str:
         if len(rows) > len(shown)
         else ""
     )
-    return f"""<section class="card list-card">
+    return f"""<section class="card list-card" id="isodynama">
   <div class="section-head"><h2>{e(subs)} {e(st[1] if st else "")}</h2>{more}</div>
   <p class="small top">{summary}</p>
   <ul class="rows eq">{"".join(lis)}</ul>
@@ -511,6 +521,60 @@ def docs_card(ctx: Context, p: dict) -> str:
       <h2>Επίσημα κείμενα</h2>
       <p class="small first">ΠΧΠ και φύλλο οδηγιών: <a href="https://services.eof.gr/human-search/" rel="noopener">αναζήτηση στον ΕΟΦ ↗</a></p>
     </section>"""
+
+
+AVAIL = {
+    "limited_availability": ("Περιορισμένη διαθεσιμότητα", "warn", "Λίστα επάρκειας ΕΟΦ"),
+    "shortage": ("Έλλειψη", "warn", "Ανακοίνωση ΕΟΦ"),
+    "discontinuation": ("Οριστική διακοπή κυκλοφορίας", "stop", "Λίστα διακοπών ΕΟΦ"),
+    "eu_shortage": ("Έλλειψη σε επίπεδο ΕΕ", "eu", "EMA"),
+}
+EU_REASON = {
+    "Shortage ongoing": "σε εξέλιξη",
+    "Medicine discontinued": "διακοπή",
+    "Shortage resolved": "επιλύθηκε",
+}
+AVAIL_ORDER = ("discontinuation", "limited_availability", "shortage", "eu_shortage")
+
+
+def availability_card(ctx: Context, p: dict) -> str:
+    items = p.get("availability") or []
+    if not items:
+        return ""
+    rows = []
+    for a in sorted(items, key=lambda a: AVAIL_ORDER.index(a["type"]) if a["type"] in AVAIL_ORDER else 9):
+        title, cls, src = AVAIL.get(a["type"], (a["type"], "warn", ""))
+        bits = []
+        if a.get("reason"):
+            bits.append(EU_REASON.get(a["reason"], a["reason"]))
+        if a.get("start"):
+            bits.append("από " + date_gr(a["start"]))
+        if a.get("valid_until"):
+            bits.append("έως " + date_gr(a["valid_until"]))
+        detail = f"<span>{e(' · '.join(bits))}</span>" if bits else ""
+        alt = f'<p class="alt">Πρόταση ΕΟΦ: {e(a["alternatives"])}</p>' if a.get("alternatives") else ""
+        when = f" · {date_gr(a['published'])}" if a.get("published") else ""
+        link = (
+            f'<a href="{e(a["source_url"])}" rel="noopener">{e(src)}{when} ↗</a>'
+            if a.get("source_url")
+            else e(src)
+        )
+        rows.append(
+            f'<div class="av {cls}"><strong>{e(title)}</strong>{detail}{alt}<p class="avsrc">{link}</p></div>'
+        )
+    more = ""
+    if ctx.equiv.get(p["eof_code"]):
+        more = '<p class="av-more"><a href="#isodynama">Ισοδύναμα με την ίδια ουσία ↓</a></p>'
+    return f'<section class="card avail" aria-label="Διαθεσιμότητα">{"".join(rows)}{more}</section>'
+
+
+def avail_tag(p: dict) -> str:
+    types = {a["type"] for a in p.get("availability") or []}
+    if "discontinuation" in types:
+        return ' <span class="tag stop" title="Οριστική διακοπή κυκλοφορίας (ΕΟΦ)">Διακοπή</span>'
+    if types & {"limited_availability", "shortage"}:
+        return ' <span class="tag warn" title="Περιορισμένη διαθεσιμότητα (ΕΟΦ)">Έλλειψη</span>'
+    return ""
 
 
 def price_card(p: dict, vat: str, was: str) -> str:
@@ -583,6 +647,7 @@ def package(ctx: Context, p: dict) -> str:
 </div>
 <div class="cols">
   <div class="main">
+    {availability_card(ctx, p)}
     {price_card(p, vat, was)}
     {"" if otc else reimbursement_card(ctx, p)}
     {equivalents_card(ctx, p)}
@@ -626,6 +691,7 @@ def _row(p: dict) -> str:
     tag = ' <span class="tag" title="Στον κατάλογο αποζημίωσης">Α</span>' if p["reimbursement"] else ""
     if p.get("kind") == "otc":
         tag = ' <span class="tag otc" title="Μη συνταγογραφούμενο, ενδεικτική τιμή">ΜΗΣΥΦΑ</span>'
+    tag += avail_tag(p)
     return (
         f'<li data-form="{fam}" data-price="{p["prices"]["retail"]:.2f}" data-name="{e(p["name"])}">'
         f'<a class="nm" href="/farmako/{e(p["eof_code"])}/">{name_html(p["name"])}</a>{tag}'
@@ -952,6 +1018,51 @@ def trivia_page(ctx: Context, facts: list[dict]) -> str:
         body,
         "/perierga/",
         "Παράξενα ευρήματα από τους επίσημους καταλόγους φαρμάκων στην Ελλάδα.",
+    )
+
+
+def shortages_page(ctx: Context) -> str:
+    m = ctx.meta
+    groups = []
+    for t in ("limited_availability", "shortage", "discontinuation", "eu_shortage"):
+        ps = [p for p in ctx.by_code.values() if any(a["type"] == t for a in p.get("availability") or [])]
+        if not ps:
+            continue
+        title, _, src = AVAIL[t]
+        info = m.get("shortages", {}).get(t, {})
+        lis = []
+        for p in sorted(ps, key=lambda p: p["name"]):
+            a = next(a for a in p["availability"] if a["type"] == t)
+            why = EU_REASON.get(a.get("reason") or "", a.get("reason") or "")
+            start = date_gr(a["start"]) if a.get("start") else ""
+            lis.append(
+                f'<li><a class="nm" href="/farmako/{e(p["eof_code"])}/">{name_html(p["name"])}</a>'
+                f'<span class="mah">{e(why)}</span><span class="p">{start}</span></li>'
+            )
+        when = f" · {src} {date_gr(info['published'])}" if info.get("published") else f" · {src}"
+        groups.append(
+            f'<section class="group"><h2>{e(title)} <span>{len(ps)}{e(when)}</span></h2>'
+            f'<ul class="rows">{"".join(lis)}</ul></section>'
+        )
+    empty = '<p class="empty">Δεν υπάρχουν τρέχουσες εγγραφές.</p>'
+    body = f"""
+<div class="wrap">
+<div class="page-head">
+  <h1>Ελλείψεις φαρμάκων</h1>
+  <p>Από τις επίσημες λίστες επάρκειας του ΕΟΦ και τον κατάλογο ελλείψεων της EMA. Ο ΕΟΦ τις ενημερώνει περίπου
+  μηνιαία. Η λίστα απαγόρευσης παράλληλων εξαγωγών δεν περιλαμβάνεται, γιατί δημοσιεύεται μόνο σκαναρισμένη.</p>
+</div>
+<p class="note">Κάθε σελίδα φαρμάκου δείχνει ισοδύναμα με την ίδια ουσία. Η αλλαγή γίνεται μόνο με τη γνώμη γιατρού ή
+φαρμακοποιού.</p>
+{"".join(groups) or empty}
+</div>
+"""
+    return layout(
+        ctx,
+        "Ελλείψεις φαρμάκων · farmaka.info",
+        body,
+        "/elleipseis/",
+        "Φάρμακα σε έλλειψη ή διακοπή στην Ελλάδα, από τις επίσημες λίστες του ΕΟΦ και της EMA.",
     )
 
 

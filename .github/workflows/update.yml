@@ -78,6 +78,11 @@ jobs:
         run: |
           refresh=""; [ "$(date -u +%u)" = "1" ] && refresh="--refresh"
           python -m ingest.ema --packages data/current/packages.csv --out data/current/ema_links.csv --cache data/ema $refresh
+      - name: Shortage lists (EOF, EMA); a failure keeps yesterday's list
+        continue-on-error: true
+        run: |
+          python -m ingest.shortages fetch --out data/shortages --max-requests 30 || [ $? -eq 1 ]
+          python -m ingest.shortages build --cache data/shortages --packages data/current/packages.csv --otc data/current/otc_packages.csv --out data/current
       - name: Save downloaded bulletins
         if: always()
         uses: actions/cache/save@v4

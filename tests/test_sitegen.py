@@ -146,3 +146,54 @@ def test_sqlite_dump(site):
     assert con.execute("select count(*) from package").fetchone()[0] == 8922
     assert con.execute("select price_retail from package where eof_code='312080101'").fetchone()[0] == 547.94
     con.close()
+
+
+def test_shortage_alert(tmp_path):
+    import csv
+
+    from sitegen.build import load_shortages
+
+    path = tmp_path / "shortages.csv"
+    cols = [
+        "eof_code",
+        "list_type",
+        "status",
+        "published",
+        "valid_until",
+        "start",
+        "alternatives",
+        "source_url",
+        "source_title",
+    ]
+    with path.open("w", newline="", encoding="utf-8") as fh:
+        w = csv.DictWriter(fh, fieldnames=cols, extrasaction="ignore")
+        w.writeheader()
+        w.writerow(
+            {
+                "eof_code": "1",
+                "list_type": "limited_availability",
+                "status": "Καθυστέρηση παράδοσης",
+                "published": "2026-10-31",
+                "valid_until": "2026-12-31",
+            }
+        )
+        w.writerow(
+            {
+                "eof_code": "2",
+                "list_type": "limited_availability",
+                "published": "2026-05-31",
+                "valid_until": "2026-06-30",
+            }
+        )  # expired: not shown
+        w.writerow(
+            {
+                "eof_code": "3",
+                "list_type": "discontinuation",
+                "published": "2025-12-31",
+                "valid_until": "2026-01-31",
+            }
+        )  # a discontinuation stays
+        w.writerow({"eof_code": "", "list_type": "eu_shortage"})  # unmatched: not attached to any package
+    got = load_shortages(tmp_path, "2026-11-14")
+    assert set(got) == {"1", "3"}
+    assert got["1"][0]["reason"] == "Καθυστέρηση παράδοσης"

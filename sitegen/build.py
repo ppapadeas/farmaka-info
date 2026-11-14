@@ -203,6 +203,36 @@ def load_eof_docs(data: Path) -> dict[str, list[dict]]:
     return out
 
 
+def load_shortages(data: Path, today: str) -> dict[str, list[dict]]:
+    """eof_code -> current shortage entries (data/current/shortages.csv, from ingest.shortages).
+
+    Limited-availability entries whose end date has passed are dropped; a
+    discontinuation stays."""
+    path = data / "shortages.csv"
+    out: dict[str, list[dict]] = defaultdict(list)
+    if not path.exists():
+        return out
+    with path.open(encoding="utf-8") as fh:
+        for r in csv.DictReader(fh):
+            if not r["eof_code"]:
+                continue
+            if r["list_type"] != "discontinuation" and r.get("valid_until") and r["valid_until"] < today:
+                continue
+            out[r["eof_code"]].append(
+                {
+                    "type": r["list_type"],
+                    "reason": r.get("status") or None,
+                    "published": r.get("published") or None,
+                    "start": r.get("start") or None,
+                    "valid_until": r.get("valid_until") or None,
+                    "alternatives": r.get("alternatives") or None,
+                    "source_url": r.get("source_url") or None,
+                    "source_title": r.get("source_title") or None,
+                }
+            )
+    return out
+
+
 GREEK_NAMES = ROOT / "reference" / "substances_el.csv"
 
 
@@ -498,9 +528,11 @@ def build(data: Path, out: Path, built_at: str) -> dict:
     pkgs.sort(key=lambda p: p["eof_code"])
     el = load_greek_names()
     eof_docs = load_eof_docs(data)
+    shortages = load_shortages(data, built_at[:10])
     for p in pkgs:
         p["substances_el"] = [el.get(x) for x in p["substances"]]
         p["documents"] = eof_docs.get(p["eof_code"], [])
+        p["availability"] = shortages.get(p["eof_code"], [])
     by_code = {p["eof_code"]: p for p in pkgs}
     subst = substance_index(pkgs, el)
     slug_of = {v["name"]: k for k, v in subst.items()}
@@ -527,6 +559,21 @@ def build(data: Path, out: Path, built_at: str) -> dict:
         "reimbursement_source": REIMBURSEMENT_SOURCE if reimb else None,
         "product_information_source": ema_meta,
         "otc_source": otc_meta,
+        "shortages": {
+            t: {
+                "packages": sum(1 for p in pkgs if any(a["type"] == t for a in p["availability"])),
+                "published": max(
+                    (
+                        a["published"]
+                        for p in pkgs
+                        for a in p["availability"]
+                        if a["type"] == t and a["published"]
+                    ),
+                    default=None,
+                ),
+            }
+            for t in ("limited_availability", "discontinuation", "shortage", "eu_shortage")
+        },
         "otc_packages": sum(1 for p in pkgs if p.get("kind") == "otc"),
         "pending_bulletins": report.get("pending_bulletins", []),
         "validation_problems": len(report.get("validation_problems", [])),
@@ -539,7 +586,7 @@ def build(data: Path, out: Path, built_at: str) -> dict:
     dl.mkdir()
     for name in ("packages.csv", "price_history.csv", "sources.json", "build_report.json"):
         shutil.copy2(data / name, dl / name)
-    for name in ("ema_links.csv", "otc_packages.csv"):
+    for name in ("ema_links.csv", "otc_packages.csv", "shortages.csv"):
         if (data / name).exists():
             shutil.copy2(data / name, dl / name)
     (dl / "farmaka.json").write_text(
@@ -581,12 +628,13 @@ def build(data: Path, out: Path, built_at: str) -> dict:
     ctx = pages.Context(
         meta=meta, by_code=by_code, subst=subst, slug_of=slug_of, downloads=downloads, equiv=equivalents(pkgs)
     )
-    urls = ["/", "/dedomena/", "/sxetika/", "/ousies/"]
+    urls = ["/", "/dedomena/", "/sxetika/", "/ousies/", "/elleipseis/"]
     (out / "index.html").write_text(pages.home(ctx, history), encoding="utf-8")
     for path, html in (
         ("dedomena", pages.data_page(ctx)),
         ("sxetika", pages.about(ctx)),
         ("ousies", pages.substances_index(ctx)),
+        ("elleipseis", pages.shortages_page(ctx)),
         (
             "perierga",
             pages.trivia_page(
