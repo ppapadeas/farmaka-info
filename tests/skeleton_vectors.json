@@ -1,0 +1,178 @@
+{
+ "skeleton": [
+  [
+   "ΠΑΡΑΚΕΤΑΜΟΛΗ",
+   "parakitamoli"
+  ],
+  [
+   "παρακεταμόλη",
+   "parakitamoli"
+  ],
+  [
+   "PARACETAMOL",
+   "parakitamol"
+  ],
+  [
+   "Ιβουπροφαίνη",
+   "ivuprofini"
+  ],
+  [
+   "IBUPROFEN",
+   "ivuprofin"
+  ],
+  [
+   "αμοξικιλλίνη",
+   "amoksikilini"
+  ],
+  [
+   "AMOXICILLIN",
+   "amoksikilin"
+  ],
+  [
+   "λεβοθυροξίνη",
+   "livotiroksini"
+  ],
+  [
+   "LEVOTHYROXINE SODIUM",
+   "livotiroksini sodium"
+  ],
+  [
+   "γκαμπαπεντίνη",
+   "gavapidini"
+  ],
+  [
+   "GABAPENTIN",
+   "gavapidin"
+  ],
+  [
+   "αμπικιλλίνη",
+   "avikilini"
+  ],
+  [
+   "AMPICILLIN",
+   "avikilin"
+  ],
+  [
+   "κωδεΐνη",
+   "kodini"
+  ],
+  [
+   "CODEINE PHOSPHATE",
+   "kodini fosfati"
+  ],
+  [
+   "ντεπον",
+   "dipon"
+  ],
+  [
+   "DEPON",
+   "dipon"
+  ],
+  [
+   "παντοπραζόλη",
+   "padoprazoli"
+  ],
+  [
+   "PANTOPRAZOLE",
+   "padoprazoli"
+  ],
+  [
+   "κλοπιδογρέλη",
+   "klopidogrili"
+  ],
+  [
+   "CLOPIDOGREL",
+   "klopidogril"
+  ],
+  [
+   "βισοπρολόλη",
+   "visoprololi"
+  ],
+  [
+   "BISOPROLOL FUMARATE",
+   "visoprolol fumarati"
+  ],
+  [
+   "APIXABAN/ABBIO F.C.TAB 5MG/TAB BT X 30 TABS ΣΕ PVC/PVDC-ALU BLISTER",
+   "apiksavan avio f k tav 5mg tav vt ks 30 tavs si pvk pvdk alu vlistir"
+  ],
+  [
+   "UNI-PHARMA ΚΛΕΩΝ ΤΣΕΤΗΣ ΦΑΡΜΑΚΕΥΤΙΚΑ ΕΡΓΑΣΤΗΡΙΑ ΑΒΕΕ",
+   "uni farma klion tsitis farmakivtika irgastiria avi"
+  ],
+  [
+   "312080101",
+   "312080101"
+  ],
+  [
+   "2803120801017",
+   "2803120801017"
+  ],
+  [
+   "µg ΫΪ ΐΰ",
+   "g i i"
+  ]
+ ],
+ "matches": [
+  [
+   "παρακεταμόλη",
+   "PARACETAMOL"
+  ],
+  [
+   "Ιβουπροφαίνη",
+   "IBUPROFEN"
+  ],
+  [
+   "αμοξικιλλίνη",
+   "AMOXICILLIN"
+  ],
+  [
+   "λεβοθυροξίνη",
+   "LEVOTHYROXINE SODIUM"
+  ],
+  [
+   "γκαμπαπεντίνη",
+   "GABAPENTIN"
+  ],
+  [
+   "αμπικιλλίνη",
+   "AMPICILLIN"
+  ],
+  [
+   "κωδεΐνη",
+   "CODEINE PHOSPHATE"
+  ],
+  [
+   "ντεπον",
+   "DEPON"
+  ],
+  [
+   "παντοπραζόλη",
+   "PANTOPRAZOLE"
+  ],
+  [
+   "κλοπιδογρέλη",
+   "CLOPIDOGREL"
+  ],
+  [
+   "βισοπρολόλη",
+   "BISOPROLOL FUMARATE"
+  ],
+  [
+   "apixaban 5mg",
+   "APIXABAN/ABBIO F.C.TAB 5MG/TAB BT X 30 TABS"
+  ],
+  [
+   "ομεπραζολη",
+   "OMEPRAZOLE"
+  ],
+  [
+   "metformini",
+   "METFORMIN HYDROCHLORIDE"
+  ],
+  [
+   "τσετης",
+   "UNI-PHARMA ΚΛΕΩΝ ΤΣΕΤΗΣ"
+  ]
+ ]
+}

@@ -1,0 +1,19 @@
+{
+  // farmaka.info: static site + read-only API on Cloudflare Workers.
+  // Build first: python -m sitegen.build --data data/current --out dist
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "farmaka-info",
+  "main": "web/worker.js",
+  "compatibility_date": "2025-10-01",
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "html_handling": "auto-trailing-slash"
+  },
+  "routes": [
+    { "pattern": "farmaka.info", "custom_domain": true },
+    { "pattern": "www.farmaka.info", "custom_domain": true }
+  ],
+  "workers_dev": true,
+  "observability": { "enabled": false }
+}

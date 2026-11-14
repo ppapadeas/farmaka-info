@@ -10,14 +10,14 @@ dependencies = [
 
 [project.optional-dependencies]
 pdf = ["pdfplumber>=0.11"]
-dev = ["pytest>=8", "ruff>=0.6"]
+dev = ["pytest>=8", "ruff>=0.6", "pdfplumber>=0.11"]
 
 [build-system]
 requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-packages = ["ingest"]
+packages = ["ingest", "sitegen"]
 
 [tool.ruff]
 line-length = 110
