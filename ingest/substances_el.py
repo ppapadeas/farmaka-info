@@ -163,7 +163,18 @@ def greek_names(packages: Path, by_atc: dict[str, list[dict]]) -> list[dict]:
                     "matched_by": how,
                 }
             )
-    return out
+    # Salt variants inherit the name of their base substance when that one was
+    # matched through its ATC code: ATORVASTATIN CALCIUM TRIHYDRATE -> Ατορβαστατίνη.
+    strong = {r["inn"]: r for r in out if r["matched_by"] == "atc+name"}
+    have = {r["inn"] for r in out}
+    for inn in sorted(every - have):
+        words = inn.split()
+        for cut in range(len(words) - 1, 0, -1):
+            base = " ".join(words[:cut])
+            if base in strong and all(_norm(w) in SALT_WORDS for w in words[cut:]):
+                out.append({**strong[base], "inn": inn, "matched_by": "salt of " + base})
+                break
+    return sorted(out, key=lambda r: r["inn"])
 
 
 def main() -> None:

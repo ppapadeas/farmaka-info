@@ -28,6 +28,7 @@ def test_greek_names_need_atc_and_name(tmp_path):
             {"eof_code": "2", "atc": "A10BA02", "substances": "METFORMIN HYDROCHLORIDE"},
             {"eof_code": "3", "atc": "N02BE01", "substances": "CAFFEINE"},  # ATC of another item
             {"eof_code": "4", "atc": "X00XX00", "substances": "PARACETAMOL|CAFFEINE"},
+            {"eof_code": "5", "atc": "C10AA", "substances": "ATORVASTATIN CALCIUM TRIHYDRATE"},
         ],
         ["eof_code", "atc", "substances"],
     )
@@ -41,3 +42,4 @@ def test_greek_names_need_atc_and_name(tmp_path):
     assert got["METFORMIN HYDROCHLORIDE"] == ("Μετφορμίνη", "atc+name")
     assert got["PARACETAMOL"] == ("Παρακεταμόλη", "name")  # only in a combination: exact English label
     assert "CAFFEINE" not in got  # an ATC code alone is not enough
+    assert got["ATORVASTATIN CALCIUM TRIHYDRATE"] == ("Ατορβαστατίνη", "salt of ATORVASTATIN")
