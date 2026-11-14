@@ -9,7 +9,7 @@
 | S1 | Υπουργείο Υγείας, Δελτία Τιμών | Τιμές παραγωγού/χονδρικής/λιανικής, ATC, ουσία, ΚΑΚ | xlsx + pdf | Δημόσιο, crawl με browser UA | [επιβεβαιωμένο] |
 | S2 | Υπουργείο Υγείας, Κατάλογος Αποζημιούμενων | Τιμή αποζημίωσης, DDD, κόστος ημερήσιας θεραπείας, περιορισμοί | **μόνο pdf** | Δημόσιο | [επιβεβαιωμένο] |
 | S3 | ΕΟΦ, μητρώο φαρμάκων ανθρώπινης χρήσης | Άδειες, ΠΧΠ, ΦΟΧ (pdf) | web αναζήτηση | robots.txt απαγορεύει crawling | επίσημο αίτημα |
-| S4 | EMA, EPAR / ePI | Κεντρικά εγκεκριμένα, ΠΧΠ/ΦΟΧ σε όλες τις γλώσσες, ePI σε FHIR | pdf, xlsx, FHIR API | Δημόσιο | [να ελεγχθεί] |
+| S4 | EMA, EPAR / ePI | Κεντρικά εγκεκριμένα, ΠΧΠ/ΦΟΧ σε όλες τις γλώσσες, ePI σε FHIR | pdf, xlsx, json, FHIR API | Δημόσιο, με αναφορά πηγής | [επιβεβαιωμένο] (xlsx, json· όχι ePI) |
 | S5 | DDInter 2.0 | Αλληλεπιδράσεις (φάρμακο–φάρμακο/τροφή/νόσος) | web + API | CC BY-NC-SA 4.0 | [να ελεγχθεί] |
 | S6 | ΗΔΙΚΑ (ηλ. συνταγογράφηση) | Κατάλογος σκευασμάτων στο σύστημα συνταγογράφησης | — | πιθανώς μόνο για πιστοποιημένους παρόχους λογισμικού | [να ελεγχθεί] |
 | S7 | ΕΟΦ, λίστες ελλείψεων / εναλλάξιμων | Διαθεσιμότητα, εναλλακτικά σκευάσματα | pdf/ανακοινώσεις | Δημόσιο | [να ελεγχθεί] |
@@ -128,9 +128,26 @@
 - Ευκαιρία: ο ΕΟΦ τρέχει από τον Ιούνιο 2026 πιλοτικό πρόγραμμα **ηλεκτρονικού ΦΟΧ (e-PIL)** με σύνδεσμο μέσω της πύλης του (https://www.eof.gr/wp-content/uploads/2026/06/Σχέδιο-Ανακοίνωσης-Πρόσκλησης-E-PIL.pdf). Καλή αφορμή για συνεργασία.
 - Ζητούμενα πεδία: κωδικός ΕΟΦ, αριθμός άδειας, ημερομηνία/κατάσταση άδειας, ΚΑΚ, τρόπος διάθεσης, ΠΧΠ/ΦΟΧ (pdf + έκδοση/ημερομηνία), ανακλήσεις.
 
-## S4 — EMA
+## S4 — EMA [επιβεβαιωμένο]
 
-- Κεντρικά εγκεκριμένα φάρμακα (EPAR) με ΠΧΠ/ΦΟΧ και στα ελληνικά. Η EMA δίνει και λήψη δεδομένων φαρμάκων σε xlsx **[να ελεγχθεί η ακριβής διαδρομή και οι όροι]**.
+- Κεντρικά εγκεκριμένα φάρμακα (EPAR): ένα PDF «πληροφορίες προϊόντος» ανά προϊόν (ΠΧΠ, επισήμανση και ΦΟΧ μαζί), σε κάθε γλώσσα της ΕΕ, άρα και στα ελληνικά. **Συνδέουμε** στο ελληνικό PDF· δεν το αντιγράφουμε ούτε το φιλοξενούμε (Δ-17).
+- Πίνακας φαρμάκων (xlsx, ξαναπαράγεται κάθε βράδυ), από τη σελίδα «Download medicine data» (https://www.ema.europa.eu/en/medicines/download-medicine-data): https://www.ema.europa.eu/en/documents/report/medicines-output-medicines-report_en.xlsx
+  - Ένα φύλλο `Medicine`. 1η γραμμή: `Content type: Medicine` και ώρα παραγωγής (`14/11/2026 - 06:00`)· επικεφαλίδες στην 9η γραμμή (39 στήλες).
+  - Διαβάζουμε: `Category`, `Name of medicine`, `EMA product number`, `Medicine status`, `International non-proprietary name (INN) / common name`, `Active substance`, `Marketing authorisation developer / applicant / holder`, `Medicine URL` (σελίδα EPAR). Αν λείπει κάποια, το ingest σταματά.
+  - 14/11/2026: 2.765 γραμμές, **1.564 φάρμακα ανθρώπινης χρήσης με κατάσταση `Authorised`**.
+  - Τα ονόματα κουβαλούν σημειώσεις: `Tenkasi (previously Orbactiv)`, `Briviact (in Italy: Nubriveo)`. Τις αφαιρούμε από το όνομα· το «previously» κρατιέται ως παλιό όνομα.
+- Το ελληνικό PDF **δεν** δίνεται στον πίνακα. Το δίνει το JSON των εγγράφων EPAR με τις μεταφράσεις τους (ενημερώνεται δύο φορές τη μέρα, ~29 MB): https://www.ema.europa.eu/en/documents/report/documents-output-epar_documents_json-report_en.json (περιγραφή πεδίων: https://www.ema.europa.eu/en/about-us/about-website/download-website-data-json-data-format). Έγγραφα `type: product-information`, πεδίο `translations.el`. 1.558 από τα 1.564 έχουν ελληνικό PDF.
+  - Για 21 προϊόντα ο `ema_product_number` του JSON είναι παλιός ή έχει κενό στο τέλος (π.χ. Cimzia: `EMEA/H/C/000740` στο JSON, `001037` στον πίνακα). Ταιριάζουμε πρώτα με αριθμό, μετά με ακριβές όνομα.
+  - Δεν μετράμε τα «Product information URLs for member states» (xls) και τα σχέδια «as approved by the CHMP».
+- Μοτίβο URL: συνήθως `https://www.ema.europa.eu/el/documents/product-information/<slug>-epar-product-information_el.pdf`, με `<slug>` της σελίδας EPAR. **Δεν είναι αξιόπιστο**: σε 7 από τα 1.558 το πραγματικό ελληνικό URL διαφέρει (Byannli με slug `byannl`, Briviact με slug `briviact-italy-nubriveo`, νεότερα αρχεία ως `/el/media/<αριθμός>`, π.χ. Ruxolitinib Zentiva). Τα URL του μοτίβου για αυτά τα τρία απαντούν 404. Γι' αυτό το URL έρχεται από το JSON και δεν μαντεύεται· όπου λείπει, μένει μόνο ο σύνδεσμος στη σελίδα EPAR.
+- Έλεγχος 14/11/2026 (HEAD, 200 `application/pdf`): Xydalba, Humira, Skyrizi, Tosmova, Briviact, Ruxolitinib Zentiva (`/el/media/…`) και 8 ακόμη από τα συνδεδεμένα (`--verify 8`). Κανένα σφάλμα.
+- Πρόσβαση: το robots.txt δεν απαγορεύει τα `/en/documents/` και επιτρέπει ρητά `/*/documents/report/*.json$`. Απαντά και χωρίς browser User-Agent. Έδωσε **429 Too Many Requests** σε HEAD ανά 3 s (μετά από λίγα αιτήματα στο ίδιο λεπτό): παύση 5 s, και στο 429 αναμονή `Retry-After` ή 30/60/120 s. Τα PDF δεν κατεβαίνουν.
+- Όροι: legal notice της EMA (https://www.ema.europa.eu/en/about-us/about-website/legal-notice#european-medicines-agency-copyright-and-limited-reproduction-notices-10876). Αναπαραγωγή και διανομή επιτρέπονται, και για εμπορική χρήση, «provided that EMA is always acknowledged as the source of the material», με την αναφορά σε κάθε αντίγραφο. Δεν ισχύει για περιεχόμενο τρίτων. Άρα το `ema_links.csv` και ό,τι δείχνει το site από εδώ αναφέρουν την EMA ως πηγή.
+- Υλοποίηση: `ingest/ema.py`. Έξοδος `data/current/ema_links.csv` (`eof_code, ema_name, ema_product_number, inn, pi_el_url, epar_url, matched_by`) και `data/current/ema_links_report.json` (πηγές με sha256, αμφίσημα, απορρίψεις). Τα δύο αρχεία της EMA μένουν στο `data/ema/` με sha256 στο `manifest.json`· νέα λήψη μόνο με `--refresh`.
+- Αποτέλεσμα 14/11/2026: **1.896 συσκευασίες → 848 προϊόντα** με ελληνικό PDF.
+  - 5 συσκευασίες χωρίς σύνδεσμο ως αμφίσημες: `LENALIDOMIDE KRKA` είναι το όνομα ενός προϊόντος και το παλιό όνομα άλλου.
+  - 32 απορρίφθηκαν (ίδιο όνομα, ουσίες χωρίς κοινή λέξη). Σχεδόν όλες είναι λάθη ή συνώνυμα στις ουσίες του δελτίου τιμών: `PRUCALORPIDE`, `TISAGENLELEUCEL`, `BIMETINIB`, `ERYTHROPOIETIN` αντί για epoetin alfa, `OCTAFLUOROPROPANE` αντί για perflutren, «Δεν βρέθηκε», κενό.
+  - Περίπου 30 συσκευασίες έχουν επιπλέον λέξεις πριν από τη μορφή (`HUMALOG KWIKPEN`, `NOVORAPID PENFILL`, `NEUPRO TTS`) και μένουν χωρίς σύνδεσμο με τον σημερινό κανόνα.
 - ePI: πρότυπο EU ePI Common Standard πάνω σε FHIR, με δημόσιο API. Το πιλοτικό (07/2023–08/2024) κάλυψε Δανία, Ολλανδία, Ισπανία, Σουηδία· όχι Ελλάδα. Υπάρχει draft roadmap (03/2026). https://www.ema.europa.eu/en/human-regulatory/marketing-authorisation/product-information/electronic-product-information-epi
 - Σημασία: μακροπρόθεσμα η πιο καθαρή πηγή δομημένων ΠΧΠ. Σχεδιάζουμε το σχήμα συμβατό με ePI/FHIR από τώρα.
 

@@ -1,0 +1,173 @@
+{
+ "meta": {
+  "total_records": 14,
+  "timestamp": "2026-11-14T05:49:50Z"
+ },
+ "data": [
+  {
+   "id": "22575",
+   "name": "Xydalba : EPAR - Product Information",
+   "type": "product-information",
+   "medicine_name": "Xydalba",
+   "ema_product_number": "EMEA/H/C/002840",
+   "document_url": "https://www.ema.europa.eu/en/documents/product-information/xydalba-epar-product-information_en.pdf",
+   "translations": {
+    "de": "https://www.ema.europa.eu/de/documents/product-information/xydalba-epar-product-information_de.pdf",
+    "el": "https://www.ema.europa.eu/el/documents/product-information/xydalba-epar-product-information_el.pdf"
+   }
+  },
+  {
+   "id": "23659",
+   "name": "Incruse Ellipta : EPAR - Product Information",
+   "type": "product-information",
+   "medicine_name": "Incruse Ellipta (previously Incruse)",
+   "ema_product_number": "EMEA/H/C/002809",
+   "document_url": "https://www.ema.europa.eu/en/documents/product-information/incruse-ellipta-epar-product-information_en.pdf",
+   "translations": {
+    "de": "https://www.ema.europa.eu/de/documents/product-information/incruse-ellipta-epar-product-information_de.pdf",
+    "el": "https://www.ema.europa.eu/el/documents/product-information/incruse-ellipta-epar-product-information_el.pdf"
+   }
+  },
+  {
+   "id": "26168",
+   "name": "Abilify Maintena : EPAR - Product Information",
+   "type": "product-information",
+   "medicine_name": "Abilify Maintena",
+   "ema_product_number": "EMEA/H/C/002755",
+   "document_url": "https://www.ema.europa.eu/en/documents/product-information/abilify-maintena-epar-product-information_en.pdf",
+   "translations": {
+    "de": "https://www.ema.europa.eu/de/documents/product-information/abilify-maintena-epar-product-information_de.pdf",
+    "el": "https://www.ema.europa.eu/el/documents/product-information/abilify-maintena-epar-product-information_el.pdf"
+   }
+  },
+  {
+   "id": "33178",
+   "name": "Humira : EPAR - Product information",
+   "type": "product-information",
+   "medicine_name": "Humira",
+   "ema_product_number": "EMEA/H/C/000481",
+   "document_url": "https://www.ema.europa.eu/en/documents/product-information/humira-epar-product-information_en.pdf",
+   "translations": {
+    "de": "https://www.ema.europa.eu/de/documents/product-information/humira-epar-product-information_de.pdf",
+    "el": "https://www.ema.europa.eu/el/documents/product-information/humira-epar-product-information_el.pdf"
+   }
+  },
+  {
+   "id": "34761",
+   "name": "Briviact : EPAR - Product Information",
+   "type": "product-information",
+   "medicine_name": "Briviact (in Italy: Nubriveo)",
+   "ema_product_number": "EMEA/H/C/003898",
+   "document_url": "https://www.ema.europa.eu/en/documents/product-information/briviact-epar-product-information_en.pdf",
+   "translations": {
+    "de": "https://www.ema.europa.eu/de/documents/product-information/briviact-epar-product-information_de.pdf",
+    "el": "https://www.ema.europa.eu/el/documents/product-information/briviact-epar-product-information_el.pdf"
+   }
+  },
+  {
+   "id": "35603",
+   "name": "Cimzia : EPAR - Product Information",
+   "type": "product-information",
+   "medicine_name": "Cimzia",
+   "ema_product_number": "EMEA/H/C/000740",
+   "document_url": "https://www.ema.europa.eu/en/documents/product-information/cimzia-epar-product-information_en.pdf",
+   "translations": {
+    "de": "https://www.ema.europa.eu/de/documents/product-information/cimzia-epar-product-information_de.pdf",
+    "el": "https://www.ema.europa.eu/el/documents/product-information/cimzia-epar-product-information_el.pdf"
+   }
+  },
+  {
+   "id": "38282",
+   "name": "Abilify : EPAR - Product Information",
+   "type": "product-information",
+   "medicine_name": "Abilify",
+   "ema_product_number": "EMEA/H/C/000471",
+   "document_url": "https://www.ema.europa.eu/en/documents/product-information/abilify-epar-product-information_en.pdf",
+   "translations": {
+    "de": "https://www.ema.europa.eu/de/documents/product-information/abilify-epar-product-information_de.pdf",
+    "el": "https://www.ema.europa.eu/el/documents/product-information/abilify-epar-product-information_el.pdf"
+   }
+  },
+  {
+   "id": "44897",
+   "name": "Skyrizi : EPAR - Product information",
+   "type": "product-information",
+   "medicine_name": "Skyrizi",
+   "ema_product_number": "EMEA/H/C/004759",
+   "document_url": "https://www.ema.europa.eu/en/documents/product-information/skyrizi-epar-product-information_en.pdf",
+   "translations": {
+    "de": "https://www.ema.europa.eu/de/documents/product-information/skyrizi-epar-product-information_de.pdf",
+    "el": "https://www.ema.europa.eu/el/documents/product-information/skyrizi-epar-product-information_el.pdf"
+   }
+  },
+  {
+   "id": "48244",
+   "name": "Byannli : EPAR - Product information",
+   "type": "product-information",
+   "medicine_name": "Byannli (previously Paliperidone Janssen-Cilag International)",
+   "ema_product_number": "EMEA/H/C/005486",
+   "document_url": "https://www.ema.europa.eu/en/documents/product-information/byannli-epar-product-information_en.pdf",
+   "translations": {
+    "de": "https://www.ema.europa.eu/de/documents/product-information/byannli-epar-product-information_de.pdf",
+    "el": "https://www.ema.europa.eu/el/documents/product-information/byannli-epar-product-information_el.pdf"
+   }
+  },
+  {
+   "id": "50213",
+   "name": "Lenalidomide Krka d.d. : EPAR - Product information",
+   "type": "product-information",
+   "medicine_name": "Lenalidomide Krka d.d.",
+   "ema_product_number": "EMEA/H/C/005729",
+   "document_url": "https://www.ema.europa.eu/en/documents/product-information/lenalidomide-krka-dd-epar-product-information_en.pdf",
+   "translations": {
+    "de": "https://www.ema.europa.eu/de/documents/product-information/lenalidomide-krka-dd-epar-product-information_de.pdf",
+    "el": "https://www.ema.europa.eu/el/documents/product-information/lenalidomide-krka-dd-epar-product-information_el.pdf"
+   }
+  },
+  {
+   "id": "50214",
+   "name": "Lenalidomide Krka : EPAR - Product information",
+   "type": "product-information",
+   "medicine_name": "Lenalidomide Krka (previously Lenalidomide Krka d.d. Novo mesto)",
+   "ema_product_number": "EMEA/H/C/005348",
+   "document_url": "https://www.ema.europa.eu/en/documents/product-information/lenalidomide-krka-epar-product-information_en.pdf",
+   "translations": {
+    "de": "https://www.ema.europa.eu/de/documents/product-information/lenalidomide-krka-epar-product-information_de.pdf",
+    "el": "https://www.ema.europa.eu/el/documents/product-information/lenalidomide-krka-epar-product-information_el.pdf"
+   }
+  },
+  {
+   "id": "50228",
+   "name": "Lenalidomide krka d.d. Novo mesto : EPAR - Product information",
+   "type": "product-information",
+   "medicine_name": "Lenalidomide Krka d.d. Novo mesto (previously Lenalidomide Krka)",
+   "ema_product_number": "EMEA/H/C/005734",
+   "document_url": "https://www.ema.europa.eu/en/documents/product-information/lenalidomide-krka-dd-novo-mesto-epar-product-information_en.pdf",
+   "translations": {
+    "de": "https://www.ema.europa.eu/de/documents/product-information/lenalidomide-krka-dd-novo-mesto-epar-product-information_de.pdf",
+    "el": "https://www.ema.europa.eu/el/documents/product-information/lenalidomide-krka-dd-novo-mesto-epar-product-information_el.pdf"
+   }
+  },
+  {
+   "id": "60975",
+   "name": "Product information URLs for member states",
+   "type": "product-information",
+   "medicine_name": "Abilify",
+   "ema_product_number": "EMEA/H/C/000471",
+   "document_url": "https://www.ema.europa.eu/en/documents/product-information/product-information-urls-member-states_en.xls",
+   "translations": null
+  },
+  {
+   "id": "21314",
+   "name": "Xydalba : EPAR - Medicine overview",
+   "type": "overview",
+   "medicine_name": "Xydalba",
+   "ema_product_number": "EMEA/H/C/002840",
+   "document_url": "https://www.ema.europa.eu/en/documents/overview/xydalba-epar-medicine-overview_en.pdf",
+   "translations": {
+    "de": "https://www.ema.europa.eu/de/documents/overview/xydalba-epar-medicine-overview_de.pdf",
+    "el": "https://www.ema.europa.eu/el/documents/overview/xydalba-epar-medicine-overview_el.pdf"
+   }
+  }
+ ]
+}
