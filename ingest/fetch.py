@@ -4,16 +4,22 @@ Usage:
     python -m ingest.fetch --section prices --out data --max-pages 2   # daily
     python -m ingest.fetch --section prices --out data --backfill full # once
     python -m ingest.fetch --section reimbursement --out data --pdf
+    python -m ingest.fetch --section otc --out data --max-pages 2      # daily, ΜΗ.ΣΥ.ΦΑ.
 
 Incremental and polite:
 - the manifest from earlier runs is kept; articles that dropped off the first
   listing pages stay in it, so the baseline is never lost;
 - an article page is fetched only if its files are not already on disk;
-- if no complete price list (kind "full") is known yet, listing continues page
-  by page (up to --baseline-pages) until one is found;
+- if no complete list (kind "full" for prices, a complete ΜΗ.ΣΥ.ΦΑ. list for
+  otc) is known yet, listing continues page by page (up to --baseline-pages)
+  until one is found;
 - the daily run fetches only the articles on the pages it reads and those from
   the newest known complete list on; older articles are history (see below).
 The manifest is written even if the crawl stops half way; re-running resumes.
+
+Section otc (non-prescription medicines, ΜΗ.ΣΥ.ΦΑ.): titles are classified by
+moh.classify_otc; an article's xlsx are downloaded, its pdf only if it has no
+xlsx. Manifest data/manifest_otc.json; the list is built by ingest.otc.
 
 Backfill (`--backfill full`, run once): reads every listing page (about 18),
 one request at a time, until a page adds nothing new, and downloads only the
@@ -29,14 +35,35 @@ from pathlib import Path
 
 import requests
 
-from .moh import PRICE_BULLETINS, REIMBURSEMENT, Article, Client, read_manifest, write_manifest
+from .moh import (
+    OTC_BULLETINS,
+    PRICE_BULLETINS,
+    REIMBURSEMENT,
+    Article,
+    Client,
+    classify,
+    classify_otc,
+    read_manifest,
+    write_manifest,
+)
+from .otc import OTC_BASELINE_KINDS, OTC_KINDS
 
-SECTIONS = {"prices": PRICE_BULLETINS, "reimbursement": REIMBURSEMENT}
+SECTIONS = {"prices": PRICE_BULLETINS, "reimbursement": REIMBURSEMENT, "otc": OTC_BULLETINS}
+CLASSIFIERS = {"otc": classify_otc}  # every other section: moh.classify
 PRICE_KINDS = ("full", "revision", "delta", "amendment")
+# kinds whose files a section downloads (a section not listed: every article)
+FETCH_KINDS = {"prices": PRICE_KINDS, "otc": OTC_KINDS}
+# complete lists: the daily run fetches every article from the newest one on
+BASELINE_KINDS = {"prices": ("full",), "otc": OTC_BASELINE_KINDS}
 BACKFILL_KINDS = ("full",)
 
 
-def wanted(art: Article, pdf: bool) -> list:
+def wanted(art: Article, pdf: bool, pdf_if_no_xlsx: bool = False) -> list:
+    """Attachments to download: the xlsx, plus the pdf with `pdf`, or the pdf
+    instead with `pdf_if_no_xlsx` when the article has no xlsx at all."""
+    xlsx = [a for a in art.attachments if a.ext == "xlsx"]
+    if pdf_if_no_xlsx and not xlsx:
+        return [a for a in art.attachments if a.ext == "pdf"]
     return [a for a in art.attachments if a.ext == "xlsx" or (pdf and a.ext == "pdf")]
 
 
@@ -55,7 +82,7 @@ def merge_manifests(listed: list[Article], previous: list[Article]) -> list[Arti
     return sorted(out.values(), key=lambda a: (a.iso_date, a.article_id), reverse=True)
 
 
-def list_all(c: Client, section: str, max_pages: int) -> tuple[list[Article], str | None]:
+def list_all(c: Client, section: str, max_pages: int, kind_of=classify) -> tuple[list[Article], str | None]:
     """Every listing page, one at a time, until a page adds nothing new.
 
     Returns what was listed and, if listing stopped early, why; what was listed
@@ -64,7 +91,7 @@ def list_all(c: Client, section: str, max_pages: int) -> tuple[list[Article], st
     seen: set[str] = set()
     for page in range(1, max_pages + 1):
         try:
-            items = c.list_articles(section, 1, first_page=page)
+            items = c.list_articles(section, 1, first_page=page, kind_of=kind_of)
         except requests.RequestException as e:
             return out, f"listing page {page} failed: {e}"
         more = [x for x in items if x.url not in seen]
@@ -75,13 +102,16 @@ def list_all(c: Client, section: str, max_pages: int) -> tuple[list[Article], st
     return out, f"listing stopped at --max-pages {max_pages}; there may be more pages"
 
 
-def daily_scope(arts: list[Article], listed: list[Article]) -> list[Article]:
+def daily_scope(
+    arts: list[Article], listed: list[Article], baseline: tuple[str, ...] = ("full",)
+) -> list[Article]:
     """Articles the daily run may fetch: those on the pages it just read and all
-    from the newest known complete list on (what the current prices need).
+    from the newest known complete list (a kind in `baseline`) on: what the
+    current prices need.
 
     Without this, a manifest filled by --backfill would turn the next daily run
     into a crawl of the whole history."""
-    fulls = [(a.iso_date, a.article_id) for a in arts if a.kind == "full"]
+    fulls = [(a.iso_date, a.article_id) for a in arts if a.kind in baseline]
     if not fulls:
         return arts
     newest = max(fulls)
@@ -111,15 +141,17 @@ def main() -> None:
     manifest = a.out / f"manifest_{a.section}.json"
     previous = read_manifest(manifest)
     c = Client()
+    kind_of = CLASSIFIERS.get(a.section, classify)
+    baseline = BASELINE_KINDS.get(a.section)
     problem = None
     if a.backfill:
         listed, problem = list_all(c, SECTIONS[a.section], a.max_pages)
     else:
-        listed = c.list_articles(SECTIONS[a.section], a.max_pages)
-    if a.section == "prices" and not a.backfill:
+        listed = c.list_articles(SECTIONS[a.section], a.max_pages, kind_of=kind_of)
+    if baseline and not a.backfill:
         page = a.max_pages + 1
-        while not any(x.kind == "full" for x in listed + previous) and page <= a.baseline_pages and listed:
-            more = c.list_articles(SECTIONS[a.section], 1, first_page=page)
+        while not any(x.kind in baseline for x in listed + previous) and page <= a.baseline_pages and listed:
+            more = c.list_articles(SECTIONS[a.section], 1, first_page=page, kind_of=kind_of)
             if not more:
                 break
             listed += [m for m in more if m.article_id not in {x.article_id for x in listed}]
@@ -130,24 +162,25 @@ def main() -> None:
     print(f"{len(listed)} articles listed, {len(arts)} in manifest", flush=True)
     if a.backfill:
         todo = [x for x in arts if x.kind == a.backfill]
-    elif a.section == "prices":
-        todo = [x for x in daily_scope(arts, listed) if x.kind in PRICE_KINDS]
+    elif a.section in FETCH_KINDS:
+        todo = [x for x in daily_scope(arts, listed, baseline) if x.kind in FETCH_KINDS[a.section]]
     else:
         todo = arts
+    pdf_if_no_xlsx = a.section == "otc"
     failures = fetched = 0
     try:
         if not a.list_only:
             for n, art in enumerate(todo, 1):
                 if (art.checked or art.attachments) and all(
                     (raw / f"moh_{art.article_id}_{x.fdl}.{x.ext or 'bin'}").exists()
-                    for x in wanted(art, a.pdf)
+                    for x in wanted(art, a.pdf, pdf_if_no_xlsx)
                 ):
                     continue  # already have everything this article offers
                 try:
                     if not (art.checked or art.attachments):
                         c.load_attachments(art)
                         art.checked = True
-                    for att in wanted(art, a.pdf):
+                    for att in wanted(art, a.pdf, pdf_if_no_xlsx):
                         c.download(att, raw, art)
                     fetched += 1
                 except requests.RequestException as e:

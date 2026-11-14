@@ -14,6 +14,7 @@ import json
 import re
 import time
 import unicodedata
+from collections.abc import Callable
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from urllib.parse import urljoin
@@ -23,6 +24,8 @@ import requests
 BASE = "https://www.moh.gov.gr"
 PRICE_BULLETINS = f"{BASE}/articles/times-farmakwn/deltia-timwn"
 REIMBURSEMENT = f"{BASE}/articles/times-farmakwn/epitroph-aksiologhshs-kai-apozhmiwshs-farmakwn"
+# Non-prescription medicines (ΜΗ.ΣΥ.ΦΑ.): indicative retail prices, own listing.
+OTC_BULLETINS = f"{BASE}/articles/times-farmakwn/deltia-timwn-mhsyfa"
 
 USER_AGENT = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130 Safari/537.36"
 PAUSE_SECONDS = 3.0  # the site started resetting connections after ~400 requests at 1.5 s
@@ -73,6 +76,45 @@ def classify(title: str) -> str:
         return "revision"
     if "δελτιο τιμων" in t or "δελτιο τιμολογησης" in t:
         return "delta"
+    return "other"
+
+
+_OTC_AMENDS_DECISION = re.compile(r"\b(ορθη επαναληψη|τροποποιηση|ακυρωση) (της|του|των)\b")
+
+
+def classify_otc(title: str) -> str:
+    """Map a ΜΗ.ΣΥ.ΦΑ. (non-prescription) bulletin title to a kind; see ingest/otc.py.
+
+    Kept apart from `classify`: the titles of this section follow other patterns.
+
+    repricing : revision of the whole list ("Αναθεώρηση καταλόγου ΜΗ.ΣΥ.ΦΑ. για το
+                έτος 2025", yearly; older: "Αναθεώρηση Δελτίου Τιμών…", "Πρώτη
+                Αναθεώρηση έτους 2018…") and the first list of 2017 ("Κατάλογος
+                ενδεικτικών τιμών… ΟΡΘΗ ΕΠΑΝΑΛΗΨΗ", a republished list)
+    update    : list updated with administrative changes ("Επικαιροποίηση Δελτίου
+                Τιμών ΜΗ.ΣΥ.ΦΑ. λόγω διοικητικών μεταβολών"), also as a
+                correction ("ΟΡΘΗ ΕΠΑΝΑΛΗΨΗ: Επικαιροποίηση…") or together with
+                a new-products bulletin ("Δελτίο Τιμών Νέων… και Επικαιροποίηση…")
+    new       : bulletin of new products, mostly quarterly ("Δελτίο Τιμών Νέων
+                ΜΗ.ΣΥ.ΦΑ. 1ου Τριμήνου 2026"; until 2019 "Κατάλογος ενδεικτικών
+                τιμών λιανικής πώλησης νέων ΜΗ.ΣΥ.ΦΑ.…")
+    amendment : corrects, amends or annuls an earlier decision ("Ορθή Επανάληψη
+                της Δ3(α) 6320/11-3-2024 Απόφασης…"); needs manual review
+    other     : anything else
+    """
+    t = _norm(title)
+    if _OTC_AMENDS_DECISION.search(t):
+        return "amendment"
+    if "επικαιροποιηση δελτι" in t:
+        return "update"
+    if "αναθεωρηση" in t or "ανατιμολογηση" in t:
+        return "repricing"
+    if "τιμων νεων" in t or "νεων μη συνταγογραφουμενων" in t:
+        return "new"
+    if "καταλογος ενδεικτικων τιμων" in t:
+        return "repricing"
+    if any(k in t for k in ("τροποποιηση", "ορθη επαναληψη", "ακυρωση")):
+        return "amendment"
     return "other"
 
 
@@ -135,7 +177,11 @@ class Client:
         raise AssertionError("unreachable")
 
     def list_articles(
-        self, section: str = PRICE_BULLETINS, max_pages: int = 50, first_page: int = 1
+        self,
+        section: str = PRICE_BULLETINS,
+        max_pages: int = 50,
+        first_page: int = 1,
+        kind_of: Callable[[str], str] = classify,
     ) -> list[Article]:
         out: list[Article] = []
         seen: set[str] = set()
@@ -152,7 +198,7 @@ class Client:
                 slug = href.rsplit("/", 1)[-1]
                 aid = int(slug.split("-", 1)[0]) if slug[:1].isdigit() else -1
                 title = _clean(m["title"])
-                out.append(Article(aid, m["date"], title, href, classify(title)))
+                out.append(Article(aid, m["date"], title, href, kind_of(title)))
             if new == 0:
                 break
         return out
