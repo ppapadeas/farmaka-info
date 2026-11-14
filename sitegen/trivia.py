@@ -12,6 +12,7 @@ from collections import Counter, defaultdict
 from ingest.normalize import _VARIANTS
 
 from .drug import short_mah, split_name, unit_count
+from .text import eur
 
 
 def _brand(p: dict) -> str:
@@ -91,7 +92,7 @@ def compute(pkgs: list[dict], history: list[dict], equiv: dict[str, list[str]], 
                 "title": "Η μεγαλύτερη πτώση τιμής",
                 "value": drop[0] * 100,
                 "kind": "pct",
-                "text": f"{_brand(drop[3])}: από {drop[1]:.2f} € ({drop[2][:4]}) σε {drop[3]['prices']['retail']:.2f} € σήμερα.",
+                "text": f"{_brand(drop[3])}: από {eur(drop[1])} ({drop[2][:4]}) σε {eur(drop[3]['prices']['retail'])} σήμερα.",
                 "links": [link(drop[3])],
             }
         )
@@ -101,7 +102,7 @@ def compute(pkgs: list[dict], history: list[dict], equiv: dict[str, list[str]], 
                 "title": "Η μεγαλύτερη αύξηση",
                 "value": rise[0] * 100,
                 "kind": "pct",
-                "text": f"{_brand(rise[3])}: από {rise[1]:.2f} € ({rise[2][:4]}) σε {rise[3]['prices']['retail']:.2f} € σήμερα.",
+                "text": f"{_brand(rise[3])}: από {eur(rise[1])} ({rise[2][:4]}) σε {eur(rise[3]['prices']['retail'])} σήμερα.",
                 "links": [link(rise[3])],
             }
         )
@@ -115,7 +116,7 @@ def compute(pkgs: list[dict], history: list[dict], equiv: dict[str, list[str]], 
                 "value": len(jumps),
                 "kind": "int",
                 "text": f"Συσκευασίες με αλλαγή τιμής ×10 ή περισσότερο σε ένα μόνο δελτίο. Η πιο ακραία: "
-                f"{_brand(j[2])}, από {a:.2f} € σε {b:.2f} € ({h['published'][:4]}). Είτε λάθος σε κατάλογο είτε "
+                f"{_brand(j[2])}, από {eur(a)} σε {eur(b)} ({h['published'][:4]}). Είτε λάθος σε κατάλογο είτε "
                 "διόρθωση· δεν το ξέρουμε, γι' αυτό μένουν έξω από την πτώση και την αύξηση.",
                 "links": [link(j[2])],
             }
@@ -213,8 +214,8 @@ def compute(pkgs: list[dict], history: list[dict], equiv: dict[str, list[str]], 
                 "title": "Ίδια ουσία, άλλη τιμή",
                 "value": best[0],
                 "kind": "times",
-                "text": f"Τόσες φορές ακριβότερο ανά τεμάχιο το {_brand(best[2][1])} ({best[2][0]:.2f} €) από το "
-                f"{_brand(best[1][1])} ({best[1][0]:.2f} €): ίδια ουσία και περιεκτικότητα, και τα δύο από το στόμα, "
+                "text": f"Τόσες φορές ακριβότερο ανά τεμάχιο το {_brand(best[2][1])} ({eur(best[2][0])}) από το "
+                f"{_brand(best[1][1])} ({eur(best[1][0])}): ίδια ουσία και περιεκτικότητα, και τα δύο από το στόμα, "
                 "άμεσης αποδέσμευσης.",
                 "links": [link(best[1][1]), link(best[2][1])],
             }
