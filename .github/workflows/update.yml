@@ -46,6 +46,11 @@ jobs:
             python -m ingest.reimbursement --pdf samples/raw/katalogos_2026-10.pdf --list main --decimal . --article 14875 --published 2026-10-22 --out data/current/reimbursement_main.csv
             python -m ingest.reimbursement --pdf samples/raw/katalogos_n3816_2026-10.pdf --list n3816 --decimal , --article 14875 --published 2026-10-22 --out data/current/reimbursement_n3816.csv
           fi
+      - name: Link EMA product information (EMA files refreshed on Mondays)
+        continue-on-error: true
+        run: |
+          refresh=""; [ "$(date -u +%u)" = "1" ] && refresh="--refresh"
+          python -m ingest.ema --packages data/current/packages.csv --out data/current/ema_links.csv --cache data/ema $refresh
       - name: Save downloaded bulletins
         if: always()
         uses: actions/cache/save@v4

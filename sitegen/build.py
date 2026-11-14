@@ -87,6 +87,38 @@ def load_reimbursement(data: Path) -> dict[str, list[dict]]:
     return out
 
 
+def load_ema(data: Path) -> tuple[dict[str, list[dict]], dict | None]:
+    """eof_code -> EMA product information links (optional, from `python -m ingest.ema`)."""
+    path = data / "ema_links.csv"
+    if not path.exists():
+        return {}, None
+    report_path = data / "ema_links_report.json"
+    report = json.loads(report_path.read_text(encoding="utf-8")) if report_path.exists() else {}
+    srcs = report.get("sources") or []
+    generated = next((s.get("generated") for s in srcs if "medicines" in s.get("url", "")), None)
+    out: dict[str, list[dict]] = defaultdict(list)
+    with path.open(encoding="utf-8") as fh:
+        for r in csv.DictReader(fh):
+            out[r["eof_code"]].append(
+                {
+                    "source": "EMA",
+                    "name": r["ema_name"],
+                    "product_number": r["ema_product_number"],
+                    "inn": r["inn"],
+                    "smpc_pil_el_url": r["pi_el_url"] or None,
+                    "epar_url": r["epar_url"],
+                }
+            )
+    meta = {
+        "publisher": "European Medicines Agency (EMA)",
+        "packages_linked": len(out),
+        "products_linked": report.get("products_linked"),
+        "generated": generated,
+        "terms": "https://www.ema.europa.eu/en/about-us/legal-notice",
+    }
+    return out, meta
+
+
 def load(data: Path):
     pk = json.loads((data / "packages.json").read_text(encoding="utf-8"))
     packages = pk["packages"] if isinstance(pk, dict) else pk
@@ -97,7 +129,8 @@ def load(data: Path):
     return packages, sources, report, history
 
 
-def enrich(packages, sources, history, reimb) -> list[dict]:
+def enrich(packages, sources, history, reimb, ema=None) -> list[dict]:
+    ema = ema or {}
     by_article = {s["moh_article"]: s for s in sources}
     hist = defaultdict(list)
     for h in history:
@@ -143,6 +176,7 @@ def enrich(packages, sources, history, reimb) -> list[dict]:
                 },
                 "price_history": sorted(hist.get(p["eof_code"], []), key=lambda h: h["published"]),
                 "reimbursement": reimb.get(p["eof_code"], []),
+                "product_information": ema.get(p["eof_code"], []),
                 "url": f"{SITE}/farmako/{p['eof_code']}/",
             }
         )
@@ -346,7 +380,8 @@ def sha256(path: Path) -> str:
 def build(data: Path, out: Path, built_at: str) -> dict:
     packages, sources, report, history = load(data)
     reimb = load_reimbursement(data)
-    pkgs = enrich(packages, sources, history, reimb)
+    ema, ema_meta = load_ema(data)
+    pkgs = enrich(packages, sources, history, reimb, ema)
     by_code = {p["eof_code"]: p for p in pkgs}
     subst = substance_index(pkgs)
     slug_of = {v["name"]: k for k, v in subst.items()}
@@ -370,6 +405,7 @@ def build(data: Path, out: Path, built_at: str) -> dict:
         "substances": len(subst),
         "sources": sources,
         "reimbursement_source": REIMBURSEMENT_SOURCE if reimb else None,
+        "product_information_source": ema_meta,
         "pending_bulletins": report.get("pending_bulletins", []),
         "validation_problems": len(report.get("validation_problems", [])),
         "review_queue": report.get("review_queue", []),
@@ -381,6 +417,8 @@ def build(data: Path, out: Path, built_at: str) -> dict:
     dl.mkdir()
     for name in ("packages.csv", "price_history.csv", "sources.json", "build_report.json"):
         shutil.copy2(data / name, dl / name)
+    if (data / "ema_links.csv").exists():
+        shutil.copy2(data / "ema_links.csv", dl / "ema_links.csv")
     (dl / "farmaka.json").write_text(
         json.dumps({"meta": meta, "packages": pkgs}, ensure_ascii=False, separators=(",", ":")),
         encoding="utf-8",

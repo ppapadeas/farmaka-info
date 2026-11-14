@@ -428,6 +428,29 @@ def equivalents_card(ctx: Context, p: dict) -> str:
 </section>"""
 
 
+def docs_card(p: dict) -> str:
+    """Official texts. EMA links for centrally authorised medicines; for the rest
+    the EOF search (a link the visitor follows, not something we crawl)."""
+    pis = [x for x in p.get("product_information", []) if x.get("smpc_pil_el_url") or x.get("epar_url")]
+    if pis:
+        x = pis[0]
+        main = (
+            f'<a class="doc" href="{e(x["smpc_pil_el_url"])}" rel="noopener">ΠΧΠ &amp; Φύλλο οδηγιών ↗</a>'
+            "<div>Ελληνικά · pdf · European Medicines Agency</div>"
+            if x.get("smpc_pil_el_url")
+            else ""
+        )
+        epar = f'<a href="{e(x["epar_url"])}" rel="noopener">Σελίδα EPAR ↗</a>' if x.get("epar_url") else ""
+        return f"""<section class="card side">
+      <h2>Επίσημα κείμενα</h2>
+      <div class="docs">{main}<p class="small">{epar} · {e(x["product_number"])}</p></div>
+    </section>"""
+    return """<section class="card side">
+      <h2>Επίσημα κείμενα</h2>
+      <p class="small first">ΠΧΠ και φύλλο οδηγιών: <a href="https://services.eof.gr/human-search/" rel="noopener">αναζήτηση στον ΕΟΦ ↗</a></p>
+    </section>"""
+
+
 def package(ctx: Context, p: dict) -> str:
     pr = p["prices"]
     brand, rest = split_name(p["name"])
@@ -497,6 +520,7 @@ def package(ctx: Context, p: dict) -> str:
         <div><dt>Κάτοχος άδειας</dt><dd class="txt">{e(p["mah"] or "—")}</dd></div>
       </dl>
     </section>
+    {docs_card(p)}
     <section class="card side">
       <h2>Πηγές</h2>
       <ul class="srcs">{"".join(srcs)}</ul>
@@ -626,6 +650,7 @@ DOWNLOAD_INFO = {
     "farmaka.sqlite": "Βάση SQLite (package, price_event, reimbursement, source)",
     "sources.json": "Τα δελτία που χρησιμοποιήθηκαν",
     "build_report.json": "Έλεγχοι, ουρά ελέγχου, δελτία σε αναμονή",
+    "ema_links.csv": "Σύνδεσμοι σε ΠΧΠ/ΦΟΧ της EMA (πηγή: EMA)",
 }
 
 PACKAGE_FIELDS = [
@@ -657,6 +682,13 @@ def data_page(ctx: Context) -> str:
     if m.get("reimbursement_source"):
         rs = m["reimbursement_source"]
         srcs += f'<li>{date_gr(rs["published"])} · <a href="{e(rs["url"])}" rel="noopener">{e(rs["title"])}</a></li>'
+    pis = m.get("product_information_source")
+    if pis:
+        srcs += (
+            f"<li>{e((pis.get('generated') or '')[:10])} · European Medicines Agency: ελληνικά ΠΧΠ/ΦΟΧ για "
+            f"{num(pis['packages_linked'], 0)} συσκευασίες κεντρικά εγκεκριμένων φαρμάκων "
+            f'(<a href="{e(pis["terms"])}" rel="noopener">όροι: αναφορά της EMA ως πηγής</a>)</li>'
+        )
     pend = (
         "<p>Σε αναμονή:</p><ul>"
         + "".join(
