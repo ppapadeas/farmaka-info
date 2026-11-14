@@ -2,7 +2,7 @@
 // this runs only for paths without a matching asset: the JSON API, the
 // no-JavaScript search page and 404s. Everything it reads comes from the same
 // static build (dist/), so there is no database and no state.
-import { codeFromQuery, eur, parseIndex, search } from "./static/search-core.js";
+import { codeFromQuery, eur, parseIndex, search, splitName } from "./static/search-core.js";
 
 const SHARDS = 256;
 const JSON_HEADERS = {
@@ -128,19 +128,15 @@ async function searchPage(url, env) {
   if (q) {
     const { total, results: rows } = search(await getIndex(env), q, 200);
     const items = rows
-      .map(
-        (r) =>
-          `<tr><td><a href="/farmako/${esc(r.eof_code)}/">${esc(r.name)}</a>${
-            r.reimbursed ? ' <span class="badge ok sm" title="Στον κατάλογο αποζημίωσης">Α</span>' : ""
-          }<br><span class="muted">${esc(r.substances.join(" + "))}</span></td><td class="mah">${esc(r.mah)}</td><td class="n">${esc(
-            eur(r.price_retail),
-          )}</td></tr>`,
-      )
+      .map((r) => {
+        const [brand, rest] = splitName(r.name);
+        const tag = r.reimbursed ? ' <span class="tag" title="Στον κατάλογο αποζημίωσης">Α</span>' : "";
+        return `<li><a class="nm" href="/farmako/${esc(r.eof_code)}/"><b>${esc(brand)}</b> <span>${esc(rest)}</span></a>${tag}<span class="mah">${esc(r.substances.join(" + "))}</span><span class="p">${esc(eur(r.price_retail))}</span></li>`;
+      })
       .join("");
     results = total
-      ? `<p class="results-count">${total} συσκευασίες${total > rows.length ? `, εμφανίζονται οι πρώτες ${rows.length}` : ""}.</p>
-<div class="tw"><table class="list"><thead><tr><th scope="col">Συσκευασία</th><th scope="col" class="mah">Κάτοχος άδειας</th><th scope="col" class="n">Λιανική</th></tr></thead><tbody>${items}</tbody></table></div>`
-      : `<p>Δεν βρέθηκε συσκευασία για «${esc(q)}». Δοκιμάστε εμπορική ονομασία, δραστική ουσία ή κωδικό ΕΟΦ.</p>`;
+      ? `<p class="count">${total} συσκευασίες${total > rows.length ? `, οι πρώτες ${rows.length}` : ""}</p><ul class="rows">${items}</ul>`
+      : `<p class="empty">Τίποτα για «${esc(q)}». Δοκιμάστε όνομα, δραστική ουσία ή κωδικό ΕΟΦ.</p>`;
   }
   const tpl = await (await asset(env, "/_templates/search.html")).text();
   const html = tpl.replace("{{QUERY}}", esc(q)).replace("{{RESULTS}}", results);

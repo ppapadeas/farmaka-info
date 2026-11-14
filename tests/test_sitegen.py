@@ -68,9 +68,10 @@ def test_package_page_shows_price_and_source(site):
     out, _ = site
     html = (out / "farmako" / "312080101" / "index.html").read_text(encoding="utf-8")
     assert "547,94 €" in html  # XYDALBA after the price cut
-    assert "άρθρο 14930" in html
-    assert "06/11/2026" in html
-    assert "δεν υποκαθιστά γιατρό ή φαρμακοποιό" in html
+    assert "Ήταν 823,64 € έως 06/11/2026" in html
+    assert "14930-symplhrwmatiko" in html  # link to the bulletin that set the price
+    assert "δεν αντικαθιστά γιατρό ή φαρμακοποιό" in html
+    assert 'class="spark"' in html
     assert "<script>" not in html  # CSP: no inline scripts
 
 
@@ -80,7 +81,8 @@ def test_api_shard_and_search_index(site):
     p = shard["312080101"]
     assert p["prices"]["retail"] == 547.94
     assert p["price_source"]["moh_article"] == 14930
-    assert [h["new"] for h in p["price_history"] if h["field"] == "price_retail"] == [547.94]
+    updates = [h for h in p["price_history"] if h["field"] == "price_retail" and h["change"] == "update"]
+    assert [(h["old"], h["new"]) for h in updates] == [(823.64, 547.94)]
     lines = (out / "search-index.tsv").read_text(encoding="utf-8").splitlines()
     assert len([x for x in lines if not x.startswith("#")]) == 8922
     assert all(len(x.split("\t")) == 11 for x in lines[1:])

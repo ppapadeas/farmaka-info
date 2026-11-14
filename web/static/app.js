@@ -1,6 +1,8 @@
 // Instant search suggestions. Without JavaScript the forms still work: they
 // submit to /anazitisi, rendered by the worker.
-import { codeFromQuery, eur, parseIndex, search } from "./search-core.js";
+import { codeFromQuery, eur, parseIndex, search, splitName } from "./search-core.js";
+import { initScan } from "./scan.js";
+import "./register-sw.js";
 
 let indexPromise = null;
 function loadIndex() {
@@ -69,13 +71,18 @@ function setup(form) {
       box.append(el("div", { class: "none" }, "Δεν βρέθηκε συσκευασία."));
     }
     for (const r of results) {
+      const [brand, rest] = splitName(r.name);
       box.append(
         el(
           "a",
           { href: `/farmako/${r.eof_code}/`, role: "option", "aria-selected": "false" },
+          el(
+            "span",
+            { class: "t" },
+            el("span", { class: "nm" }, el("b", {}, brand), " ", el("span", {}, rest)),
+            el("span", { class: "sub" }, r.substances.join(" + ")),
+          ),
           el("span", { class: "pr" }, eur(r.price_retail)),
-          el("span", { class: "nm" }, r.name),
-          el("span", { class: "sub" }, [r.substances.join(" + "), r.mah].filter(Boolean).join(" · ")),
         ),
       );
     }
@@ -125,4 +132,7 @@ function setup(form) {
   });
 }
 
-document.querySelectorAll("form.search").forEach(setup);
+document.querySelectorAll("form.search").forEach((form) => {
+  setup(form);
+  initScan(form); // adds a camera button only where barcode scanning is supported
+});

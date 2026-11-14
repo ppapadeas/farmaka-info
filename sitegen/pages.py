@@ -1,15 +1,18 @@
 """HTML for every page type. Plain functions returning strings; all data is
-escaped with `e()`. No inline scripts or styles (the CSP forbids them)."""
+escaped with `e()`. No inline scripts or styles (the CSP forbids them); charts
+are inline SVG drawn with presentation attributes only."""
 
 from __future__ import annotations
 
 import hashlib
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from datetime import date
 from html import escape
 from pathlib import Path
 from urllib.parse import quote
 
+from .drug import dispensing_label, inn_label, short_mah, split_name, strength, unit_count
 from .text import date_gr, eur, num
 
 SITE = "https://farmaka.info"
@@ -20,13 +23,17 @@ ASSET_VERSION = hashlib.sha256(
     b"".join(p.read_bytes() for p in sorted(STATIC.iterdir()) if p.is_file())
 ).hexdigest()[:10]
 
-FIELD_LABELS = {
-    "price_retail": "Λιανική",
-    "price_wholesale": "Χονδρική",
-    "price_exfactory": "Παραγωγού",
-    "non_reimbursed": "Μη αποζημιούμενο",
-}
-LIST_LABELS = {"main": "Κύριος κατάλογος", "n3816": "Κατάλογος άρθρου 12 ν. 3816/2010"}
+LIST_LABELS = {"main": "Κύριος κατάλογος", "n3816": "Κατάλογος ν. 3816/2010"}
+EXAMPLES = ["παρακεταμόλη", "Lipitor", "μετφορμίνη", "2802342802025"]
+
+LOGO = (
+    '<svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true"><rect width="28" height="28" rx="8" '
+    'fill="#0a6b5b"/><path d="M11.5 7h5v4.5H21v5h-4.5V21h-5v-4.5H7v-5h4.5z" fill="#fff"/></svg>'
+)
+ICON_SEARCH = (
+    '<svg width="{s}" height="{s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" '
+    'stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>'
+)
 
 
 def e(x) -> str:
@@ -40,20 +47,37 @@ class Context:
     subst: dict
     slug_of: dict
     downloads: list
+    equiv: dict = field(default_factory=dict)  # eof_code -> codes with same substances, strength, form
 
 
-def layout(ctx: Context, title: str, body: str, path: str, desc: str = "", search_box: bool = True) -> str:
+def pct(new: float, old: float) -> str:
+    v = (new - old) / old * 100
+    return f"{'−' if v < 0 else '+'}{num(abs(v), 0)}%"
+
+
+def name_html(name: str, extra: str = "") -> str:
+    brand, rest = split_name(name)
+    tail = " · ".join(x for x in (rest, extra) if x)
+    return f"<b>{e(brand)}</b> <span>{e(tail)}</span>" if tail else f"<b>{e(brand)}</b>"
+
+
+def layout(
+    ctx: Context, title: str, body: str, path: str, desc: str = "", search_box: bool = True, nav: str = ""
+) -> str:
     mini = (
-        """<form class="search search-mini" action="/anazitisi" method="get" role="search">
+        f"""<form class="search search-mini" action="/anazitisi" method="get" role="search">
+      {ICON_SEARCH.format(s=18)}
       <label class="sr" for="q-top">Αναζήτηση φαρμάκου</label>
-      <input id="q-top" name="q" type="search" placeholder="Αναζήτηση φαρμάκου…" autocomplete="off"
-        spellcheck="false" enterkeyhint="search">
+      <input id="q-top" name="q" type="search" placeholder="Αναζήτηση" autocomplete="off" spellcheck="false" enterkeyhint="search">
       <div class="suggest" hidden></div>
     </form>"""
         if search_box
         else ""
     )
-    m = ctx.meta
+
+    def cur(n: str) -> str:
+        return ' aria-current="page"' if n == nav else ""
+
     return f"""<!doctype html>
 <html lang="el">
 <head>
@@ -64,31 +88,28 @@ def layout(ctx: Context, title: str, body: str, path: str, desc: str = "", searc
 <link rel="canonical" href="{SITE}{e(path)}">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="manifest" href="/manifest.webmanifest">
-<meta name="theme-color" content="#0b6e5f">
+<meta name="theme-color" content="#0a6b5b">
+<link rel="preload" href="/static/inter-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/static/style.css?v={ASSET_VERSION}">
+<link rel="stylesheet" href="/static/scan.css?v={ASSET_VERSION}">
 <script type="module" src="/static/app.js?v={ASSET_VERSION}"></script>
 </head>
 <body>
 <a class="skip" href="#main">Μετάβαση στο περιεχόμενο</a>
 <header class="top">
-  <div class="wrap top-row">
-    <a class="brand" href="/" aria-label="farmaka.info, αρχική">farmaka<span>.info</span></a>
+  <div class="wrap">
+    <a class="brand" href="/" aria-label="farmaka.info, αρχική">{LOGO}<span>farmaka<span class="tld">.info</span></span></a>
     {mini}
-    <nav aria-label="Κύριο μενού"><a href="/dedomena/">Δεδομένα &amp; API</a><a href="/sxetika/">Σχετικά</a></nav>
+    <nav aria-label="Κύριο μενού"><a href="/dedomena/"{cur("data")}>Δεδομένα</a><a class="opt" href="/dedomena/#api">API</a><a href="/sxetika/"{cur("about")}>Σχετικά</a></nav>
   </div>
 </header>
-<main id="main" class="wrap">
+<main id="main">
 {body}
 </main>
 <footer class="foot">
   <div class="wrap">
-    <p><strong>Η πληροφορία είναι ενημερωτική και δεν υποκαθιστά γιατρό ή φαρμακοποιό.</strong>
-    Η επίσημη πηγή υπερισχύει πάντα.</p>
-    <p>Πηγή: Υπουργείο Υγείας (δελτία τιμών, κατάλογος αποζημιούμενων). Τελευταίο δελτίο που έχει
-    ενσωματωθεί: {date_gr(m["data_published"])}. <a href="/dedomena/">Τι περιλαμβάνεται</a>.</p>
-    <p>Δεδομένα <a href="/dedomena/#adeia">CC0</a> · Κώδικας <a href="{REPO}">AGPL-3.0</a> ·
-    Χωρίς cookies, χωρίς διαφημίσεις, χωρίς παρακολούθηση ·
-    <a href="{REPO}/issues">Αναφορά λάθους</a></p>
+    <span>Ενημερωτικό· δεν αντικαθιστά γιατρό ή φαρμακοποιό. Πηγή: Υπουργείο Υγείας.</span>
+    <nav aria-label="Υποσέλιδο"><a href="/dedomena/">Δεδομένα CC0</a><a href="{REPO}">Κώδικας</a><a href="{REPO}/issues">Αναφορά λάθους</a></nav>
   </div>
 </footer>
 </body>
@@ -96,352 +117,430 @@ def layout(ctx: Context, title: str, body: str, path: str, desc: str = "", searc
 """
 
 
-def source_line(src: dict) -> str:
-    if not src or not src.get("published"):
-        return ""
-    title = src.get("title") or "Δελτίο τιμών"
-    link = f'<a href="{e(src["url"])}" rel="noopener">«{e(title)}»</a>' if src.get("url") else f"«{e(title)}»"
-    art = f", άρθρο {e(src['moh_article'])}" if src.get("moh_article") else ""
-    return (
-        f'<p class="src">Πηγή: {e(src.get("publisher", "Υπουργείο Υγείας"))}, {link}, '
-        f"δημοσίευση {date_gr(src['published'])}{art}.</p>"
-    )
-
-
-def subst_links(ctx: Context, names: list[str]) -> str:
-    if not names:
-        return '<span class="muted">—</span>'
-    return " + ".join(f'<a href="/ousia/{e(ctx.slug_of[n])}/">{e(n)}</a>' for n in names)
-
-
-def badges(p: dict) -> str:
-    out = []
-    if p["reimbursement"]:
-        out.append('<span class="badge ok">Στον κατάλογο αποζημίωσης</span>')
-    if p["non_reimbursed"]:
-        out.append('<span class="badge warn">Μη αποζημιούμενο (σήμανση στο δελτίο τιμών)</span>')
-    return f'<p class="badges">{"".join(out)}</p>' if out else ""
-
-
-def pkg_row(p: dict, current: str | None = None) -> str:
-    cls = ' class="current"' if p["eof_code"] == current else ""
-    mark = (
-        ' <span class="badge ok sm" title="Στον κατάλογο αποζημίωσης">Α</span>' if p["reimbursement"] else ""
-    )
-    return (
-        f'<tr{cls}><td><a href="/farmako/{e(p["eof_code"])}/">{e(p["name"])}</a>{mark}</td>'
-        f'<td class="mah">{e(p["mah"])}</td><td class="n">{eur(p["prices"]["retail"])}</td></tr>'
-    )
-
-
-def pkg_table(rows: list[dict], current: str | None = None, caption: str = "") -> str:
-    cap = f"<caption>{e(caption)}</caption>" if caption else ""
-    return (
-        f'<div class="tw"><table class="list">{cap}<thead><tr><th scope="col">Συσκευασία</th>'
-        '<th scope="col" class="mah">Κάτοχος άδειας</th><th scope="col" class="n">Λιανική</th></tr></thead><tbody>'
-        + "".join(pkg_row(p, current) for p in rows)
-        + "</tbody></table></div>"
-    )
-
-
-def search_form(big: bool = True) -> str:
-    return f"""<form class="search {"search-big" if big else ""}" action="/anazitisi" method="get" role="search">
+def search_form(value: str = "", autofocus: bool = True) -> str:
+    af = " autofocus" if autofocus else ""
+    return f"""<form class="search search-big" action="/anazitisi" method="get" role="search">
+  {ICON_SEARCH.format(s=22)}
   <label class="sr" for="q">Αναζήτηση φαρμάκου</label>
-  <input id="q" name="q" type="search" placeholder="π.χ. apotel, παρακεταμόλη, 280…"
-    autocomplete="off" spellcheck="false" enterkeyhint="search" autofocus>
+  <input id="q" name="q" type="search" value="{e(value)}" placeholder="Όνομα, δραστική ουσία ή barcode" autocomplete="off" spellcheck="false" enterkeyhint="search"{af}>
   <button type="submit">Αναζήτηση</button>
   <div class="suggest" hidden></div>
 </form>"""
 
 
+# ---------------------------------------------------------------- home
+
+
 def home(ctx: Context, history: list[dict]) -> str:
     m = ctx.meta
-    recent = sorted(
-        (h for h in history if h["field"] == "price_retail"),
-        key=lambda h: (h["published"], h["eof_code"]),
-        reverse=True,
-    )[:30]
     by_art = {s["moh_article"]: s for s in m["sources"]}
+    changes = sorted(
+        (h for h in history if h["field"] == "price_retail" and h["change"] in ("new", "update")),
+        key=lambda h: (h["published"], h["change"] == "update", h["eof_code"]),
+        reverse=True,
+    )[:8]
     rows = []
-    for h in recent:
+    for h in changes:
         p = ctx.by_code.get(h["eof_code"])
         if not p:
             continue
-        if h["change"] == "new":
-            what = f"Νέα συσκευασία, λιανική {eur(float(h['new']))}"
+        new = float(h["new"])
+        if h["change"] == "update" and h["old"] not in ("", None):
+            old = float(h["old"])
+            prices = f'<span class="old">{eur(old)}</span><span class="new">{eur(new)}</span>'
+            pill = f'<span class="pill {"down" if new < old else "up"}">{pct(new, old)}</span>'
         else:
-            old, new = float(h["old"]), float(h["new"])
-            arrow = "μείωση" if new < old else "αύξηση"
-            what = f"Λιανική {eur(old)} → {eur(new)} ({arrow})"
+            prices = f'<span class="new">{eur(new)}</span>'
+            pill = '<span class="pill new">Νέο</span>'
         src = by_art.get(int(h["moh_article"]), {})
         rows.append(
-            f'<tr><td class="nowrap">{date_gr(h["published"])}</td>'
-            f'<td><a href="/farmako/{e(p["eof_code"])}/">{e(p["name"])}</a></td><td>{what}</td>'
-            f'<td><a href="{e(src.get("url", ""))}" rel="noopener">άρθρο {e(h["moh_article"])}</a></td></tr>'
+            f'<li><span class="d" title="{e(src.get("title", ""))}">{date_gr(h["published"])[:5]}</span>'
+            f'<a class="nm" href="/farmako/{e(p["eof_code"])}/">{name_html(p["name"])}</a>{prices}{pill}</li>'
         )
-    recent_html = (
-        '<section><h2>Πρόσφατες αλλαγές λιανικής τιμής</h2><div class="tw"><table class="list">'
-        '<thead><tr><th scope="col">Δημοσίευση</th><th scope="col">Συσκευασία</th>'
-        '<th scope="col">Αλλαγή</th><th scope="col">Πηγή</th></tr></thead><tbody>'
-        + "".join(rows)
-        + "</tbody></table></div></section>"
+    recent = (
+        '<section class="wrap narrow recent"><div class="section-head"><h2>Πρόσφατες αλλαγές</h2></div>'
+        f'<ul class="changes">{"".join(rows)}</ul></section>'
         if rows
         else ""
     )
-    reimb = (
-        f"<li>{num(m['reimbursed_packages'], 0)} από αυτές στον κατάλογο αποζημιούμενων φαρμάκων "
-        f"(αναθεώρηση {date_gr(m['reimbursement_source']['published'])})</li>"
-        if m.get("reimbursement_source")
-        else ""
-    )
+    examples = "".join(f'<a class="chip" href="/anazitisi?q={quote(x)}">{e(x)}</a>' for x in EXAMPLES)
+    reimb = m.get("reimbursed_packages") or 0
     pending = (
-        f'<li class="muted">{len(m["pending_bulletins"])} μεταγενέστερα δελτία δεν έχουν ενσωματωθεί ακόμη '
-        '(<a href="/dedomena/#katastasi">ποια</a>)</li>'
+        f'<p class="pending">Τελευταίο δελτίο {date_gr(m["data_published"])} · '
+        f'<a href="/dedomena/#katastasi">{len(m["pending_bulletins"])} νεότερα σε αναμονή</a></p>'
         if m["pending_bulletins"]
-        else ""
+        else f'<p class="pending">Τελευταίο δελτίο {date_gr(m["data_published"])}</p>'
     )
     body = f"""
-<section class="hero">
-  <h1>Τιμές και αποζημίωση φαρμάκων στην Ελλάδα</h1>
-  <p class="lead">Όλες οι συσκευασίες του επίσημου δελτίου τιμών του Υπουργείου Υγείας, με τιμή
-  παραγωγού, χονδρική και λιανική, αποζημίωση και ιστορικό. Κάθε στοιχείο δείχνει από ποιο δελτίο
-  προέρχεται. Δωρεάν, χωρίς λογαριασμό, χωρίς παρακολούθηση.</p>
+<section class="wrap narrow hero">
+  <h1>Πληροφορίες φαρμάκων στην Ελλάδα</h1>
+  <p class="sub">Τιμές, αποζημίωση, δραστικές ουσίες και κωδικοί, από τις επίσημες πηγές. Ανοιχτά για όλους.</p>
   {search_form()}
-  <p class="hint">Εμπορική ονομασία, δραστική ουσία, εταιρεία, κωδικός ΕΟΦ ή barcode. Ελληνικά ή
-  λατινικά, με ή χωρίς τόνους.</p>
+  <div class="chips">{examples}</div>
 </section>
-<section class="stats" aria-label="Τι περιέχει">
-  <ul>
-    <li><strong>{num(m["packages"], 0)}</strong> συσκευασίες, <strong>{num(m["substances"], 0)}</strong>
-    δραστικές ουσίες</li>
-    {reimb}
-    <li>Τελευταίο δελτίο που έχει ενσωματωθεί: <strong>{date_gr(m["data_published"])}</strong></li>
-    {pending}
-    <li>Όλα τα δεδομένα ελεύθερα για λήψη και μέσω API: <a href="/dedomena/">Δεδομένα &amp; API</a></li>
-  </ul>
+<section class="wrap narrow" aria-label="Τι περιέχει">
+  <div class="stats">
+    <div><strong>{num(m["packages"], 0)}</strong><span>συσκευασίες</span></div>
+    <div><strong>{num(m["substances"], 0)}</strong><span>δραστικές ουσίες</span></div>
+    <div><strong>{num(reimb, 0)}</strong><span>αποζημιώνονται</span></div>
+  </div>
+  {pending}
 </section>
-{recent_html}
+{recent}
 """
     return layout(
         ctx,
-        "farmaka.info · Τιμές και αποζημίωση φαρμάκων στην Ελλάδα",
+        "farmaka.info · Πληροφορίες φαρμάκων στην Ελλάδα",
         body,
         "/",
-        "Ανοιχτή βάση τιμών και αποζημίωσης φαρμάκων για την Ελλάδα, από τα επίσημα δελτία του Υπουργείου "
-        "Υγείας. Δωρεάν, χωρίς λογαριασμό.",
+        "Ανοιχτή βάση πληροφοριών για τα φάρμακα στην Ελλάδα: τιμές, αποζημίωση, δραστικές ουσίες και κωδικοί, "
+        "από τις επίσημες πηγές. Δωρεάν, χωρίς λογαριασμό.",
         search_box=False,
     )
 
 
-def package(ctx: Context, p: dict) -> str:
+# ---------------------------------------------------------------- package
+
+
+def price_series(p: dict, start: str) -> list[tuple[str, float]]:
+    """(date, retail) points from the package's history; the first point is the
+    earliest price we know (the oldest applied full list if nothing earlier)."""
+    ev = sorted((h for h in p["price_history"] if h["field"] == "price_retail"), key=lambda h: h["published"])
+    pts: list[tuple[str, float]] = []
+    for h in ev:
+        if h["change"] == "withdrawn" or h["new"] is None:
+            continue
+        if not pts and h["change"] == "update" and h["old"] is not None:
+            pts.append((start, h["old"]))
+        pts.append((h["published"], h["new"]))
+    if not pts:
+        pts = [(start, p["prices"]["retail"])]
+    return pts
+
+
+def sparkline(pts: list[tuple[str, float]], end: str) -> str:
+    w, h, pad = 600.0, 64.0, 8.0
+    d0 = date.fromisoformat(pts[0][0])
+    span = max((date.fromisoformat(end) - d0).days, 1)
+    lo, hi = min(v for _, v in pts), max(v for _, v in pts)
+
+    def x(d: str) -> float:
+        return round(min(max((date.fromisoformat(d) - d0).days / span, 0), 1) * w, 1)
+
+    def y(v: float) -> float:
+        if hi == lo:
+            return h / 2
+        return round(pad + (hi - v) / (hi - lo) * (h - 2 * pad), 1)
+
+    path = f"M0 {y(pts[0][1])}"
+    for d, v in pts[1:]:
+        path += f" H{x(d)} V{y(v)}"
+    path += f" H{w:g}"
+    area = path + f" V{h:g} H0 Z"
+    return (
+        f'<svg class="spark" viewBox="0 0 {w:g} {h:g}" preserveAspectRatio="none" aria-hidden="true">'
+        f'<path class="area" d="{area}"/><path class="line" d="{path}" vector-effect="non-scaling-stroke"/></svg>'
+    )
+
+
+def history_card(ctx: Context, p: dict) -> str:
     m = ctx.meta
-    pr = p["prices"]
-    vat = f"{num(p['vat'] * 100, 0)}%" if p["vat"] else "—"
-    atc = e(p["atc"]) if p["atc"] else '<span class="muted">δεν αναφέρεται</span>'
-    prices = f"""
-<section class="card">
-  <h2>Τιμές</h2>
-  <table class="kv">
-    <tr><th scope="row">Λιανική</th><td class="n big">{eur(pr["retail"])}</td></tr>
-    <tr><th scope="row">Χονδρική</th><td class="n">{eur(pr["wholesale"])}</td></tr>
-    <tr><th scope="row">Παραγωγού</th><td class="n">{eur(pr["exfactory"])}</td></tr>
-    <tr><th scope="row">ΦΠΑ</th><td class="n">{vat}</td></tr>
-  </table>
-  {source_line(p["price_source"])}
+    start = m["sources"][0]["published"]
+    end = m["built_at"][:10]
+    pts = price_series(p, start)
+    first, last = pts[0], pts[-1]
+    changes = sorted(
+        (h for h in p["price_history"] if h["field"] == "price_retail" and h["change"] in ("update", "new")),
+        key=lambda h: h["published"],
+        reverse=True,
+    )
+    if len(pts) > 1 and first[1] != last[1]:
+        summary = (
+            f'{eur(first[1])} → <b>{eur(last[1])}</b> '
+            f'<span class="pill {"down" if last[1] < first[1] else "up"}">{pct(last[1], first[1])}</span>'
+        )
+    elif changes and changes[-1]["change"] == "new":
+        summary = f"Νέα συσκευασία από {date_gr(changes[-1]['published'])}"
+    else:
+        summary = f"Σταθερή από {date_gr(first[0])}"
+    url_of = {s["moh_article"]: s.get("url") for s in m["sources"]}
+    events = "".join(
+        f'<li><span class="num">{date_gr(h["published"])}</span><span>'
+        + (
+            f'<span class="num">{eur(h["old"])}</span> → <b class="num">{eur(h["new"])}</b>'
+            if h["change"] == "update" and h["old"] is not None
+            else f'νέα συσκευασία, <b class="num">{eur(h["new"])}</b>'
+        )
+        + f'</span><a href="{e(url_of.get(h["moh_article"], ""))}" rel="noopener">δελτίο ↗</a></li>'
+        for h in changes
+    )
+    return f"""<section class="card">
+  <div class="reimb-head"><h2>Ιστορικό τιμής</h2><span>{summary}</span></div>
+  {sparkline(pts, end)}
+  <div class="spark-axis"><span>{date_gr(first[0])}</span><span>σήμερα</span></div>
+  {f'<ul class="hist">{events}</ul>' if events else ""}
 </section>"""
 
-    if p["reimbursement"]:
-        parts = []
-        for r in p["reimbursement"]:
-            diff = (
-                r["retail_in_list"] - r["reimbursement_price"]
-                if r["retail_in_list"] is not None and r["reimbursement_price"] is not None
-                else None
-            )
-            restr = (
-                '<tr><th scope="row">Περιορισμοί</th><td>'
-                + "".join(f"<p>{e(x)}</p>" for x in r["restrictions"])
-                + "</td></tr>"
-                if r["restrictions"]
-                else ""
-            )
-            ddd = (
-                f'<tr><th scope="row">Καθορισμένη ημερήσια δόση (DDD)</th>'
-                f'<td class="n">{num(r["ddd"], 3).rstrip("0").rstrip(",")} {e(r["ddd_unit"] or "")}</td></tr>'
-                if r["ddd"] is not None
-                else ""
-            )
-            ahd = (
-                f'<tr><th scope="row">Ημερήσιες δόσεις στη συσκευασία</th>'
-                f'<td class="n">{num(r["daily_doses_per_pack"], 2)}</td></tr>'
-                if r["daily_doses_per_pack"] is not None
-                else ""
-            )
-            khth = (
-                f'<tr><th scope="row">Κόστος ημερήσιας θεραπείας</th>'
-                f'<td class="n">{eur(r["daily_cost"])}</td></tr>'
-                if r["daily_cost"] is not None
-                else ""
-            )
-            diff_row = (
-                f'<tr><th scope="row">Διαφορά λιανικής από τιμή αποζημίωσης</th>'
-                f'<td class="n">{eur(diff)}</td></tr>'
-                if diff is not None
-                else ""
-            )
-            parts.append(
-                f"""<table class="kv">
-    <tr><th scope="row">Τιμή αποζημίωσης</th><td class="n big">{eur(r["reimbursement_price"])}</td></tr>
-    <tr><th scope="row">Λιανική στον κατάλογο</th><td class="n">{eur(r["retail_in_list"])}</td></tr>
-    {diff_row}{ddd}{ahd}{khth}
-    <tr><th scope="row">Τρόπος διάθεσης</th><td>{e(r["dispensing"] or "—")}</td></tr>
-    <tr><th scope="row">Ομάδα στον κατάλογο</th><td>{e(r["route_group"] or "—")}</td></tr>
-    <tr><th scope="row">Κατάλογος</th><td>{e(LIST_LABELS.get(r["list"], r["list"]))}</td></tr>
-    {restr}
-  </table>"""
-            )
-        note = (
-            '<p class="note">Όταν η λιανική είναι πάνω από την τιμή αποζημίωσης, τη διαφορά την πληρώνει '
-            "ο ασφαλισμένος, επιπλέον της συμμετοχής του. Το ποσοστό συμμετοχής εξαρτάται από την πάθηση "
-            "και δεν φαίνεται εδώ.</p>"
-        )
-        reimb = (
-            '<section class="card"><h2>Αποζημίωση</h2>'
-            + "".join(parts)
-            + note
-            + source_line(p["reimbursement"][0]["source"])
-            + "</section>"
-        )
-    elif m.get("reimbursement_source"):
-        rs = m["reimbursement_source"]
-        reimb = (
-            '<section class="card"><h2>Αποζημίωση</h2><p>Η συσκευασία δεν βρέθηκε στον Κατάλογο '
-            f"Αποζημιούμενων Φαρμάκων (αναθεώρηση {date_gr(rs['published'])}). Μπορεί να είναι νεότερη "
-            "του καταλόγου ή να μην αποζημιώνεται.</p>" + source_line(rs) + "</section>"
-        )
-    else:
-        reimb = ""
 
-    hist = p["price_history"]
-    first = m["sources"][0]
-    if hist:
-        hrows = "".join(
-            f'<tr><td class="nowrap">{date_gr(h["published"])}</td><td>{e(FIELD_LABELS.get(h["field"], h["field"]))}</td>'
-            f'<td class="n">{"—" if h["old"] is None else (eur(h["old"]) if h["field"] != "non_reimbursed" else ("ναι" if h["old"] else "όχι"))}</td>'
-            f'<td class="n">{"—" if h["new"] is None else (eur(h["new"]) if h["field"] != "non_reimbursed" else ("ναι" if h["new"] else "όχι"))}</td>'
-            f"<td>άρθρο {e(h['moh_article'])}</td></tr>"
-            for h in hist
-        )
-        history = (
-            '<section class="card"><h2>Ιστορικό</h2><div class="tw"><table class="list"><thead><tr>'
-            '<th scope="col">Δημοσίευση</th><th scope="col">Πεδίο</th><th scope="col" class="n">Πριν</th>'
-            '<th scope="col" class="n">Μετά</th><th scope="col">Πηγή</th></tr></thead><tbody>'
-            + hrows
-            + f'</tbody></table></div><p class="src">Το ιστορικό ξεκινά από τον πλήρη κατάλογο της '
-            f"{date_gr(first['published'])}.</p></section>"
-        )
-    else:
-        history = (
-            '<section class="card"><h2>Ιστορικό</h2><p>Καμία αλλαγή τιμής από τον πλήρη κατάλογο της '
-            f"{date_gr(first['published'])} μέχρι το τελευταίο δελτίο που έχει ενσωματωθεί "
-            f"({date_gr(m['data_published'])}).</p></section>"
-        )
-
-    same = sorted(
-        (
-            ctx.by_code[c]
-            for c in (ctx.subst[ctx.slug_of[p["substances"][0]]]["codes"] if p["substances"] else [])
-            if ctx.by_code[c]["substances"] == p["substances"]
-        ),
-        key=lambda x: (x["prices"]["retail"], x["name"]),
+def _bar(covered: float, label: str) -> str:
+    c = round(max(min(covered, 1), 0) * 100, 1)
+    return (
+        f'<svg class="bar" viewBox="0 0 100 12" preserveAspectRatio="none" role="img" aria-label="{e(label)}">'
+        f'<rect class="a" width="{c:g}" height="12"/><rect class="b" x="{c:g}" width="{100 - c:g}" height="12"/></svg>'
     )
-    if len(same) > 1:
-        shown = same[:25]
-        if p not in shown:
-            shown.append(p)
-        more = (
-            f'<p><a href="/ousia/{e(ctx.slug_of[p["substances"][0]])}/">Όλες οι {len(same)} συσκευασίες</a></p>'
-            if len(same) > len(shown)
-            else ""
-        )
-        alt = (
-            '<section class="card"><h2>Άλλες συσκευασίες με τις ίδιες δραστικές ουσίες</h2>'
-            '<p class="note">Ταξινόμηση κατά λιανική τιμή. Μορφή, περιεκτικότητα και μέγεθος συσκευασίας '
-            "διαφέρουν· δεν σημαίνει ότι είναι εναλλάξιμα. Ρωτήστε τον φαρμακοποιό ή τον γιατρό σας.</p>"
-            + pkg_table(shown, p["eof_code"])
-            + more
-            + "</section>"
-        )
-    else:
-        alt = ""
 
+
+def reimbursement_card(ctx: Context, p: dict) -> str:
+    m = ctx.meta
+    if not p["reimbursement"]:
+        if not m.get("reimbursement_source"):
+            return ""
+        rs = m["reimbursement_source"]
+        return (
+            '<section class="card"><h2>Αποζημίωση</h2><p class="small">Δεν περιλαμβάνεται στον κατάλογο '
+            f"αποζημιούμενων φαρμάκων της {date_gr(rs['published'])}.</p></section>"
+        )
+    r = p["reimbursement"][0]
+    retail = r["retail_in_list"] or p["prices"]["retail"]
+    rp = r["reimbursement_price"]
+    diff = max(retail - rp, 0)
+    per_day = []
+    if r["daily_cost"] is not None:
+        per_day.append(f"{eur(r['daily_cost'])} / ημέρα")
+    if r["daily_doses_per_pack"] is not None:
+        n = r["daily_doses_per_pack"]
+        per_day.append(f"{num(n, 0) if n == int(n) else num(n, 2)} ημερήσιες δόσεις")
+    head = f'<span>{" · ".join(per_day)}</span>' if per_day else ""
+    if diff > 0.004:
+        bar = _bar(rp / retail, f"Από τα {eur(retail)}: {eur(rp)} τιμή αποζημίωσης, {eur(diff)} διαφορά")
+        legend = f"""<div class="legend">
+    <div><i class="a"></i><p><strong>{eur(rp)}</strong><span>τιμή αποζημίωσης</span></p></div>
+    <div><i class="b"></i><p><strong>{eur(diff)}</strong><span>διαφορά, την πληρώνει ο ασθενής</span></p></div>
+  </div>"""
+    else:
+        bar = _bar(1, "Η τιμή αποζημίωσης καλύπτει όλη τη λιανική")
+        legend = f"""<div class="legend">
+    <div><i class="a"></i><p><strong>{eur(rp)}</strong><span>τιμή αποζημίωσης, όση η λιανική</span></p></div>
+  </div>"""
+    restr = (
+        '<details class="restr"><summary>Περιορισμοί αποζημίωσης</summary>'
+        + "".join(f"<p>{e(x)}</p>" for x in r["restrictions"])
+        + "</details>"
+        if r["restrictions"]
+        else ""
+    )
+    lst = "" if r["list"] == "main" else f" · {e(LIST_LABELS.get(r['list'], r['list']))}"
+    return f"""<section class="card">
+  <div class="reimb-head"><h2>Αποζημίωση</h2>{head}</div>
+  {bar}
+  {legend}
+  <p class="small">Συν τη συμμετοχή (0, 10 ή 25%) επί της τιμής αποζημίωσης{lst}.</p>
+  {restr}
+</section>"""
+
+
+def equivalents_card(ctx: Context, p: dict) -> str:
+    codes = ctx.equiv.get(p["eof_code"], [])
+    if len(codes) < 2:
+        return ""
+    st = strength(p["name"])
+    rows = [ctx.by_code[c] for c in codes]
+    counts = {q["eof_code"]: unit_count(q["name"]) for q in rows}
+    per_unit = all(counts.values())
+
+    def key(q: dict) -> float:
+        return q["prices"]["retail"] / counts[q["eof_code"]] if per_unit else q["prices"]["retail"]
+
+    rows.sort(key=lambda q: (key(q), q["prices"]["retail"], q["name"]))
+    mine = key(p)
+    cheaper = [q for q in rows if key(q) < mine * 0.995]
+    shown = rows[:7]
+    if p not in shown:
+        shown.append(p)
+    lis = []
+    for q in shown:
+        n = counts[q["eof_code"]]
+        extra = " · ".join(x for x in ((f"×{n}" if n else ""), short_mah(q["mah"])) if x)
+        label = f"<b>{e(split_name(q['name'])[0])}</b> <span>· {e(extra)}</span>"
+        u = f'<span class="u">{eur(key(q))}/τεμ.</span>' if per_unit else ""
+        price = f'<span class="p">{eur(q["prices"]["retail"])}</span>'
+        if q is p:
+            lis.append(f'<li class="me"><span class="nm">{label}</span>{u}{price}<span class="pill here">αυτό</span></li>')
+            continue
+        k = key(q)
+        rel = (
+            f'<span class="pill {"down" if k < mine else "up"}">{pct(k, mine)}</span>'
+            if abs(k - mine) / mine > 0.005
+            else '<span class="pill same">ίδια</span>'
+        )
+        lis.append(f'<li><a class="nm" href="/farmako/{e(q["eof_code"])}/">{label}</a>{u}{price}{rel}</li>')
+    basis = "ανά τεμάχιο" if per_unit else "ανά συσκευασία"
+    if cheaper:
+        best = (mine - key(cheaper[0])) / mine * 100
+        word = "φθηνότερη" if len(cheaper) == 1 else "φθηνότερες"
+        summary = f"{len(cheaper)} {word} {basis}, έως <b>{num(best, 0)}%</b> λιγότερο."
+    else:
+        summary = f"Η φθηνότερη επιλογή {basis}."
+    subs = " + ".join(inn_label(s) for s in p["substances"])
+    more = (
+        f'<a href="/ousia/{e(ctx.slug_of[p["substances"][0]])}/">Όλες οι {len(rows)}</a>'
+        if len(rows) > len(shown)
+        else ""
+    )
+    return f"""<section class="card list-card">
+  <div class="section-head"><h2>{e(subs)} {e(st[1] if st else "")}</h2>{more}</div>
+  <p class="small top">{summary}</p>
+  <ul class="rows eq">{"".join(lis)}</ul>
+  <p class="small">Ίδια δραστική ουσία, περιεκτικότητα και μορφή. Αλλαγή σκευάσματος μόνο με τη γνώμη γιατρού ή φαρμακοποιού.</p>
+</section>"""
+
+
+def package(ctx: Context, p: dict) -> str:
+    pr = p["prices"]
+    brand, rest = split_name(p["name"])
+    subs = p["substances"]
+    crumbs = f'<a href="/ousia/{e(ctx.slug_of[subs[0]])}/">{e(inn_label(subs[0]))}</a>' if subs else "Συσκευασία"
+    chips = [f'<a class="chip sub-link" href="/ousia/{e(ctx.slug_of[s])}/">{e(inn_label(s))}</a>' for s in subs]
+    if p["mah"]:
+        chips.append(f'<span class="chip" title="{e(p["mah"])}">{e(short_mah(p["mah"]))}</span>')
+    disp = dispensing_label(p["reimbursement"][0]["dispensing"]) if p["reimbursement"] else None
+    if disp:
+        chips.append(f'<span class="chip">{e(disp)}</span>')
+    if p["non_reimbursed"]:
+        chips.append('<span class="chip warn">Μη αποζημιούμενο</span>')
+    vat = f"{num(p['vat'] * 100, 0)}%" if p["vat"] else "—"
+    was = ""
+    upd = [h for h in p["price_history"] if h["field"] == "price_retail" and h["change"] == "update" and h["old"]]
+    if upd:
+        last = max(upd, key=lambda h: h["published"])
+        was = f'<p class="was">Ήταν {eur(last["old"])} έως {date_gr(last["published"])}</p>'
+    ps = p["price_source"]
+    srcs = [
+        f'<li><a href="{e(ps["url"])}" rel="noopener">Δελτίο τιμών ↗</a><div>Υπουργείο Υγείας · {date_gr(ps["published"])}</div></li>'
+    ]
+    if p["reimbursement"]:
+        rs = p["reimbursement"][0]["source"]
+        srcs.append(
+            f'<li><a href="{e(rs["url"])}" rel="noopener">Κατάλογος αποζημίωσης ↗</a><div>Υπουργείο Υγείας · {date_gr(rs["published"])}</div></li>'
+        )
     issue = quote(f"Λάθος στη συσκευασία {p['eof_code']}")
     body = f"""
-<nav class="crumbs" aria-label="Διαδρομή"><a href="/">Αρχική</a> › Συσκευασία {e(p["eof_code"])}</nav>
-<h1 class="pkg">{e(p["name"])}</h1>
-{badges(p)}
-<dl class="facts">
-  <div><dt>Δραστική ουσία</dt><dd>{subst_links(ctx, p["substances"])}</dd></div>
-  <div><dt>Κάτοχος άδειας κυκλοφορίας</dt><dd>{e(p["mah"]) or "—"}</dd></div>
-  <div><dt>ATC</dt><dd>{atc}</dd></div>
-  <div><dt>Κωδικός ΕΟΦ</dt><dd class="mono">{e(p["eof_code"])}</dd></div>
-  <div><dt>Barcode</dt><dd class="mono">{e(p["barcode"])}</dd></div>
-</dl>
-<div class="grid">
-{prices}
-{reimb}
+<div class="wrap">
+<nav class="crumbs" aria-label="Διαδρομή"><a href="/">Αρχική</a> / {crumbs}</nav>
+<div class="title">
+  <h1>{e(brand)}</h1>
+  <p class="form">{e(rest)}</p>
+  <div class="chips">{"".join(chips)}</div>
 </div>
-{history}
-{alt}
-<p class="meta-links">Σε μορφή JSON: <a href="/api/v1/packages/{e(p["eof_code"])}"><code>/api/v1/packages/{e(p["eof_code"])}</code></a>
- · <a href="{REPO}/issues/new?title={issue}">Αναφορά λάθους</a></p>
-<p class="note">Για το επίσημο κείμενο του φαρμάκου (ΠΧΠ, φύλλο οδηγιών) δείτε τον
-<a href="https://www.eof.gr" rel="noopener">ΕΟΦ</a>. Η ενσωμάτωσή του εδώ εκκρεμεί.</p>
+<div class="cols">
+  <div class="main">
+    <section class="card price">
+      <div><div class="label">Λιανική τιμή</div><div class="big">{eur(pr["retail"])}</div>{was}</div>
+      <dl class="kv">
+        <dt>Χονδρική</dt><dd>{eur(pr["wholesale"])}</dd>
+        <dt>Παραγωγού</dt><dd>{eur(pr["exfactory"])}</dd>
+        <dt>ΦΠΑ</dt><dd>{vat}</dd>
+      </dl>
+    </section>
+    {reimbursement_card(ctx, p)}
+    {equivalents_card(ctx, p)}
+    {history_card(ctx, p)}
+  </div>
+  <aside>
+    <section class="card side">
+      <dl class="codes">
+        <div><dt>Κωδικός ΕΟΦ</dt><dd>{e(p["eof_code"])}</dd></div>
+        <div><dt>Barcode</dt><dd>{e(p["barcode"])}</dd></div>
+        <div><dt>ATC</dt><dd>{e(p["atc"] or "—")}</dd></div>
+        <div><dt>Κάτοχος άδειας</dt><dd class="txt">{e(p["mah"] or "—")}</dd></div>
+      </dl>
+    </section>
+    <section class="card side">
+      <h2>Πηγές</h2>
+      <ul class="srcs">{"".join(srcs)}</ul>
+    </section>
+    <div class="links"><a href="/api/v1/packages/{e(p["eof_code"])}">JSON</a><a href="{REPO}/issues/new?title={issue}">Αναφορά λάθους</a></div>
+  </aside>
+</div>
+</div>
 """
-    subst = ", ".join(p["substances"]) or "—"
+    subst = ", ".join(inn_label(s) for s in subs) or "—"
     return layout(
         ctx,
-        f"{p['name']} · τιμή {eur(pr['retail'])} · farmaka.info",
+        f"{brand} {rest} · {eur(pr['retail'])} · farmaka.info",
         body,
         f"/farmako/{p['eof_code']}/",
-        f"{p['name']} ({subst}, {p['mah']}). Λιανική {eur(pr['retail'])}, χονδρική {eur(pr['wholesale'])}, "
-        f"αποζημίωση και ιστορικό τιμών, με πηγή το Υπουργείο Υγείας.",
+        f"{p['name']} ({subst}). Λιανική {eur(pr['retail'])}, αποζημίωση, φθηνότερα ισοδύναμα και ιστορικό τιμής, "
+        "από το Υπουργείο Υγείας.",
     )
+
+
+# ---------------------------------------------------------------- substance
+
+
+def _row(p: dict) -> str:
+    tag = ' <span class="tag" title="Στον κατάλογο αποζημίωσης">Α</span>' if p["reimbursement"] else ""
+    return (
+        f'<li><a class="nm" href="/farmako/{e(p["eof_code"])}/">{name_html(p["name"])}</a>{tag}'
+        f'<span class="mah">{e(short_mah(p["mah"]))}</span><span class="p">{eur(p["prices"]["retail"])}</span></li>'
+    )
+
+
+def _strength_sort(label: str) -> tuple:
+    head = label.split()[0].replace(",", ".") if label else ""
+    try:
+        return (0, float(head.split("+")[0]), label)
+    except ValueError:
+        return (1, 0.0, label)
 
 
 def substance(ctx: Context, s: dict) -> str:
     rows = [ctx.by_code[c] for c in s["codes"]]
-    single = sorted((p for p in rows if p["substances"] == [s["name"]]), key=lambda p: p["name"])
-    combo = sorted((p for p in rows if p["substances"] != [s["name"]]), key=lambda p: p["name"])
+    single = [p for p in rows if p["substances"] == [s["name"]]]
+    combo = [p for p in rows if p["substances"] != [s["name"]]]
     parts = []
-    if single:
-        parts.append(f"<section><h2>Μόνο {e(s['name'])} ({len(single)})</h2>{pkg_table(single)}</section>")
-    if combo:
-        groups: dict[tuple, list] = {}
-        for p in combo:
-            groups.setdefault(tuple(p["substances"]), []).append(p)
-        html = []
-        for names, ps in sorted(groups.items()):
-            html.append(f"<h3>{subst_links(ctx, list(names))} ({len(ps)})</h3>{pkg_table(ps)}")
+    groups: dict[str, list] = {}
+    for p in single:
+        st = strength(p["name"])
+        groups.setdefault(st[1] if st else "Άλλες", []).append(p)
+    for label, ps in sorted(groups.items(), key=lambda kv: _strength_sort(kv[0])):
+        ps.sort(key=lambda p: (p["prices"]["retail"], p["name"]))
         parts.append(
-            f"<section><h2>Σε συνδυασμό με άλλες ουσίες ({len(combo)})</h2>{''.join(html)}</section>"
+            f'<section class="group"><h2>{e(label)} <span>{len(ps)}</span></h2>'
+            f'<ul class="rows">{"".join(_row(p) for p in ps)}</ul></section>'
+        )
+    cg: dict[tuple, list] = {}
+    for p in combo:
+        cg.setdefault(tuple(p["substances"]), []).append(p)
+    for names, ps in sorted(cg.items()):
+        ps.sort(key=lambda p: (p["prices"]["retail"], p["name"]))
+        title = " + ".join(inn_label(n) for n in names)
+        parts.append(
+            f'<section class="group"><h2>{e(title)} <span>{len(ps)}</span></h2>'
+            f'<ul class="rows">{"".join(_row(p) for p in ps)}</ul></section>'
         )
     atcs = sorted({p["atc"] for p in rows if p["atc"]})
+    reimb = sum(1 for p in rows if p["reimbursement"])
     body = f"""
-<nav class="crumbs" aria-label="Διαδρομή"><a href="/">Αρχική</a> › Δραστική ουσία</nav>
-<h1>{e(s["name"])}</h1>
-<p>{len(rows)} συσκευασίες στο δελτίο τιμών περιέχουν {e(s["name"])}. ATC: {e(", ".join(atcs)) or "—"}.</p>
-<p class="note">Οι λίστες δεν σημαίνουν ότι τα σκευάσματα είναι εναλλάξιμα. Ρωτήστε τον φαρμακοποιό ή τον γιατρό σας.</p>
+<div class="wrap">
+<nav class="crumbs" aria-label="Διαδρομή"><a href="/">Αρχική</a> / Δραστική ουσία</nav>
+<div class="page-head">
+  <h1>{e(inn_label(s["name"]))}</h1>
+  <p>{num(len(rows), 0)} συσκευασίες · {num(reimb, 0)} αποζημιώνονται · ATC {e(", ".join(atcs[:4]) or "—")}</p>
+</div>
 {"".join(parts)}
-{source_line(ctx.meta["sources"][-1] | {"publisher": "Υπουργείο Υγείας"})}
+</div>
 """
     return layout(
         ctx,
-        f"{s['name']} · συσκευασίες και τιμές · farmaka.info",
+        f"{inn_label(s['name'])} · συσκευασίες και τιμές · farmaka.info",
         body,
         f"/ousia/{s['slug']}/",
-        f"Όλες οι συσκευασίες με {s['name']} στην Ελλάδα, με λιανική τιμή και αποζημίωση.",
+        f"Όλες οι συσκευασίες με {inn_label(s['name'])} στην Ελλάδα, με τιμή και αποζημίωση.",
     )
+
+
+# ---------------------------------------------------------------- data & about
 
 
 def _size(n: int) -> str:
@@ -451,29 +550,26 @@ def _size(n: int) -> str:
 
 
 DOWNLOAD_INFO = {
-    "packages.csv": "Τρέχουσα εικόνα: μία γραμμή ανά συσκευασία, τιμές και πηγή τιμής.",
-    "price_history.csv": "Κάθε αλλαγή τιμής που έχει εφαρμοστεί, με το δελτίο από το οποίο προήλθε.",
-    "reimbursement.csv": "Κατάλογος αποζημιούμενων: τιμή αποζημίωσης, DDD, κόστος ημερήσιας θεραπείας, περιορισμοί.",
-    "farmaka.json": "Όλα τα παραπάνω σε ένα αρχείο JSON, μία εγγραφή ανά συσκευασία.",
-    "farmaka.sqlite": "Βάση SQLite με πίνακες package, price_event, reimbursement, source.",
-    "sources.json": "Τα δελτία που χρησιμοποιήθηκαν, με σύνδεσμο στο Υπουργείο.",
-    "build_report.json": "Αναφορά build: έλεγχοι, ουρά χειροκίνητου ελέγχου, δελτία που εκκρεμούν.",
+    "packages.csv": "Μία γραμμή ανά συσκευασία, με τιμές και πηγή",
+    "price_history.csv": "Κάθε αλλαγή τιμής, με το δελτίο της",
+    "reimbursement.csv": "Τιμή αποζημίωσης, DDD, κόστος ημέρας, περιορισμοί",
+    "farmaka.json": "Όλα μαζί, μία εγγραφή ανά συσκευασία",
+    "farmaka.sqlite": "Βάση SQLite (package, price_event, reimbursement, source)",
+    "sources.json": "Τα δελτία που χρησιμοποιήθηκαν",
+    "build_report.json": "Έλεγχοι, ουρά ελέγχου, δελτία σε αναμονή",
 }
 
 PACKAGE_FIELDS = [
-    ("eof_code", "Κωδικός ΕΟΦ, 9 ψηφία. Μοναδικό κλειδί συσκευασίας."),
-    ("barcode", "EAN-13 με πρόθεμα 280· οι θέσεις 4–12 είναι ο κωδικός ΕΟΦ."),
-    ("name", "Ονομασία όπως στο δελτίο (όνομα, μορφή, περιεκτικότητα, συσκευασία)."),
-    ("atc", "Κωδικός ATC όπως στο δελτίο· σε λίγες γραμμές δεν φτάνει σε επίπεδο ουσίας."),
-    ("substances", "Δραστικές ουσίες, χωρισμένες με |."),
-    ("mah", "Κάτοχος άδειας κυκλοφορίας, όπως στο δελτίο."),
-    ("non_reimbursed", "1 αν το δελτίο το σημειώνει ως μη αποζημιούμενο."),
-    ("price_exfactory", "Τιμή παραγωγού, €."),
-    ("price_wholesale", "Χονδρική τιμή, €."),
-    ("price_retail", "Λιανική τιμή, €."),
-    ("vat", "ΦΠΑ ως κλάσμα (0.06 = 6%)."),
-    ("price_published", "Ημερομηνία δημοσίευσης του δελτίου που όρισε την τρέχουσα τιμή."),
-    ("price_moh_article", "Αριθμός άρθρου του Υπουργείου για το ίδιο δελτίο."),
+    ("eof_code", "Κωδικός ΕΟΦ, 9 ψηφία· μοναδικό κλειδί"),
+    ("barcode", "EAN-13 με πρόθεμα 280· περιέχει τον κωδικό ΕΟΦ"),
+    ("name", "Ονομασία όπως στο δελτίο"),
+    ("atc", "Κωδικός ATC"),
+    ("substances", "Δραστικές ουσίες, χωρισμένες με |"),
+    ("mah", "Κάτοχος άδειας κυκλοφορίας"),
+    ("non_reimbursed", "1 αν το δελτίο το σημειώνει μη αποζημιούμενο"),
+    ("price_exfactory / price_wholesale / price_retail", "Τιμή παραγωγού, χονδρική, λιανική (€)"),
+    ("vat", "ΦΠΑ ως κλάσμα (0.06 = 6%)"),
+    ("price_published / price_moh_article", "Δελτίο που όρισε την τρέχουσα τιμή"),
 ]
 
 
@@ -481,182 +577,140 @@ def data_page(ctx: Context) -> str:
     m = ctx.meta
     dls = "".join(
         f'<tr><td><a href="/data/{e(d["name"])}">{e(d["name"])}</a></td><td>{e(DOWNLOAD_INFO.get(d["name"], ""))}</td>'
-        f'<td class="n nowrap">{_size(d["bytes"])}</td><td class="mono hash" title="{e(d["sha256"])}">{e(d["sha256"][:16])}…</td></tr>'
+        f'<td class="r">{_size(d["bytes"])}</td></tr>'
         for d in ctx.downloads
         if d["name"] != "SHA256SUMS"
     )
     srcs = "".join(
-        f'<li>{date_gr(s["published"])}: <a href="{e(s.get("url", ""))}" rel="noopener">{e(s.get("title") or s["file"])}</a> '
-        f"(άρθρο {e(s['moh_article'])}, {'πλήρης κατάλογος' if s['kind'] == 'full' else 'δελτίο αλλαγών'})</li>"
+        f'<li>{date_gr(s["published"])} · <a href="{e(s.get("url", ""))}" rel="noopener">{e(s.get("title") or s["file"])}</a></li>'
         for s in m["sources"]
     )
     if m.get("reimbursement_source"):
         rs = m["reimbursement_source"]
-        srcs += (
-            f'<li>{date_gr(rs["published"])}: <a href="{e(rs["url"])}" rel="noopener">{e(rs["title"])}</a> '
-            f"(άρθρο {e(rs['moh_article'])}, pdf· κύριος κατάλογος και κατάλογος ν. 3816/2010)</li>"
-        )
+        srcs += f'<li>{date_gr(rs["published"])} · <a href="{e(rs["url"])}" rel="noopener">{e(rs["title"])}</a></li>'
     pend = (
-        "<p>Γνωστά δελτία που <strong>δεν</strong> έχουν ενσωματωθεί ακόμη:</p><ul>"
+        "<p>Σε αναμονή:</p><ul>"
         + "".join(
-            f'<li>{date_gr(x["published"])}: <a href="{e(x["url"])}" rel="noopener">{e(x["title"])}</a> '
-            f"(άρθρο {e(x['moh_article'])}) · {'δεν έχει ληφθεί ακόμη' if x['reason'] == 'not downloaded yet' else 'θέλει χειροκίνητο έλεγχο'}</li>"
+            f'<li>{date_gr(x["published"])} · <a href="{e(x["url"])}" rel="noopener">{e(x["title"])}</a>'
+            f' <span class="muted">({"δεν έχει ληφθεί" if x["reason"] == "not downloaded yet" else "χειροκίνητος έλεγχος"})</span></li>'
             for x in m["pending_bulletins"]
         )
-        + "</ul><p>Οι τιμές των συσκευασιών που αλλάζουν σε αυτά τα δελτία μπορεί να μην είναι οι τρέχουσες.</p>"
+        + "</ul>"
         if m["pending_bulletins"]
-        else "<p>Δεν υπάρχουν γνωστά δελτία που να εκκρεμούν.</p>"
+        else ""
     )
     fields = "".join(f"<tr><td><code>{e(k)}</code></td><td>{e(v)}</td></tr>" for k, v in PACKAGE_FIELDS)
-    example = next(iter(ctx.by_code))
+    ex = "234280202" if "234280202" in ctx.by_code else next(iter(ctx.by_code))
     body = f"""
+<div class="wrap narrow prose">
 <h1>Δεδομένα &amp; API</h1>
-<p class="lead">Όλα τα δεδομένα του site είναι ελεύθερα: κατεβάστε τα, χρησιμοποιήστε τα σε δικό σας
-λογισμικό, χωρίς εγγραφή και χωρίς κλειδί.</p>
+<p class="lead">Ελεύθερα για κάθε χρήση (CC0). Χωρίς εγγραφή, χωρίς κλειδί.</p>
 
-<section id="katastasi"><h2>Κατάσταση ενημέρωσης</h2>
-<p>Τελευταίο build: {date_gr(m["built_at"])}. Ενσωματωμένα δελτία:</p>
+<h2 id="lipseis">Λήψεις</h2>
+<div class="tw"><table class="table"><thead><tr><th>Αρχείο</th><th>Περιεχόμενο</th><th class="r">Μέγεθος</th></tr></thead><tbody>{dls}</tbody></table></div>
+<p class="small">UTF-8, δεκαδικά με τελεία. Έλεγχος: <a href="/data/SHA256SUMS">SHA256SUMS</a>.</p>
+
+<h2 id="api">API</h2>
+<div class="tw"><table class="table"><tbody>
+<tr><td><a href="/api/v1/packages/{e(ex)}"><code>/api/v1/packages/{{κωδικός ΕΟΦ}}</code></a></td><td>Μία συσκευασία</td></tr>
+<tr><td><a href="/api/v1/barcode/{e(ctx.by_code[ex]["barcode"])}"><code>/api/v1/barcode/{{EAN-13}}</code></a></td><td>Με barcode</td></tr>
+<tr><td><a href="/api/v1/search?q=lipitor"><code>/api/v1/search?q=…</code></a></td><td>Αναζήτηση</td></tr>
+<tr><td><a href="/api/v1/substances"><code>/api/v1/substances</code></a></td><td>Δραστικές ουσίες</td></tr>
+<tr><td><a href="/api/v1/meta"><code>/api/v1/meta</code></a></td><td>Ενημέρωση και πηγές</td></tr>
+</tbody></table></div>
+<p class="small">JSON, CORS ανοιχτό. Για μαζική χρήση προτιμήστε τις λήψεις.</p>
+
+<h2 id="katastasi">Πηγές και ενημέρωση</h2>
 <ul>{srcs}</ul>
 {pend}
-</section>
 
-<section id="lipseis"><h2>Λήψεις</h2>
-<div class="tw"><table class="list"><thead><tr><th scope="col">Αρχείο</th><th scope="col">Περιεχόμενο</th>
-<th scope="col" class="n">Μέγεθος</th><th scope="col">SHA-256</th></tr></thead><tbody>{dls}</tbody></table></div>
-<p>Έλεγχος ακεραιότητας: <a href="/data/SHA256SUMS">SHA256SUMS</a>. Κωδικοποίηση UTF-8, δεκαδικά με τελεία.</p>
-</section>
+<details><summary>Πεδία του packages.csv</summary>
+<div class="tw"><table class="table"><tbody>{fields}</tbody></table></div>
+<p class="small">Σταθερά ονόματα· αλλαγή σημαίνει νέο <code>schema_version</code> (τώρα {e(m["schema_version"])}).</p>
+</details>
 
-<section id="adeia"><h2>Άδεια</h2>
-<p>Τα δεδομένα διατίθενται με <a href="https://creativecommons.org/publicdomain/zero/1.0/deed.el" rel="noopener">CC0 1.0</a>:
-χωρίς περιορισμούς, ούτε υποχρέωση αναφοράς. Μια αναφορά στο farmaka.info και στο Υπουργείο Υγείας ως πηγή
-βοηθά τους χρήστες σας να ελέγχουν την προέλευση. Ο κώδικας είναι ελεύθερος με
-<a href="{REPO}/blob/main/LICENSE">AGPL-3.0</a>.</p>
-</section>
-
-<section id="pedia"><h2>Πεδία του packages.csv</h2>
-<div class="tw"><table class="list"><thead><tr><th scope="col">Πεδίο</th><th scope="col">Περιγραφή</th></tr></thead>
-<tbody>{fields}</tbody></table></div>
-<p>Τα ονόματα των πεδίων είναι σταθερά. Αλλαγή σχήματος σημαίνει νέο <code>schema_version</code>
-(τρέχον: {e(m["schema_version"])}).</p>
-</section>
-
-<section id="api"><h2>API</h2>
-<p>Read-only, JSON, χωρίς κλειδί, με CORS ανοιχτό για όλους. Παρακαλούμε για λογική χρήση· για μαζική
-επεξεργασία προτιμήστε τις λήψεις.</p>
-<div class="tw"><table class="list"><thead><tr><th scope="col">Αίτημα</th><th scope="col">Επιστρέφει</th></tr></thead><tbody>
-<tr><td><a href="/api/v1/packages/{e(example)}"><code>GET /api/v1/packages/{{κωδικός ΕΟΦ}}</code></a></td><td>Μία συσκευασία: τιμές, πηγή, ιστορικό, αποζημίωση.</td></tr>
-<tr><td><a href="/api/v1/barcode/{e(ctx.by_code[example]["barcode"])}"><code>GET /api/v1/barcode/{{EAN-13}}</code></a></td><td>Το ίδιο, με barcode.</td></tr>
-<tr><td><a href="/api/v1/search?q=apotel"><code>GET /api/v1/search?q=…&amp;limit=…</code></a></td><td>Αναζήτηση (όνομα, ουσία, εταιρεία, κωδικός). Έως 200 αποτελέσματα.</td></tr>
-<tr><td><a href="/api/v1/substances"><code>GET /api/v1/substances</code></a></td><td>Όλες οι δραστικές ουσίες με τους κωδικούς των συσκευασιών τους.</td></tr>
-<tr><td><a href="/api/v1/meta"><code>GET /api/v1/meta</code></a></td><td>Πότε ενημερώθηκε, από ποια δελτία, τι εκκρεμεί.</td></tr>
-</tbody></table></div>
-</section>
-
-<section id="kena"><h2>Γνωστά κενά</h2>
+<details><summary>Γνωστά κενά</summary>
 <ul>
-<li>Το ιστορικό τιμών ξεκινά από τον πλήρη κατάλογο της {date_gr(m["sources"][0]["published"])}· το παλαιότερο ιστορικό θα προστεθεί σταδιακά.</li>
-<li>Ως ημερομηνία τιμής χρησιμοποιείται η δημοσίευση του δελτίου. Η ημερομηνία ισχύος μπορεί να διαφέρει.</li>
-<li>Οι αποσύρσεις συσκευασιών φαίνονται μόνο στον επόμενο πλήρη κατάλογο.</li>
-<li>Φάρμακα που δεν υπάρχουν στο δελτίο τιμών (π.χ. πολλά μη συνταγογραφούμενα με ελεύθερη τιμή) δεν εμφανίζονται.</li>
-<li>Οι τροποποιήσεις και ορθές επαναλήψεις αποφάσεων δεν εφαρμόζονται αυτόματα· ελέγχονται χειροκίνητα.</li>
-<li>Οι σημαίες «Σ» και «Τ» του καταλόγου αποζημίωσης δημοσιεύονται όπως είναι· η σημασία τους δεν έχει επιβεβαιωθεί.</li>
-<li>Δεν περιλαμβάνονται ακόμη ΠΧΠ και φύλλα οδηγιών: τα στοιχεία του ΕΟΦ θα έρθουν με επίσημο αίτημα, όχι με scraping.</li>
+<li>Ιστορικό τιμών από {date_gr(m["sources"][0]["published"])}· τα παλαιότερα δελτία προστίθενται.</li>
+<li>Ημερομηνία τιμής = δημοσίευση δελτίου· η ισχύς μπορεί να διαφέρει.</li>
+<li>Φάρμακα εκτός δελτίου τιμών (π.χ. πολλά μη συνταγογραφούμενα) δεν εμφανίζονται.</li>
+<li>Τροποποιήσεις αποφάσεων ελέγχονται χειροκίνητα.</li>
+<li>ΠΧΠ και φύλλα οδηγιών: εκκρεμεί επίσημο αίτημα προς τον ΕΟΦ.</li>
 </ul>
-<p>Ο κώδικας του pipeline και τα tests: <a href="{REPO}">{REPO.removeprefix("https://")}</a>.</p>
-</section>
+</details>
+
+<h2 id="adeia">Άδεια</h2>
+<p>Δεδομένα <a href="https://creativecommons.org/publicdomain/zero/1.0/deed.el" rel="noopener">CC0 1.0</a>. Κώδικας <a href="{REPO}/blob/main/LICENSE">AGPL-3.0</a>.</p>
+</div>
 """
     return layout(
-        ctx,
-        "Δεδομένα & API · farmaka.info",
-        body,
-        "/dedomena/",
-        "Ανοιχτά δεδομένα τιμών και αποζημίωσης φαρμάκων (CC0) και API χωρίς κλειδί.",
+        ctx, "Δεδομένα & API · farmaka.info", body, "/dedomena/", "Ανοιχτά δεδομένα φαρμάκων (CC0) και API χωρίς κλειδί.", nav="data"
     )
 
 
 def about(ctx: Context) -> str:
     body = f"""
+<div class="wrap narrow prose">
 <h1>Σχετικά</h1>
-<section><h2>Τι είναι</h2>
-<p>Το farmaka.info είναι μια ελεύθερη, ανοιχτή βάση πληροφοριών για τα φάρμακα στην Ελλάδα. Συγκεντρώνει τα
-επίσημα δελτία τιμών και τον κατάλογο αποζημιούμενων φαρμάκων του Υπουργείου Υγείας, τα ενώνει ανά
-συσκευασία και τα δημοσιεύει ως ιστοσελίδες, αρχεία και API.</p>
-<p>Η πληροφορία αυτή είναι ήδη δημόσια, αλλά σκόρπια σε δεκάδες αρχεία xlsx και pdf. Εδώ τη βρίσκετε σε
-ένα σημείο, με το ιστορικό της και με σύνδεσμο στο έγγραφο από το οποίο προέρχεται κάθε τιμή.</p>
-</section>
-<section><h2>Για ποιον</h2>
-<p>Για φαρμακοποιούς, γιατρούς, νοσηλευτές, φοιτητές, ασθενείς, δημοσιογράφους, και για όσους φτιάχνουν
-λογισμικό υγείας και χρειάζονται αξιόπιστα, ανοιχτά δεδομένα.</p>
-</section>
-<section><h2>Τι δεν είναι</h2>
-<p>Δεν είναι ιατρική συμβουλή. Δεν προτείνει θεραπεία και δεν ελέγχει αλληλεπιδράσεις για συγκεκριμένο
-ασθενή. Για οτιδήποτε αφορά την υγεία σας, ρωτήστε τον γιατρό ή τον φαρμακοποιό σας. Αν κάτι εδώ διαφέρει
-από την επίσημη πηγή, ισχύει η επίσημη πηγή.</p>
-</section>
-<section><h2>Πηγές</h2>
-<ul>
-<li>Υπουργείο Υγείας, <a href="https://www.moh.gov.gr/articles/times-farmakwn/deltia-timwn" rel="noopener">Δελτία Τιμών Φαρμάκων</a>.</li>
-<li>Υπουργείο Υγείας, <a href="https://www.moh.gov.gr/articles/times-farmakwn/epitroph-aksiologhshs-kai-apozhmiwshs-farmakwn" rel="noopener">Κατάλογος Αποζημιούμενων Φαρμάκων</a>.</li>
-</ul>
-<p>Χρησιμοποιούμε μόνο δημόσιες πηγές ή πηγές με ρητή άδεια. Δεν αντιγράφουμε δεδομένα από ιδιωτικές βάσεις.
-Τα στοιχεία του ΕΟΦ (μητρώο, ΠΧΠ, φύλλα οδηγιών) θα προστεθούν όταν διατεθούν με επίσημο αίτημα.</p>
-</section>
-<section><h2>Ιδιωτικότητα</h2>
-<p>Δεν υπάρχουν λογαριασμοί, cookies, διαφημίσεις, εργαλεία analytics ή scripts τρίτων. Οι αναζητήσεις
-γίνονται μέσα στον browser σας. Το site φιλοξενείται στο Cloudflare, που κρατά τεχνικά logs για την
-ασφάλεια της υπηρεσίας· εμείς δεν τα χρησιμοποιούμε για να παρακολουθούμε επισκέπτες.</p>
-</section>
-<section><h2>Ποιος το φτιάχνει</h2>
-<p>Ανεξάρτητο project του Πιέρρου Παπαδέα. Ο κώδικας είναι ανοιχτός
-(<a href="{REPO}">{REPO.removeprefix("https://")}</a>, AGPL-3.0) και τα δεδομένα ελεύθερα (CC0).
-Συνεισφορές είναι ευπρόσδεκτες.</p>
-</section>
-<section><h2>Επικοινωνία</h2>
-<p>Βρήκατε λάθος; Ανοίξτε ένα <a href="{REPO}/issues">issue στο GitHub</a> με τον κωδικό ΕΟΦ της
-συσκευασίας και, αν γίνεται, το έγγραφο του Υπουργείου που δείχνει τη σωστή τιμή. Κάθε διόρθωση
-επαληθεύεται από την πηγή.</p>
-</section>
+<p class="lead">Ελεύθερη, ανοιχτή βάση πληροφοριών για τα φάρμακα στην Ελλάδα.</p>
+<p>Τα δελτία τιμών και ο κατάλογος αποζημίωσης του Υπουργείου Υγείας είναι δημόσια, αλλά σκόρπια σε
+εκατοντάδες αρχεία. Εδώ ενώνονται ανά συσκευασία, με ιστορικό και σύνδεσμο στην πηγή κάθε στοιχείου.</p>
+
+<h2>Τι δεν είναι</h2>
+<p>Ιατρική συμβουλή. Για την υγεία σας ρωτήστε γιατρό ή φαρμακοποιό. Αν κάτι διαφέρει από την επίσημη πηγή, ισχύει η πηγή.</p>
+
+<h2>Ιδιωτικότητα</h2>
+<p>Χωρίς λογαριασμούς, cookies, analytics ή scripts τρίτων. Η αναζήτηση γίνεται στον browser σας.
+Φιλοξενία: Cloudflare, που κρατά τεχνικά logs ασφαλείας.</p>
+
+<h2>Ποιος</h2>
+<p>Ανεξάρτητο project του Πιέρρου Παπαδέα. <a href="{REPO}">Ανοιχτός κώδικας</a> (AGPL-3.0), ελεύθερα δεδομένα (CC0).</p>
+
+<h2>Λάθη</h2>
+<p>Ανοίξτε <a href="{REPO}/issues">issue</a> με τον κωδικό ΕΟΦ και, αν γίνεται, το έγγραφο του Υπουργείου.</p>
+</div>
 """
     return layout(
-        ctx,
-        "Σχετικά · farmaka.info",
-        body,
-        "/sxetika/",
-        "Τι είναι το farmaka.info, από πού έρχονται τα δεδομένα, ποιος το φτιάχνει.",
+        ctx, "Σχετικά · farmaka.info", body, "/sxetika/", "Τι είναι το farmaka.info και από πού έρχονται τα δεδομένα.", nav="about"
     )
 
 
 def not_found(ctx: Context) -> str:
-    body = """
-<h1>Η σελίδα δεν βρέθηκε</h1>
-<p>Ίσως η διεύθυνση άλλαξε ή η συσκευασία δεν υπάρχει πια στο δελτίο τιμών. Δοκιμάστε μια αναζήτηση:</p>
-""" + search_form()
+    body = f"""
+<div class="wrap narrow prose">
+<h1>Δεν βρέθηκε</h1>
+<p class="lead">Η σελίδα δεν υπάρχει ή η συσκευασία έφυγε από το δελτίο τιμών.</p>
+{search_form(autofocus=False)}
+</div>"""
     return layout(ctx, "Δεν βρέθηκε · farmaka.info", body, "/404.html", search_box=False)
 
 
 def search_template(ctx: Context) -> str:
     """Filled in by web/worker.js for /anazitisi (works without JavaScript)."""
-    body = """
-<h1>Αναζήτηση</h1>
+    body = f"""
+<div class="wrap narrow">
+<div class="page-head"><h1>Αναζήτηση</h1></div>
 <form class="search search-big" action="/anazitisi" method="get" role="search">
+  {ICON_SEARCH.format(s=22)}
   <label class="sr" for="q">Αναζήτηση φαρμάκου</label>
-  <input id="q" name="q" type="search" value="{{QUERY}}" autocomplete="off" spellcheck="false" enterkeyhint="search">
+  <input id="q" name="q" type="search" value="{{{{QUERY}}}}" placeholder="Όνομα, δραστική ουσία ή barcode" autocomplete="off" spellcheck="false" enterkeyhint="search">
   <button type="submit">Αναζήτηση</button>
   <div class="suggest" hidden></div>
 </form>
-{{RESULTS}}
+{{{{RESULTS}}}}
+</div>
 """
     return layout(ctx, "Αναζήτηση · farmaka.info", body, "/anazitisi", search_box=False)
 
 
 HEADERS = """/*
-  Content-Security-Policy: default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'
+  Content-Security-Policy: default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; connect-src 'self'; font-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: camera=(self), geolocation=(), microphone=(), interest-cohort=()
   Cross-Origin-Opener-Policy: same-origin
 /static/*
-  Cache-Control: public, max-age=86400
+  Cache-Control: public, max-age=3600
 /data/*
   Access-Control-Allow-Origin: *
   Cache-Control: public, max-age=3600
@@ -674,12 +728,12 @@ def webmanifest() -> str:
         {
             "name": "farmaka.info",
             "short_name": "farmaka",
-            "description": "Τιμές και αποζημίωση φαρμάκων στην Ελλάδα",
+            "description": "Πληροφορίες φαρμάκων στην Ελλάδα",
             "lang": "el",
             "start_url": "/",
             "display": "standalone",
             "background_color": "#ffffff",
-            "theme_color": "#0b6e5f",
+            "theme_color": "#0a6b5b",
             "icons": [{"src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml"}],
         },
         ensure_ascii=False,

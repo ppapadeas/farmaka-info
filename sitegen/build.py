@@ -25,6 +25,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from . import pages
+from .drug import form_group, strength
 from .text import skeleton, slugify
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -164,6 +165,19 @@ def substance_index(pkgs: list[dict]) -> dict[str, dict]:
         for s in p["substances"]:
             out[slugs[s]]["codes"].append(p["eof_code"])
     return out
+
+
+def equivalents(pkgs: list[dict]) -> dict[str, list[str]]:
+    """eof_code -> codes with the same substances, strength and dose-form family.
+
+    Packages whose strength or form cannot be read from the name get no group:
+    better no comparison than a wrong one."""
+    groups: dict[tuple, list[str]] = defaultdict(list)
+    for p in pkgs:
+        st, fg = strength(p["name"]), form_group(p["name"])
+        if p["substances"] and st and fg:
+            groups[(tuple(p["substances"]), st[0], fg)].append(p["eof_code"])
+    return {c: codes for codes in groups.values() if len(codes) > 1 for c in codes}
 
 
 def write_search_index(pkgs: list[dict], path: Path) -> None:
@@ -341,6 +355,7 @@ def build(data: Path, out: Path, built_at: str) -> dict:
         if f.is_file():
             shutil.copy2(f, out / "static" / f.name)
     shutil.copy2(STATIC / "favicon.svg", out / "favicon.svg")
+    shutil.copy2(STATIC / "sw.js", out / "sw.js")  # a service worker controls only paths below its own
 
     latest = max(s["published"] for s in sources)
     meta = {
@@ -395,7 +410,9 @@ def build(data: Path, out: Path, built_at: str) -> dict:
     write_search_index(pkgs, out / "search-index.tsv")
 
     # pages
-    ctx = pages.Context(meta=meta, by_code=by_code, subst=subst, slug_of=slug_of, downloads=downloads)
+    ctx = pages.Context(
+        meta=meta, by_code=by_code, subst=subst, slug_of=slug_of, downloads=downloads, equiv=equivalents(pkgs)
+    )
     urls = ["/", "/dedomena/", "/sxetika/"]
     (out / "index.html").write_text(pages.home(ctx, history), encoding="utf-8")
     for path, html in (

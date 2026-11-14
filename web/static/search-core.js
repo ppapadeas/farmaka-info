@@ -122,3 +122,21 @@ export function search(rows, q, limit = 50) {
 export function eur(x) {
   return new Intl.NumberFormat("el-GR", { style: "currency", currency: "EUR" }).format(x);
 }
+
+// Same rule as sitegen/drug.py::split_name: brand = words before the dose form.
+const FORM_WORDS = new Set([
+  "TABLET", "TABLETS", "TABS", "TAB", "CAPS", "CAP", "SYR", "CREAM", "GEL", "OINT", "LOTION", "POWDER",
+  "DROPS", "SUPP", "PATCH", "SHAMPOO", "SPRAY", "GRANULES", "EMULSION", "SUSPENSION", "SOLUTION",
+]);
+const DOTTED_FORM = /^(?=.*[A-Z])[A-Z/]+(?:\.[A-Z/]+)+\.?$/;
+
+export function splitName(name) {
+  const toks = String(name).split(/\s+/).filter(Boolean);
+  for (let i = 1; i < toks.length; i++) {
+    const t = toks[i].toUpperCase().replace(/,+$/, "");
+    if (FORM_WORDS.has(t) || DOTTED_FORM.test(t)) {
+      return [toks.slice(0, i).join(" ").replace(/[®™]/g, "").trim(), toks.slice(i).join(" ")];
+    }
+  }
+  return [(toks[0] || name).replace(/[®™]/g, ""), toks.slice(1).join(" ")];
+}
