@@ -130,7 +130,7 @@ def pkg_row(p: dict, current: str | None = None) -> str:
     )
     return (
         f'<tr{cls}><td><a href="/farmako/{e(p["eof_code"])}/">{e(p["name"])}</a>{mark}</td>'
-        f'<td>{e(p["mah"])}</td><td class="n">{eur(p["prices"]["retail"])}</td></tr>'
+        f'<td class="mah">{e(p["mah"])}</td><td class="n">{eur(p["prices"]["retail"])}</td></tr>'
     )
 
 
@@ -138,7 +138,7 @@ def pkg_table(rows: list[dict], current: str | None = None, caption: str = "") -
     cap = f"<caption>{e(caption)}</caption>" if caption else ""
     return (
         f'<div class="tw"><table class="list">{cap}<thead><tr><th scope="col">Συσκευασία</th>'
-        '<th scope="col">Κάτοχος άδειας</th><th scope="col" class="n">Λιανική</th></tr></thead><tbody>'
+        '<th scope="col" class="mah">Κάτοχος άδειας</th><th scope="col" class="n">Λιανική</th></tr></thead><tbody>'
         + "".join(pkg_row(p, current) for p in rows)
         + "</tbody></table></div>"
     )

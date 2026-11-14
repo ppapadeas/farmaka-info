@@ -24,10 +24,12 @@ _GREEK_DIGRAPHS = [
     ("τσ", "ts"),
     ("τζ", "tz"),
 ]
+_GREEK_LETTERS = "αβγδεζηθικλμνξοπρσςτυφχψω"
 _GREEK = dict(
     zip(
-        "αβγδεζηθικλμνξοπρσςτυφχψω",
-        "a v g d e z i th i k l m n ks o p r s s t i f ch ps o".split(),
+        _GREEK_LETTERS,
+        ["a", "v", "g", "d", "e", "z", "i", "th", "i", "k", "l", "m", "n"]
+        + ["ks", "o", "p", "r", "s", "s", "t", "i", "f", "ch", "ps", "o"],
         strict=True,
     )
 )
@@ -66,8 +68,9 @@ def skeleton(text: str | None) -> str:
 # so use the ELOT-like single letters.
 _SLUG_GREEK = dict(
     zip(
-        "αβγδεζηθικλμνξοπρσςτυφχψω",
-        "a v g d e z i th i k l m n x o p r s s t y f ch ps o".split(),
+        _GREEK_LETTERS,
+        ["a", "v", "g", "d", "e", "z", "i", "th", "i", "k", "l", "m", "n"]
+        + ["x", "o", "p", "r", "s", "s", "t", "y", "f", "ch", "ps", "o"],
         strict=True,
     )
 )

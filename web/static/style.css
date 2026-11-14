@@ -108,7 +108,7 @@ h1.pkg { font-size: 1.35rem; word-break: break-word; }
 .badge.ok { background: var(--ok-bg); color: var(--ok-fg); }
 .badge.warn { background: var(--warn-bg); color: var(--warn-fg); }
 .badge.sm { font-size: .72rem; padding: 0 6px; vertical-align: 1px; }
-.facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 8px 20px; margin: 12px 0 8px; }
+.facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px 20px; margin: 12px 0 8px; }
 .facts div { border-left: 3px solid var(--line); padding-left: 10px; }
 .facts dt { font-size: .82rem; color: var(--muted); }
 .facts dd { margin: 0; word-break: break-word; }
@@ -148,6 +148,7 @@ h1.pkg { font-size: 1.35rem; word-break: break-word; }
   .search-mini { order: 3; flex-basis: 100%; max-width: none; }
   .hero h1 { font-size: 1.45rem; }
   .search button { padding: 0 12px; }
+  .list .mah { display: none; }
 }
 @media print {
   .top, .foot, .search, .meta-links { display: none; }

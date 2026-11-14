@@ -132,14 +132,14 @@ async function searchPage(url, env) {
         (r) =>
           `<tr><td><a href="/farmako/${esc(r.eof_code)}/">${esc(r.name)}</a>${
             r.reimbursed ? ' <span class="badge ok sm" title="Στον κατάλογο αποζημίωσης">Α</span>' : ""
-          }<br><span class="muted">${esc(r.substances.join(" + "))}</span></td><td>${esc(r.mah)}</td><td class="n">${esc(
+          }<br><span class="muted">${esc(r.substances.join(" + "))}</span></td><td class="mah">${esc(r.mah)}</td><td class="n">${esc(
             eur(r.price_retail),
           )}</td></tr>`,
       )
       .join("");
     results = total
       ? `<p class="results-count">${total} συσκευασίες${total > rows.length ? `, εμφανίζονται οι πρώτες ${rows.length}` : ""}.</p>
-<div class="tw"><table class="list"><thead><tr><th scope="col">Συσκευασία</th><th scope="col">Κάτοχος άδειας</th><th scope="col" class="n">Λιανική</th></tr></thead><tbody>${items}</tbody></table></div>`
+<div class="tw"><table class="list"><thead><tr><th scope="col">Συσκευασία</th><th scope="col" class="mah">Κάτοχος άδειας</th><th scope="col" class="n">Λιανική</th></tr></thead><tbody>${items}</tbody></table></div>`
       : `<p>Δεν βρέθηκε συσκευασία για «${esc(q)}». Δοκιμάστε εμπορική ονομασία, δραστική ουσία ή κωδικό ΕΟΦ.</p>`;
   }
   const tpl = await (await asset(env, "/_templates/search.html")).text();
