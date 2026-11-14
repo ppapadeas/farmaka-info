@@ -301,9 +301,17 @@ def reimbursement_card(ctx: Context, p: dict) -> str:
             f"αποζημιούμενων φαρμάκων της {date_gr(rs['published'])}.</p></section>"
         )
     r = p["reimbursement"][0]
-    retail = r["retail_in_list"] or p["prices"]["retail"]
+    # Compare with today's retail price: a price change after the catalogue
+    # (e.g. a later price cut) must not show a gap that no longer exists.
+    retail = p["prices"]["retail"]
     rp = r["reimbursement_price"]
     diff = max(retail - rp, 0)
+    stale = ""
+    if r["retail_in_list"] is not None and abs(r["retail_in_list"] - retail) > 0.004:
+        stale = (
+            f'<p class="small">Ο κατάλογος γράφει λιανική {eur(r["retail_in_list"])}· '
+            f"η τρέχουσα είναι {eur(retail)}.</p>"
+        )
     per_day = []
     if r["daily_cost"] is not None:
         per_day.append(f"{eur(r['daily_cost'])} / ημέρα")
@@ -320,7 +328,7 @@ def reimbursement_card(ctx: Context, p: dict) -> str:
     else:
         bar = _bar(1, "Η τιμή αποζημίωσης καλύπτει όλη τη λιανική")
         legend = f"""<div class="legend">
-    <div><i class="a"></i><p><strong>{eur(rp)}</strong><span>τιμή αποζημίωσης, όση η λιανική</span></p></div>
+    <div><i class="a"></i><p><strong>{eur(rp)}</strong><span>τιμή αποζημίωσης· καλύπτει όλη τη λιανική</span></p></div>
   </div>"""
     restr = (
         '<details class="restr"><summary>Περιορισμοί αποζημίωσης</summary>'
@@ -335,6 +343,7 @@ def reimbursement_card(ctx: Context, p: dict) -> str:
   {bar}
   {legend}
   <p class="small">Συν τη συμμετοχή (0, 10 ή 25%) επί της τιμής αποζημίωσης{lst}.</p>
+  {stale}
   {restr}
 </section>"""
 

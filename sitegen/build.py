@@ -101,6 +101,9 @@ def enrich(packages, sources, history, reimb) -> list[dict]:
     by_article = {s["moh_article"]: s for s in sources}
     hist = defaultdict(list)
     for h in history:
+        # per-package records keep the retail series; every field is in price_history.csv
+        if h["field"] != "price_retail":
+            continue
         hist[h["eof_code"]].append(
             {
                 "field": h["field"],
