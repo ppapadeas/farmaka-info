@@ -1,0 +1,68 @@
+# Daily: fetch new MoH bulletins (politely, first 2 listing pages), rebuild the
+# data and the site, deploy to Cloudflare. Downloaded bulletins are kept in the
+# Actions cache between runs; the sample bulletins in git are always a fallback
+# baseline, so a ministry outage never breaks the site.
+name: update
+on:
+  schedule:
+    - cron: "23 5 * * *" # 07:23/08:23 Athens
+  workflow_dispatch:
+concurrency:
+  group: update
+  cancel-in-progress: false
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: python -m pip install -e ".[pdf]"
+      - name: Restore downloaded bulletins
+        uses: actions/cache/restore@v4
+        with:
+          path: data
+          key: moh-data-${{ github.run_id }}
+          restore-keys: moh-data-
+      - name: Fetch new price bulletins
+        # The ministry site is sometimes down; build with what we have.
+        continue-on-error: true
+        run: python -m ingest.fetch --section prices --out data --max-pages 2
+      - name: Build data
+        run: |
+          python -m ingest.build --manifest data/manifest_prices.json --raw data/raw --out data/current
+          if [ -f ingest/reimbursement.py ]; then
+            python -m ingest.reimbursement --pdf samples/raw/katalogos_2026-10.pdf --list main --decimal . --out data/current/reimbursement_main.csv
+            python -m ingest.reimbursement --pdf samples/raw/katalogos_n3816_2026-10.pdf --list n3816 --decimal , --out data/current/reimbursement_n3816.csv
+          fi
+      - name: Save downloaded bulletins
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: data
+          key: moh-data-${{ github.run_id }}
+      - name: Build site
+        run: |
+          python -m sitegen.build --data data/current --out dist
+          test "$(find dist -type f | wc -l)" -gt 10000
+      - name: Deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx --yes wrangler@4 deploy
+      - name: Summary
+        run: |
+          python - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json
+          r = json.load(open("data/current/build_report.json", encoding="utf-8"))
+          print(f"- packages: {r['packages']}")
+          print(f"- baseline: {r['baseline']['moh_article']} ({r['baseline']['published']})")
+          print(f"- deltas applied: {[d['moh_article'] for d in r['deltas_applied']]}")
+          print(f"- pending bulletins: {[p['moh_article'] for p in r['pending_bulletins']]}")
+          print(f"- review queue: {len(r['review_queue'])}")
+          PY
