@@ -329,3 +329,24 @@ a.nm:hover b { text-decoration: underline; }
   .top, .foot, .search, .links { display: none; }
   .card { break-inside: avoid; }
 }
+
+/* dose form label and filters on substance pages */
+.rows .kind { flex: none; font-size: 12px; color: var(--ink-2); background: var(--soft); padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+.filters { margin-top: 20px; display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; }
+.filters[hidden] { display: none; }
+.fchips { display: flex; flex-wrap: wrap; gap: 6px; flex: 1; }
+.fchip {
+  font: inherit; font-size: 14px; padding: 5px 12px; border-radius: 999px; cursor: pointer;
+  border: 1px solid var(--line); background: var(--bg); color: var(--ink-2);
+}
+.fchip span { color: var(--faint); margin-left: 2px; font-variant-numeric: tabular-nums; }
+.fchip:hover { border-color: var(--field); color: var(--ink); }
+.fchip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+.fchip[aria-pressed="true"] span { color: rgba(255, 255, 255, 0.8); }
+.sort { font-size: 14px; color: var(--muted); display: flex; align-items: center; gap: 8px; }
+.sort select { font: inherit; font-size: 14px; color: var(--ink); background: var(--bg); border: 1px solid var(--field); border-radius: 8px; padding: 4px 8px; }
+.group[hidden], .rows li[hidden] { display: none; }
+@media (max-width: 640px) {
+  .rows .kind { display: none; }
+  .rows li { flex-wrap: wrap; }
+}

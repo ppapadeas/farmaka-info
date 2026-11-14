@@ -329,6 +329,7 @@ def write(
                 "review_queue": list(issues),
                 "pending_bulletins": pending or [],
                 "withdrawn_since_last_full": report.get("withdrawn", []),
+                "skipped_attachments": report.get("skipped_attachments", []),
                 "history": {
                     "fulls_applied": listing(d for d in applied if d[2] == "full"),
                     "older_deltas_applied": listing(
@@ -373,12 +374,14 @@ def main() -> None:
     # production build, so a run never depends on the ministry site being up.
     sample_sources = [(d, i, k, ROOT / "samples/raw" / f) for d, i, k, f in SAMPLES]
     articles = article_index(json.loads(SAMPLES_MANIFEST.read_text(encoding="utf-8")))
+    skipped: list[dict] = []
     if a.samples:
         sources = sample_sources
     else:
         if not a.manifest:
             ap.error("--manifest or --samples required")
         sources = []
+        skipped: list[dict] = []
         if a.manifest.exists():
             manifest = json.loads(a.manifest.read_text(encoding="utf-8"))
             articles.update(article_index(manifest))
@@ -386,10 +389,25 @@ def main() -> None:
                 if art["kind"] not in ("full", "delta"):
                     continue
                 d, m, y = art["date"].split("/")
-                for att in art["attachments"]:
-                    p = a.raw / f"moh_{art['article_id']}_{att['fdl']}.xlsx"
-                    if p.exists():
-                        sources.append((f"{y}-{m}-{d}", art["article_id"], art["kind"], p))
+                files = [a.raw / f"moh_{art['article_id']}_{att['fdl']}.xlsx" for att in art["attachments"]]
+                files = [p for p in files if p.exists()]
+                if art["kind"] == "full" and len(files) > 1:
+                    # e.g. 10267 (03/2022): the complete list plus a 54-row table of
+                    # amendments. Only the complete list is a baseline; the rest is
+                    # reported, never read as a full list (it would "withdraw" everything).
+                    main_file = max(files, key=lambda p: p.stat().st_size)
+                    skipped += [
+                        {
+                            "moh_article": art["article_id"],
+                            "file": p.name,
+                            "reason": "secondary table of a full list",
+                        }
+                        for p in files
+                        if p != main_file
+                    ]
+                    files = [main_file]
+                for p in files:
+                    sources.append((f"{y}-{m}-{d}", art["article_id"], art["kind"], p))
         have = {s[1] for s in sources}
         sources += [s for s in sample_sources if s[1] not in have]
 
@@ -397,6 +415,7 @@ def main() -> None:
     provenance: dict[str, dict] = {}
     report: dict = {}
     base, deltas, rows, history = merge(sources, issues, provenance, report)
+    report["skipped_attachments"] = skipped
     problems = validate(rows)
     pending = pending_bulletins(sources, base, articles)
     write(a.out, base, deltas, rows, history, problems, issues, provenance, articles, pending, report)

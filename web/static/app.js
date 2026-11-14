@@ -68,7 +68,13 @@ function setup(form) {
     const { total, results } = search(rows, q, 8);
     box.replaceChildren();
     if (!total) {
-      box.append(el("div", { class: "none" }, "Δεν βρέθηκε συσκευασία."));
+      box.append(
+        el(
+          "div",
+          { class: "none" },
+          "Δεν υπάρχει στο δελτίο τιμών. Πολλά μη συνταγογραφούμενα (π.χ. Depon, Panadol) έχουν ελεύθερη τιμή και δεν περιλαμβάνονται· δοκιμάστε τη δραστική ουσία.",
+        ),
+      );
     }
     for (const r of results) {
       const [brand, rest] = splitName(r.name);
@@ -131,6 +137,48 @@ function setup(form) {
     if (!form.contains(ev.target)) close();
   });
 }
+
+// Substance pages: filter by dose form, sort by price or name.
+function setupFilters(box) {
+  const groups = [...document.querySelectorAll(".group")];
+  const chips = [...box.querySelectorAll(".fchip")];
+  const sort = box.querySelector("select[data-sort]");
+  let form = "all";
+  const apply = () => {
+    for (const g of groups) {
+      const items = [...g.querySelectorAll("li[data-form]")];
+      let shown = 0;
+      for (const li of items) {
+        li.hidden = form !== "all" && li.dataset.form !== form;
+        if (!li.hidden) shown++;
+      }
+      g.hidden = shown === 0;
+    }
+  };
+  const order = () => {
+    const by = sort.value;
+    for (const ul of document.querySelectorAll(".group .rows")) {
+      const items = [...ul.children];
+      items.sort((a, b) =>
+        by === "name"
+          ? a.dataset.name.localeCompare(b.dataset.name, "el")
+          : Number(a.dataset.price) - Number(b.dataset.price) || a.dataset.name.localeCompare(b.dataset.name, "el"),
+      );
+      ul.append(...items);
+    }
+  };
+  chips.forEach((c) =>
+    c.addEventListener("click", () => {
+      form = c.dataset.form;
+      chips.forEach((x) => x.setAttribute("aria-pressed", String(x === c)));
+      apply();
+    }),
+  );
+  sort?.addEventListener("change", order);
+  box.hidden = false;
+}
+
+document.querySelectorAll(".filters").forEach(setupFilters);
 
 document.querySelectorAll("form.search").forEach((form) => {
   setup(form);

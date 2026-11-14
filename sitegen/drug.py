@@ -235,3 +235,104 @@ def dispensing_label(s: str | None) -> str | None:
     if "ΣΥΝΤΑΓΗ" in u or "ΙΑΤΡΙΚΗ" in u:
         return "Με ιατρική συνταγή"
     return None
+
+
+# Dose-form families for filters, and a plain Greek label per package. Built
+# from the 191 form codes in the price list (F.C.TAB, SOL.INF, PD.C.S.INF …).
+FORM_FAMILIES = {
+    "tablet": "Δισκία",
+    "capsule": "Καψάκια",
+    "granules": "Κοκκία / φακελάκια",
+    "oral_liquid": "Πόσιμα",
+    "injection": "Ενέσιμα",
+    "infusion": "Ορός / έγχυση",
+    "topical": "Δερματικά",
+    "eye": "Οφθαλμικά",
+    "ear": "Ωτικά",
+    "nasal": "Ρινικά",
+    "inhalation": "Εισπνεόμενα",
+    "vaginal": "Κολπικά",
+    "rectal": "Ορθικά / υπόθετα",
+    "patch": "Επιθέματα",
+    "gas": "Ιατρικά αέρια",
+    "other": "Άλλες μορφές",
+}
+
+
+def form_kind(name: str) -> tuple[str, str]:
+    """(family, Greek label) for a package, e.g. ('tablet', 'Δισκία παρατεταμένης αποδέσμευσης')."""
+    f = dose_form(name) or ""
+    has = lambda *ks: any(k in f for k in ks)  # noqa: E731
+    if not f:
+        return "other", "Άλλη μορφή"
+    if has("VAG"):
+        return "vaginal", "Κολπικό"
+    if has("SUPP"):
+        return "rectal", "Υπόθετα"
+    if has("REC"):
+        return "rectal", "Ορθικό"
+    if f.startswith(("EY", "EYE")) or has("OCU"):
+        if has("OINT"):
+            return "eye", "Οφθαλμική αλοιφή"
+        if has("GEL"):
+            return "eye", "Οφθαλμική γέλη"
+        return "eye", "Οφθαλμικές σταγόνες"
+    if f.startswith(("EAR", "EA.")):
+        return "ear", "Ωτικές σταγόνες"
+    if has("NAS", "N.SP"):
+        return "nasal", "Ρινικό εκνέφωμα" if has("SP") else "Ρινικό"
+    if has("INH", "AER"):
+        return "inhalation", "Εισπνεόμενο"
+    if has("MED.GAS"):
+        return "gas", "Ιατρικό αέριο"
+    if has("PATCH", "T.T.S", "TTS", "PLAST"):
+        return "patch", "Διαδερμικό επίθεμα"
+    if has("INF") or f.endswith(("IF", ".J.F", "INJF")) or f in ("I.V.",):
+        return "infusion", "Ορός / έγχυση"
+    if has(
+        "INJ", "IN.", "C/S", "PFS", "PF.", "IMPL", "SOLV", "VIAL", "PD.S.IN", "PD.C.SO.IN", "S.I.", "B.V."
+    ):
+        if has("PF.P"):
+            return "injection", "Ενέσιμο, προγεμισμένη πένα"
+        if has("PFS", "PF.SYR", "PRFS"):
+            return "injection", "Ενέσιμο, προγεμισμένη σύριγγα"
+        return "injection", "Ενέσιμο"
+    if has("GRAN", "GRA.", "GR.OR"):
+        return "granules", "Αναβράζοντα κοκκία" if has("EFF") else "Κοκκία (φακελάκια)"
+    if has("TAB") or f.endswith(".TA") or f.endswith("TA"):
+        if has("EF", "SOLU"):
+            return "tablet", "Αναβράζοντα δισκία"
+        if has("CHW"):
+            return "tablet", "Μασώμενα δισκία"
+        if has("DISP", "ORO"):
+            return "tablet", "Διασπειρόμενα δισκία"
+        if has("PR.", "CON.R", "SR.", "MOD.R", "S.R", "CO.R"):
+            return "tablet", "Δισκία παρατεταμένης αποδέσμευσης"
+        if has("SUBL", "LING"):
+            return "tablet", "Υπογλώσσια δισκία"
+        if f.startswith("GR."):
+            return "tablet", "Γαστροανθεκτικά δισκία"
+        return "tablet", "Δισκία"
+    if has("CAP", "CA.") or f.endswith(".CA"):
+        if has("SOFT"):
+            return "capsule", "Μαλακά καψάκια"
+        if has("PR.", "MOD.R"):
+            return "capsule", "Καψάκια παρατεταμένης αποδέσμευσης"
+        if f.startswith(("GR.", "E.C.")):
+            return "capsule", "Γαστροανθεκτικά καψάκια"
+        return "capsule", "Καψάκια"
+    if f == "SYR":
+        return "oral_liquid", "Σιρόπι"
+    if has("ORA", "OR.", "OR/", "LYOP", "DENTAL") or f.startswith("PS.OR"):
+        return "oral_liquid", "Πόσιμο εναιώρημα" if has("SUS") else "Πόσιμο διάλυμα"
+    if has("CREAM"):
+        return "topical", "Κρέμα"
+    if has("OINT"):
+        return "topical", "Αλοιφή"
+    if has("GEL"):
+        return "topical", "Γέλη"
+    if has("SHAMP"):
+        return "topical", "Σαμπουάν"
+    if has("CUT", "EXT", "SOAP", "LOT", "SPR."):
+        return "topical", "Δερματικό σκεύασμα"
+    return "other", "Άλλη μορφή"

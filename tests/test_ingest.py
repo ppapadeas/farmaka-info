@@ -14,6 +14,12 @@ def test_header_variants_fold():
     assert HEADER_MAP[_key("Περιγραφή Προϊόντος")] == "name"
     assert HEADER_MAP[_key("Δραστική(ές) Ουσία(ες)")] == "substance"  # moh article 12962
     assert HEADER_MAP[_key("ΤΙΜΗ ΠΑΡΑΓΩΓΟΥ")] == HEADER_MAP[_key("Τιμή Παραγωγού")]
+    # older complete lists (moh articles 7309, 9022, 9794, 10267)
+    assert HEADER_MAP[_key("ΜΗ ΑΠΟΖΗΜΙΟΥΜΕΝΑ")] == "non_reimbursed"
+    assert HEADER_MAP[_key("ΑΠΟΖΗΜΙΟΥΜΕΝΑ")] == "note_reimbursed"
+    assert HEADER_MAP[_key("Νέο")] == HEADER_MAP[_key("ΝΕΟ ΠΡΟΪΟΝ")] == "note_new"
+    assert HEADER_MAP[_key("Επισήμανση νέων ΔΤΦ")] == "note_new"
+    assert HEADER_MAP[_key("Επικαιροποίηση του σκευάσματος ως προς:")] == "note_change"
 
 
 def test_substance_split():
@@ -112,3 +118,50 @@ def test_parse_vat():
     assert parse_vat("6%") == 0.06  # moh article 12962
     assert parse_vat(13) == 0.13
     assert parse_vat(None) == 0.0
+
+
+def test_empty_code_taken_from_barcode(tmp_path):
+    # moh article 9022 (06/2021): ADDAMEL N has an empty Κωδικός but a valid barcode
+    import openpyxl
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.append(
+        [
+            "Κωδικός",
+            "Barcode",
+            "Προϊόν",
+            "ATC",
+            "Μη Αποζημιούμενο",
+            "Τιμή Παραγωγού",
+            "Χονδρική Τιμή",
+            "Λιανική Τιμή",
+            "Δραστική ουσία",
+            "Κάτοχος Άδειας Κυκλοφορίας",
+            "ΦΠΑ",
+            "Νέο",
+        ]
+    )
+    ws.append(
+        [
+            "",
+            "2802021402010",
+            "ADDAMEL N NEW C/S.SOL.IN BTx20 (AMP x10 ML)",
+            "B05XA31",
+            "",
+            32.39,
+            33.98,
+            46.82,
+            "ZINC CHLORIDE",
+            "FRESENIUS KABI HELLAS AE",
+            "6%",
+            "",
+        ]
+    )
+    ws.append(["", "", "", "", "", None, None, None, "", "", "", ""])  # blank row
+    path = tmp_path / "moh_9022_test.xlsx"
+    wb.save(path)
+    issues: list[dict] = []
+    rows = read_bulletin(path, issues)
+    assert [r.eof_code for r in rows] == ["202140201"]
+    assert issues and issues[0]["problem"].startswith("empty eof_code")

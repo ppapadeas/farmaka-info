@@ -31,13 +31,18 @@ _VARIANTS = {
     "barcode": ["Barcode", "BARCODE"],
     "name": ["Προϊόν", "Περιγραφή Προϊόντος", "ΟΝΟΜΑΣΙΑ - ΜΟΡΦΗ - ΠΕΡΙΕΚΤΙΚΟΤΗΤΑ"],
     "atc": ["ATC"],
-    "non_reimbursed": ["Μη Αποζημιούμενο", "ΜΗ ΑΠΟΖΗΜΙΟΥΜΕΝΟ"],
+    "non_reimbursed": ["Μη Αποζημιούμενο", "ΜΗ ΑΠΟΖΗΜΙΟΥΜΕΝΟ", "ΜΗ ΑΠΟΖΗΜΙΟΥΜΕΝΑ"],
     "price_exfactory": ["Τιμή Παραγωγού", "ΤΙΜΗ ΠΑΡΑΓΩΓΟΥ"],
     "price_wholesale": ["Χονδρική Τιμή", "ΧΟΝΔΡΙΚΗ ΤΙΜΗ"],
     "price_retail": ["Λιανική Τιμή", "ΛΙΑΝΙΚΗ ΤΙΜΗ"],
     "substance": ["Δραστική ουσία", "Δραστική/ες", "Δραστική(ες)", "Δραστική(ές) Ουσία(ες)"],
     "mah": ["Κάτοχος Άδειας Κυκλοφορίας", "KAK", "ΚΑΚ", "ΟΝΟΝΑΣΙΑ ΚΑΚ", "ΟΝΟΜΑΣΙΑ ΚΑΚ"],
     "vat": ["ΦΠΑ"],
+    # Annotation columns of older complete lists. Recognised (so they are not an
+    # unknown header) but not used: they mark rows, they do not carry prices.
+    "note_reimbursed": ["ΑΠΟΖΗΜΙΟΥΜΕΝΑ"],  # 7309 (06/2020): 'N' on 6,597 of 8,456 rows
+    "note_new": ["Νέο", "ΝΕΟ ΠΡΟΪΟΝ", "Επισήμανση νέων ΔΤΦ"],  # 7309, 8483, 9022, 9794, 11377
+    "note_change": ["Επικαιροποίηση του σκευάσματος ως προς:"],  # 10267 (03/2022)
 }
 HEADER_MAP = {_key(v): canon for canon, vs in _VARIANTS.items() for v in vs}
 
@@ -159,8 +164,27 @@ def read_bulletin(path: Path, issues: list[dict] | None = None) -> list[PriceRow
         def g(k: str, r=r):
             return r[cols[k]] if k in cols and cols[k] < len(r) else None
 
-        if g("eof_code") is None:
-            continue
+        code = _code(g("eof_code")) if g("eof_code") is not None else ""
+        if not code:
+            # moh article 9022 (06/2021), ADDAMEL N: empty code, valid barcode. The
+            # barcode embeds the code (positions 4-12), so take it from there and
+            # flag the row. A priced row with neither is an error; anything else
+            # (blank lines, notes) is not a package row.
+            bc = _code(g("barcode")) if g("barcode") is not None else ""
+            if not (ean13_ok(bc) and bc.startswith("280")):
+                if g("price_retail") not in (None, ""):
+                    raise UnknownHeader(f"{path.name}: priced row without eof_code or valid barcode: {r!r}")
+                continue
+            code = bc[3:12]
+            if issues is not None:
+                issues.append(
+                    {
+                        "file": path.name,
+                        "eof_code": code,
+                        "name": str(g("name")).strip(),
+                        "problem": "empty eof_code; taken from the barcode",
+                    }
+                )
         atc = (str(g("atc")).strip() or None) if g("atc") is not None else None
         try:
             prices = [parse_price(g(k)) for k in ("price_exfactory", "price_wholesale", "price_retail")]
@@ -170,7 +194,7 @@ def read_bulletin(path: Path, issues: list[dict] | None = None) -> list[PriceRow
             issues.append(
                 {
                     "file": path.name,
-                    "eof_code": _code(g("eof_code")),
+                    "eof_code": code,
                     "name": str(g("name")).strip(),
                     "problem": str(e),
                 }
@@ -178,7 +202,7 @@ def read_bulletin(path: Path, issues: list[dict] | None = None) -> list[PriceRow
             continue
         out.append(
             PriceRow(
-                eof_code=_code(g("eof_code")),
+                eof_code=code,
                 barcode=_code(g("barcode")),
                 name=str(g("name")).strip(),
                 atc=atc,

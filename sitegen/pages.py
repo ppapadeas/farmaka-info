@@ -12,7 +12,16 @@ from html import escape
 from pathlib import Path
 from urllib.parse import quote
 
-from .drug import dispensing_label, inn_label, short_mah, split_name, strength, unit_count
+from .drug import (
+    FORM_FAMILIES,
+    dispensing_label,
+    form_kind,
+    inn_label,
+    short_mah,
+    split_name,
+    strength,
+    unit_count,
+)
 from .text import date_gr, eur, num
 
 SITE = "https://farmaka.info"
@@ -51,6 +60,8 @@ class Context:
 
 
 def pct(new: float, old: float) -> str:
+    if not old:
+        return ""
     v = (new - old) / old * 100
     return f"{'−' if v < 0 else '+'}{num(abs(v), 0)}%"
 
@@ -208,7 +219,7 @@ def price_series(p: dict, start: str) -> list[tuple[str, float]]:
     ev = sorted((h for h in p["price_history"] if h["field"] == "price_retail"), key=lambda h: h["published"])
     pts: list[tuple[str, float]] = []
     for h in ev:
-        if h["change"] == "withdrawn" or h["new"] is None:
+        if h["change"] == "withdrawn" or not h["new"]:  # a few old lists print 0 as a price
             continue
         if not pts and h["change"] == "update" and h["old"] is not None:
             pts.append((start, h["old"]))
@@ -416,6 +427,9 @@ def package(ctx: Context, p: dict) -> str:
     chips = [
         f'<a class="chip sub-link" href="/ousia/{e(ctx.slug_of[s])}/">{e(inn_label(s))}</a>' for s in subs
     ]
+    fam, form_label = form_kind(p["name"])
+    if fam != "other":
+        chips.append(f'<span class="chip">{e(form_label)}</span>')
     if p["mah"]:
         chips.append(f'<span class="chip" title="{e(p["mah"])}">{e(short_mah(p["mah"]))}</span>')
     disp = dispensing_label(p["reimbursement"][0]["dispensing"]) if p["reimbursement"] else None
@@ -496,11 +510,37 @@ def package(ctx: Context, p: dict) -> str:
 
 
 def _row(p: dict) -> str:
+    fam, label = form_kind(p["name"])
     tag = ' <span class="tag" title="Στον κατάλογο αποζημίωσης">Α</span>' if p["reimbursement"] else ""
     return (
-        f'<li><a class="nm" href="/farmako/{e(p["eof_code"])}/">{name_html(p["name"])}</a>{tag}'
+        f'<li data-form="{fam}" data-price="{p["prices"]["retail"]:.2f}" data-name="{e(p["name"])}">'
+        f'<a class="nm" href="/farmako/{e(p["eof_code"])}/">{name_html(p["name"])}</a>{tag}'
+        f'<span class="kind">{e(label)}</span>'
         f'<span class="mah">{e(short_mah(p["mah"]))}</span><span class="p">{eur(p["prices"]["retail"])}</span></li>'
     )
+
+
+def _filters(rows: list[dict]) -> str:
+    """Form filter and sort controls; hidden until app.js wires them (no-JS shows the full list)."""
+    fams: dict[str, int] = {}
+    for p in rows:
+        f = form_kind(p["name"])[0]
+        fams[f] = fams.get(f, 0) + 1
+    if len(fams) < 2 and len(rows) < 6:
+        return ""
+    chips = [
+        f'<button type="button" class="fchip" data-form="all" aria-pressed="true">Όλες <span>{len(rows)}</span></button>'
+    ]
+    for f in FORM_FAMILIES:
+        if f in fams:
+            chips.append(
+                f'<button type="button" class="fchip" data-form="{f}" aria-pressed="false">{e(FORM_FAMILIES[f])} <span>{fams[f]}</span></button>'
+            )
+    chips_html = "".join(chips) if len(fams) > 1 else ""
+    return f"""<div class="filters" hidden>
+  <div class="fchips" role="group" aria-label="Μορφή">{chips_html}</div>
+  <label class="sort">Ταξινόμηση <select data-sort><option value="price">Τιμή</option><option value="name">Όνομα</option></select></label>
+</div>"""
 
 
 def _strength_sort(label: str) -> tuple:
@@ -545,6 +585,7 @@ def substance(ctx: Context, s: dict) -> str:
   <h1>{e(inn_label(s["name"]))}</h1>
   <p>{num(len(rows), 0)} συσκευασίες · {num(reimb, 0)} αποζημιώνονται · ATC {e(", ".join(atcs[:4]) or "—")}</p>
 </div>
+{_filters(rows)}
 {"".join(parts)}
 </div>
 """
