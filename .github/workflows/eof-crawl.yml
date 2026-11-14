@@ -1,0 +1,59 @@
+# Nightly, very slow crawl of EOF SmPC / package leaflet documents (Δ-18).
+# The crawler itself refuses to run outside 00:00-07:00 Athens time, keeps
+# >=10 s between requests, stops on 403/429 and on a data/eof/STOP file.
+# Documents stay in the Actions cache; the daily job only needs the small
+# links file, kept in its own cache.
+name: eof-crawl
+on:
+  schedule:
+    - cron: "5 22 * * *" # 00:05 Athens in winter, 01:05 in summer
+  workflow_dispatch:
+concurrency:
+  group: eof-crawl
+  cancel-in-progress: false
+jobs:
+  crawl:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install -e .
+      - name: Restore the price list (for package codes)
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            data
+            !data/eof
+          key: moh-data-none
+          restore-keys: moh-data-
+      - name: Restore EOF documents
+        uses: actions/cache/restore@v4
+        with:
+          path: data/eof
+          key: eof-docs-${{ github.run_id }}
+          restore-keys: eof-docs-
+      - name: Crawl (stops by itself at 07:00 Athens time)
+        id: crawl
+        run: python -m ingest.eof crawl --packages data/current/packages.csv --out data/eof
+      - name: Links
+        if: always()
+        run: |
+          mkdir -p data/eof-links
+          if [ -f data/eof/manifest.json ]; then
+            python -m ingest.eof links --manifest data/eof/manifest.json --out data/eof-links/eof_docs.csv
+          fi
+      - name: Save EOF documents
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: data/eof
+          key: eof-docs-${{ github.run_id }}
+      - name: Save links for the daily job
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: data/eof-links
+          key: eof-links-${{ github.run_id }}

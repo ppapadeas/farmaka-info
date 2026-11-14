@@ -6,6 +6,7 @@ requires-python = ">=3.11"
 dependencies = [
   "requests>=2.31",
   "openpyxl>=3.1",
+  "tzdata; sys_platform == 'win32'",  # zoneinfo has no system database on Windows
 ]
 
 [project.optional-dependencies]

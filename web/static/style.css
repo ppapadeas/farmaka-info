@@ -369,7 +369,7 @@ a.nm:hover b { text-decoration: underline; }
 
 /* official texts */
 .docs .doc { display: inline-block; font-weight: 600; text-decoration: none; font-size: 15px; }
-.docs > div { color: var(--faint); margin-top: 2px; }
+.docs > div { color: var(--faint); margin-top: 2px; margin-bottom: 8px; }
 .docs .small { margin-top: 10px; }
 .small.first { margin-top: 0; }
 

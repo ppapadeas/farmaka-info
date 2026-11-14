@@ -189,6 +189,20 @@ def load_otc(data: Path, ema: dict[str, list[dict]] | None = None) -> tuple[list
     return [p for p in out if p["prices"]["retail"]], meta
 
 
+def load_eof_docs(data: Path) -> dict[str, list[dict]]:
+    """eof_code -> EOF SmPC/leaflet links from the nightly crawl (data/current/eof_docs.csv)."""
+    path = data / "eof_docs.csv"
+    out: dict[str, list[dict]] = defaultdict(list)
+    if not path.exists():
+        return out
+    with path.open(encoding="utf-8") as fh:
+        for r in csv.DictReader(fh):
+            out[r["eof_code"]].append(
+                {"source": "ΕΟΦ", "type": r["doc_type"], "url": r["url"], "date": r.get("date") or None}
+            )
+    return out
+
+
 GREEK_NAMES = ROOT / "reference" / "substances_el.csv"
 
 
@@ -483,8 +497,10 @@ def build(data: Path, out: Path, built_at: str) -> dict:
     pkgs += [p for p in otc if p["eof_code"] not in have]  # the regulated list wins on overlap
     pkgs.sort(key=lambda p: p["eof_code"])
     el = load_greek_names()
+    eof_docs = load_eof_docs(data)
     for p in pkgs:
         p["substances_el"] = [el.get(x) for x in p["substances"]]
+        p["documents"] = eof_docs.get(p["eof_code"], [])
     by_code = {p["eof_code"]: p for p in pkgs}
     subst = substance_index(pkgs, el)
     slug_of = {v["name"]: k for k, v in subst.items()}

@@ -471,6 +471,20 @@ def docs_card(p: dict) -> str:
       <h2>Επίσημα κείμενα</h2>
       <div class="docs">{main}<p class="small">{epar} · {e(x["product_number"])}</p></div>
     </section>"""
+    docs = {d["type"]: d for d in p.get("documents", [])}
+    if docs:
+        rows = []
+        for t, label in (("pil", "Φύλλο οδηγιών χρήσης"), ("smpc", "Περίληψη χαρακτηριστικών (ΠΧΠ)")):
+            d = docs.get(t)
+            if d:
+                date = f" · {date_gr(d['date'])}" if d.get("date") else ""
+                rows.append(
+                    f'<a class="doc" href="{e(d["url"])}" rel="noopener">{label} ↗</a><div>ΕΟΦ{date}</div>'
+                )
+        return f"""<section class="card side">
+      <h2>Επίσημα κείμενα</h2>
+      <div class="docs">{"".join(rows)}<p class="small">Πηγή: Εθνικός Οργανισμός Φαρμάκων</p></div>
+    </section>"""
     return """<section class="card side">
       <h2>Επίσημα κείμενα</h2>
       <p class="small first">ΠΧΠ και φύλλο οδηγιών: <a href="https://services.eof.gr/human-search/" rel="noopener">αναζήτηση στον ΕΟΦ ↗</a></p>

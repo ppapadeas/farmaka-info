@@ -26,9 +26,17 @@ jobs:
       - name: Restore downloaded bulletins
         uses: actions/cache/restore@v4
         with:
-          path: data
+          path: |
+            data
+            !data/eof
           key: moh-data-${{ github.run_id }}
           restore-keys: moh-data-
+      - name: Restore EOF document links (from the nightly crawl)
+        uses: actions/cache/restore@v4
+        with:
+          path: data/eof-links
+          key: eof-links-none
+          restore-keys: eof-links-
       - name: Backfill the complete price lists (once; the marker lives in the cache)
         continue-on-error: true
         run: |
@@ -64,10 +72,14 @@ jobs:
         if: always()
         uses: actions/cache/save@v4
         with:
-          path: data
+          path: |
+            data
+            !data/eof
+            !data/eof-links
           key: moh-data-${{ github.run_id }}
       - name: Build site
         run: |
+          if [ -f data/eof-links/eof_docs.csv ]; then cp data/eof-links/eof_docs.csv data/current/eof_docs.csv; fi
           python -m sitegen.build --data data/current --out dist
           test "$(find dist -type f | wc -l)" -gt 10000
       - name: Deploy
