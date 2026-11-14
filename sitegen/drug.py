@@ -12,8 +12,27 @@ from __future__ import annotations
 import re
 
 _FORM_WORDS = {
-    "TABLET", "TABLETS", "TABS", "TAB", "CAPS", "CAP", "SYR", "CREAM", "GEL", "OINT", "LOTION", "POWDER",
-    "DROPS", "SUPP", "PATCH", "SHAMPOO", "SPRAY", "GRANULES", "EMULSION", "SUSPENSION", "SOLUTION",
+    "TABLET",
+    "TABLETS",
+    "TABS",
+    "TAB",
+    "CAPS",
+    "CAP",
+    "SYR",
+    "CREAM",
+    "GEL",
+    "OINT",
+    "LOTION",
+    "POWDER",
+    "DROPS",
+    "SUPP",
+    "PATCH",
+    "SHAMPOO",
+    "SPRAY",
+    "GRANULES",
+    "EMULSION",
+    "SUSPENSION",
+    "SOLUTION",
 }
 _DOTTED_FORM = re.compile(r"^(?=.*[A-Z])[A-Z/]+(?:\.[A-Z/]+)+\.?$")
 
@@ -77,7 +96,9 @@ def strength(name: str) -> tuple[str, str] | None:
     if per in ("TAB", "CAP", "DOSE", "SACHET"):
         per = ""
     key = f"{amount}{unit}" + (f"/{per}" if per else "")
-    unit_l = {"MCG": "mcg", "MG": "mg", "G": "g", "IU": "IU", "ML": "ml", "%": "%", "MMOL": "mmol", "U": "U"}[unit]
+    unit_l = {"MCG": "mcg", "MG": "mg", "G": "g", "IU": "IU", "ML": "ml", "%": "%", "MMOL": "mmol", "U": "U"}[
+        unit
+    ]
     label = (amount.replace(".", ",") + ("" if unit == "%" else " ") + unit_l) + (
         f"/{per.lower().replace('.', ',')}" if per else ""
     )
@@ -97,15 +118,79 @@ def unit_count(name: str) -> int | None:
 
 
 _LEGAL = {
-    "LTD", "LIMITED", "GMBH", "AG", "SA", "S.A.", "A.E.", "Α.Ε.", "ΑΕ", "AE", "ΑΒΕΕ", "Α.Β.Ε.Ε.", "ΑΕΒΕ", "Α.Ε.Β.Ε.",
-    "Μ.Ε.Π.Ε.", "ΜΕΠΕ", "Ε.Π.Ε.", "ΕΠΕ", "B.V.", "BV", "S.L.U.", "S.L.", "SL", "S.R.L.", "SRL", "S.P.A.", "SPA",
-    "INC", "INC.", "A/S", "AB", "OY", "KFT", "D.O.O.", "N.V.", "NV", "PLC", "KG", "CO", "&", "LLC", "S.A.S.",
-    "SAS", "Ι.Κ.Ε.", "ΙΚΕ", "Ο.Ε.", "ΟΕ", "Α.Β.Ε.Ε", "ΑΒΕΕ.", "LTD.", "GMBH,", "ABEE", "A.B.E.E.", "AEBE",
-    "A.E", "MEPE", "M.E.P.E.", "EPE", "E.P.E.", "IKE",
+    "LTD",
+    "LIMITED",
+    "GMBH",
+    "AG",
+    "SA",
+    "S.A.",
+    "A.E.",
+    "Α.Ε.",
+    "ΑΕ",
+    "AE",
+    "ΑΒΕΕ",
+    "Α.Β.Ε.Ε.",
+    "ΑΕΒΕ",
+    "Α.Ε.Β.Ε.",
+    "Μ.Ε.Π.Ε.",
+    "ΜΕΠΕ",
+    "Ε.Π.Ε.",
+    "ΕΠΕ",
+    "B.V.",
+    "BV",
+    "S.L.U.",
+    "S.L.",
+    "SL",
+    "S.R.L.",
+    "SRL",
+    "S.P.A.",
+    "SPA",
+    "INC",
+    "INC.",
+    "A/S",
+    "AB",
+    "OY",
+    "KFT",
+    "D.O.O.",
+    "N.V.",
+    "NV",
+    "PLC",
+    "KG",
+    "CO",
+    "&",
+    "LLC",
+    "S.A.S.",
+    "SAS",
+    "Ι.Κ.Ε.",
+    "ΙΚΕ",
+    "Ο.Ε.",
+    "ΟΕ",
+    "Α.Β.Ε.Ε",
+    "ΑΒΕΕ.",
+    "LTD.",
+    "GMBH,",
+    "ABEE",
+    "A.B.E.E.",
+    "AEBE",
+    "A.E",
+    "MEPE",
+    "M.E.P.E.",
+    "EPE",
+    "E.P.E.",
+    "IKE",
 }
 _CUT = {
-    "ΑΝΩΝΥΜΗ", "ΕΤΑΙΡΕΙΑ", "ΕΤΑΙΡΙΑ", "ΦΑΡΜΑΚΕΥΤΙΚΗ", "ΦΑΡΜΑΚΕΥΤΙΚΑ", "ΒΙΟΜΗΧΑΝΙΑ", "ΕΜΠΟΡΙΑ", "ΕΜΠΟΡΙΚΗ",
-    "ΜΟΝΟΠΡΟΣΩΠΗ", "ΦΑΡΜΑΚΑΠΟΘΗΚΗ", "ΕΡΓΑΣΤΗΡΙΑ",
+    "ΑΝΩΝΥΜΗ",
+    "ΕΤΑΙΡΕΙΑ",
+    "ΕΤΑΙΡΙΑ",
+    "ΦΑΡΜΑΚΕΥΤΙΚΗ",
+    "ΦΑΡΜΑΚΕΥΤΙΚΑ",
+    "ΒΙΟΜΗΧΑΝΙΑ",
+    "ΕΜΠΟΡΙΑ",
+    "ΕΜΠΟΡΙΚΗ",
+    "ΜΟΝΟΠΡΟΣΩΠΗ",
+    "ΦΑΡΜΑΚΑΠΟΘΗΚΗ",
+    "ΕΡΓΑΣΤΗΡΙΑ",
 }
 
 

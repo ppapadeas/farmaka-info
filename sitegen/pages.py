@@ -256,7 +256,7 @@ def history_card(ctx: Context, p: dict) -> str:
     )
     if len(pts) > 1 and first[1] != last[1]:
         summary = (
-            f'{eur(first[1])} → <b>{eur(last[1])}</b> '
+            f"{eur(first[1])} → <b>{eur(last[1])}</b> "
             f'<span class="pill {"down" if last[1] < first[1] else "up"}">{pct(last[1], first[1])}</span>'
         )
     elif changes and changes[-1]["change"] == "new":
@@ -310,7 +310,7 @@ def reimbursement_card(ctx: Context, p: dict) -> str:
     if r["daily_doses_per_pack"] is not None:
         n = r["daily_doses_per_pack"]
         per_day.append(f"{num(n, 0) if n == int(n) else num(n, 2)} ημερήσιες δόσεις")
-    head = f'<span>{" · ".join(per_day)}</span>' if per_day else ""
+    head = f"<span>{' · '.join(per_day)}</span>" if per_day else ""
     if diff > 0.004:
         bar = _bar(rp / retail, f"Από τα {eur(retail)}: {eur(rp)} τιμή αποζημίωσης, {eur(diff)} διαφορά")
         legend = f"""<div class="legend">
@@ -365,7 +365,9 @@ def equivalents_card(ctx: Context, p: dict) -> str:
         u = f'<span class="u">{eur(key(q))}/τεμ.</span>' if per_unit else ""
         price = f'<span class="p">{eur(q["prices"]["retail"])}</span>'
         if q is p:
-            lis.append(f'<li class="me"><span class="nm">{label}</span>{u}{price}<span class="pill here">αυτό</span></li>')
+            lis.append(
+                f'<li class="me"><span class="nm">{label}</span>{u}{price}<span class="pill here">αυτό</span></li>'
+            )
             continue
         k = key(q)
         rel = (
@@ -399,8 +401,12 @@ def package(ctx: Context, p: dict) -> str:
     pr = p["prices"]
     brand, rest = split_name(p["name"])
     subs = p["substances"]
-    crumbs = f'<a href="/ousia/{e(ctx.slug_of[subs[0]])}/">{e(inn_label(subs[0]))}</a>' if subs else "Συσκευασία"
-    chips = [f'<a class="chip sub-link" href="/ousia/{e(ctx.slug_of[s])}/">{e(inn_label(s))}</a>' for s in subs]
+    crumbs = (
+        f'<a href="/ousia/{e(ctx.slug_of[subs[0]])}/">{e(inn_label(subs[0]))}</a>' if subs else "Συσκευασία"
+    )
+    chips = [
+        f'<a class="chip sub-link" href="/ousia/{e(ctx.slug_of[s])}/">{e(inn_label(s))}</a>' for s in subs
+    ]
     if p["mah"]:
         chips.append(f'<span class="chip" title="{e(p["mah"])}">{e(short_mah(p["mah"]))}</span>')
     disp = dispensing_label(p["reimbursement"][0]["dispensing"]) if p["reimbursement"] else None
@@ -410,7 +416,9 @@ def package(ctx: Context, p: dict) -> str:
         chips.append('<span class="chip warn">Μη αποζημιούμενο</span>')
     vat = f"{num(p['vat'] * 100, 0)}%" if p["vat"] else "—"
     was = ""
-    upd = [h for h in p["price_history"] if h["field"] == "price_retail" and h["change"] == "update" and h["old"]]
+    upd = [
+        h for h in p["price_history"] if h["field"] == "price_retail" and h["change"] == "update" and h["old"]
+    ]
     if upd:
         last = max(upd, key=lambda h: h["published"])
         was = f'<p class="was">Ήταν {eur(last["old"])} έως {date_gr(last["published"])}</p>'
@@ -644,7 +652,12 @@ def data_page(ctx: Context) -> str:
 </div>
 """
     return layout(
-        ctx, "Δεδομένα & API · farmaka.info", body, "/dedomena/", "Ανοιχτά δεδομένα φαρμάκων (CC0) και API χωρίς κλειδί.", nav="data"
+        ctx,
+        "Δεδομένα & API · farmaka.info",
+        body,
+        "/dedomena/",
+        "Ανοιχτά δεδομένα φαρμάκων (CC0) και API χωρίς κλειδί.",
+        nav="data",
     )
 
 
@@ -671,7 +684,12 @@ def about(ctx: Context) -> str:
 </div>
 """
     return layout(
-        ctx, "Σχετικά · farmaka.info", body, "/sxetika/", "Τι είναι το farmaka.info και από πού έρχονται τα δεδομένα.", nav="about"
+        ctx,
+        "Σχετικά · farmaka.info",
+        body,
+        "/sxetika/",
+        "Τι είναι το farmaka.info και από πού έρχονται τα δεδομένα.",
+        nav="about",
     )
 
 
