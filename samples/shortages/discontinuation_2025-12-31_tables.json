@@ -1,0 +1,63 @@
+{
+ "source": "ΛΙΣΤΑ ΦΑΡΜΑΚΕΥΤΙΚΩΝ ΣΚΕΥΑΣΜΑΤΩΝ ΟΡΙΣΤΙΚΗΣ ΔΙΑΚΟΠΗΣ ΚΥΚΛΟΦΟΡΙΑΣ 31-12-2025 (pdf, 10 pages): page 1 trimmed, and the two rows of ANIDULAFUNGIN/TEVA (same barcode, two dates)",
+ "tables": [
+  [
+   [
+    "ΛΙΣΤΑ ΦΑΡΜΑΚΕΥΤΙΚΩΝ ΣΚΕΥΑΣΜΑΤΩΝ ΟΡΙΣΤΙΚΗΣ ΔΙΑΚΟΠΗΣ 31 ΔΕΚΕΜΒΡΙΟΥ 2025",
+    null,
+    null,
+    null,
+    null,
+    null,
+    null
+   ],
+   [
+    "Barcode",
+    "Περιγραφή",
+    "ATC",
+    "Δραστική(ές) ουσία(ες)",
+    "Κάτοχος άδειας κυκλοφορίας",
+    "Ημ. οριστικής\nδιακοπής",
+    "Εναλλακτικές Θεραπευτικές Επιλογές"
+   ],
+   [
+    "2803097501096",
+    "ABASAGLAR INJ.SOL 100U/ML BTX10\nCARTRIDGES X 3ML",
+    "A10AE04",
+    "INSULIN GLARGINE",
+    "ELI LILLY NEDERLAND B.V., THE NEDERLANDS",
+    "28/11/25",
+    "Εναλλακτικά το ίδιο φάρμακο σε διαφορετική συσκευασία"
+   ],
+   [
+    "2802810001011",
+    "ABSZESS-ILON OINTMENT (54+72)MG/1G\nBTX25 G",
+    "D11AX",
+    "TURPENTINE OIL",
+    "Β. ΡΟΥΣΙΝΟΣ ΚΑΙ ΣΙΑ Ο.Ε. Δ.Τ. ACCELERE PHARM",
+    "24/02/25",
+    ""
+   ]
+  ],
+  [
+   [
+    "2803169701010",
+    "ANIDULAFUNGIN/TEVA PD.C.SO.IN 100MG\nBTX1 VIAL",
+    "J02AX06",
+    "ANIDULAFUNGIN",
+    "TEVA B.V., THE NETHERLANDS",
+    "29/09/25",
+    "Εναλλακτικά άλλα σκευάσματα της ίδιας δραστικής, μορφής και περιεκτικότητας"
+   ],
+   [
+    "2803169701010",
+    "ANIDULAFUNGIN/TEVA PD.C.SO.IN 100MG\nBTX1 VIAL",
+    "J02AX06",
+    "ANIDULAFUNGIN",
+    "TEVA B.V., THE NETHERLANDS",
+    "16/10/25",
+    "Εναλλακτικά άλλα σκευάσματα της ίδιας δραστικής, μορφής και περιεκτικότητας"
+   ]
+  ]
+ ]
+}
