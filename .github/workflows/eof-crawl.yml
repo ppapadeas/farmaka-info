@@ -6,7 +6,11 @@
 name: eof-crawl
 on:
   schedule:
+    # GitHub may start scheduled runs hours late (3.5 h on 15/11/2026) or drop them.
+    # A second trigger covers a dropped run; outside 00:00-07:00 Athens the crawler
+    # refuses to start (exit 2), which is not a failure.
     - cron: "5 22 * * *" # 00:05 Athens in winter, 01:05 in summer
+    - cron: "35 0 * * *" # 02:35 Athens in winter, 03:35 in summer
   workflow_dispatch:
 concurrency:
   group: eof-crawl
@@ -27,6 +31,7 @@ jobs:
           path: |
             data
             !data/eof
+            !data/eof-links
           key: moh-data-none
           restore-keys: moh-data-
       - name: Restore EOF documents
@@ -35,9 +40,19 @@ jobs:
           path: data/eof
           key: eof-docs-${{ github.run_id }}
           restore-keys: eof-docs-
+      - name: Price list for package codes (offline from the samples if the cache is empty)
+        run: |
+          if [ ! -f data/current/packages.csv ]; then
+            python -m ingest.build --manifest data/manifest_prices.json --raw data/raw --out data/current
+          fi
       - name: Crawl (stops by itself at 07:00 Athens time)
         id: crawl
-        run: python -m ingest.eof crawl --packages data/current/packages.csv --out data/eof
+        run: |
+          set +e
+          python -m ingest.eof crawl --packages data/current/packages.csv --out data/eof
+          code=$?
+          if [ $code -eq 2 ]; then echo "Outside the 00:00-07:00 Athens window or stopped by data/eof/STOP: nothing to do."; exit 0; fi
+          exit $code
       - name: Links
         if: always()
         run: |

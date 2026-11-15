@@ -5,7 +5,10 @@
 name: update
 on:
   schedule:
+    # GitHub may start scheduled runs hours late or drop them; the second time is a
+    # safety net. Runs never overlap (concurrency) and fetching is incremental.
     - cron: "23 5 * * *" # 07:23/08:23 Athens
+    - cron: "23 11 * * *" # 13:23/14:23 Athens
   workflow_dispatch:
 concurrency:
   group: update
@@ -29,6 +32,7 @@ jobs:
           path: |
             data
             !data/eof
+            !data/eof-links
           key: moh-data-${{ github.run_id }}
           restore-keys: moh-data-
       - name: EMA product information in sections (from the cache, else the data-ema-pi release)
