@@ -154,6 +154,17 @@ Source ──< (κάθε εγγραφή γεγονότος έχει source_id)
 
 Συμβατότητα με ePI (FHIR): κάθε Document αντιστοιχεί σε `Composition`, κάθε Section σε `Composition.section` (αριθμός και τίτλος του προτύπου QRD), τα Block σε XHTML (`<p>`, `<h3>`, `<ul>`, `<table>`).
 
+#### ΠΧΠ/ΦΟΧ του ΕΟΦ σε ενότητες (έξοδος `ingest/eof_pi.py`, `eof_pi/<κωδικός προϊόντος 7 ψηφίων>.json`)
+
+Ίδιο σχήμα εγγράφου με τα κείμενα της EMA (`pil`, `smpc`: λίστες εγγράφων με `preamble` και `sections` → `number`, `title`, `page`, `blocks`), με αυτές τις διαφορές:
+
+- `product_number`: `EOF-<κωδικός προϊόντος>`· `product_code`: τα 7 πρώτα ψηφία του κωδικού ΕΟΦ· `name`: όπως στη σελίδα του ΕΟΦ· `eof_codes`: οι κωδικοί συσκευασιών του προϊόντος.
+- `source`: του φύλλου οδηγιών (ή της ΠΧΠ αν δεν υπάρχει φύλλο)· `sources.pil`, `sources.smpc`: `publisher`, `short` (`ΕΟΦ`), `url` (ο σύνδεσμος λήψης του ΕΟΦ), `date` (η ημερομηνία του αρχείου, από τα μεταδεδομένα του PDF· κενή για Word), `retrieved_at`, `sha256`, `attribution`.
+- `layout`: ανά είδος και έγγραφο, `qrd` (πρότυπο QRD), `numbered` (παλιά μορφή, ενότητες στις δικές της αριθμημένες επικεφαλίδες) ή `text` (χωρίς ενότητες: όλο το κείμενο στο `preamble`).
+- `warnings`: σημειώσεις του parser (π.χ. έγγραφο μόνο με τίτλο που αφαιρέθηκε).
+
+Στον ίδιο φάκελο: `report.json` (`products`, `layouts` με πλήθη, `errors`, `error_list`: αρχεία που δεν αναλύθηκαν και γιατί) και `_state.json` (sha256 των αρχείων ανά προϊόν, για να αναλύονται μόνο όσα άλλαξαν).
+
 ### Source
 
 `source_id`, `publisher` (`moh`/`eof`/`ema`/…), `article_id`, `title`, `published`, `url`, `file_name`, `sha256`, `retrieved_at`, `kind`.
