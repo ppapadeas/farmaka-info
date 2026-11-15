@@ -569,6 +569,13 @@ h4[id] { scroll-margin-top: 16px; }
 .lf-smpc .chip { background: var(--bg); border: 1px solid var(--line); }
 .lf-smpc .chip:hover { border-color: var(--accent-line); background: var(--accent-soft); color: var(--accent-ink); }
 .lf-src { margin-top: 16px; }
+.card.leaflet.smpc { margin-top: 16px; }
+.lf-quick { margin-top: 12px; font-size: 13px; gap: 6px; }
+.lf-quick .chip { background: var(--bg); border: 1px solid var(--line); }
+.lf-quick .chip:hover { border-color: var(--accent-line); background: var(--accent-soft); color: var(--accent-ink); }
+.lf-full { max-width: none; margin-top: 14px; }
+.lf-group { padding: 16px 4px 8px; font-size: 13px; font-weight: 700; letter-spacing: 0.03em; color: var(--muted); border-bottom: 1px solid var(--line-2); scroll-margin-top: 16px; }
+.lf-group .n { margin-right: 6px; color: var(--accent); font-variant-numeric: tabular-nums; }
 @media (max-width: 760px) {
   /* on a phone the price stays near the top; the answers follow it */
   .cols > .main > .card.price { order: -1; }

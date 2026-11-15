@@ -1062,6 +1062,15 @@ def _cmd_crawl(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_remaining(args: argparse.Namespace) -> int:
+    """Print how many products of the price list are still to crawl (0 when all are done)."""
+    ema = {r["eof_code"] for r in read_csv(args.ema_links)} if args.ema_links.exists() else set()
+    manifest = read_manifest(args.manifest)
+    done = {k for k, v in manifest["products"].items() if v.get("state") in ("done", "not_found")}
+    print(sum(1 for t in plan(read_csv(args.packages), ema) if t.code not in done))
+    return 0
+
+
 def _cmd_links(args: argparse.Namespace) -> int:
     manifest = read_manifest(args.manifest)
     n = write_links(links(manifest, args.manifest.parent.as_posix()), args.out)
@@ -1092,7 +1101,13 @@ def main(argv: list[str] | None = None) -> int:
     lk = sub.add_parser("links", help="write eof_docs.csv from the manifest")
     lk.add_argument("--manifest", type=Path, default=Path("data/eof/manifest.json"))
     lk.add_argument("--out", type=Path, default=Path("data/current/eof_docs.csv"))
+    rm = sub.add_parser("remaining", help="print how many products are still to crawl")
+    rm.add_argument("--packages", type=Path, default=Path("data/current/packages.csv"))
+    rm.add_argument("--ema-links", type=Path, default=Path("data/current/ema_links.csv"))
+    rm.add_argument("--manifest", type=Path, default=Path("data/eof/manifest.json"))
     args = ap.parse_args(argv)
+    if args.cmd == "remaining":
+        return _cmd_remaining(args)
     if args.cmd == "crawl":
         if args.now_for_testing is not None and args.now_for_testing < 1:
             ap.error("--now-for-testing needs N >= 1")

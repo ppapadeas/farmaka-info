@@ -312,7 +312,11 @@ def glance(doc: dict) -> dict:
         found = find(_USE_SELF) or find(_USE)
         for i, hit in [found] if found else []:
             items: list[str] = []
-            if hit.endswith(":"):
+            # «Το Χ ενδείκνυται για τη θεραπεία» with the list right after it and no «:» (EOF texts)
+            nxt = blocks[i + 1] if i + 1 < len(blocks) else {}
+            last = _sentences(blocks[i].get("text", "") or "")[-1:] == [hit]
+            opens = last and nxt.get("type") == "list" and not hit.endswith((".", ";", "!", "»", ")"))
+            if hit.endswith(":") or opens:
                 for nb in blocks[i + 1 :]:
                     if nb.get("type") == "subheading":
                         break
@@ -326,7 +330,7 @@ def glance(doc: dict) -> dict:
                     ):
                         items.append(_item(nb["text"]))
                 if not items:
-                    hit = hit.rstrip(":") + "…"
+                    hit = hit.rstrip(":") + "…"  # «…:» with nothing after it
             out["use"] = {"text": _clip(hit, 260), "items": items[:5], "more": max(len(items) - 5, 0)}
             break
     s2 = _section(doc, "2")
@@ -342,7 +346,7 @@ def glance(doc: dict) -> dict:
                 for b in s3.get("blocks", [])
                 if b.get("type") == "paragraph"
                 for s in _sentences(b["text"])
-                if not _BOILER_HOW.search(s) and not s.endswith(":")
+                if not _BOILER_HOW.search(s) and not s.endswith(":") and len(s.split()) >= 4
             ),
             None,
         )
@@ -392,14 +396,21 @@ def glance(doc: dict) -> dict:
 
 
 def source_date(d: dict) -> str:
+    """The text's date: the file's own date (EOF) or the EMA pdf's Last-Modified."""
     src = d.get("source") or {}
+    if re.fullmatch(r"\d{4}-\d{2}-\d{2}", src.get("date") or ""):
+        return date_gr(src["date"])
     try:
         return date_gr(parsedate_to_datetime(src["last_modified"]).date().isoformat())
     except (KeyError, TypeError, ValueError):
         return ""
 
 
-def glance_html(g: dict, date: str) -> str:
+def source_short(d: dict) -> str:
+    return (d.get("source") or {}).get("short") or "EMA"
+
+
+def glance_html(g: dict, date: str, who: str = "EMA") -> str:
     if not g:
         return ""
     tiles = []
@@ -442,46 +453,120 @@ def glance_html(g: dict, date: str) -> str:
         tiles.append(f'<div class="tile"><h3><a href="#fo-s5">Φύλαξη</a></h3>{chips}{text}</div>')
     when = f" · {e(date)}" if date else ""
     return f"""<section class="card glance" aria-labelledby="glance-h">
-      <div class="section-head"><h2 id="glance-h">Με μια ματιά</h2><span class="small">Αυτούσια από το φύλλο οδηγιών · EMA{when}</span></div>
+      <div class="section-head"><h2 id="glance-h">Με μια ματιά</h2><span class="small">Αυτούσια από το φύλλο οδηγιών · {e(who)}{when}</span></div>
       <div class="tiles">{"".join(tiles)}</div>
     </section>"""
 
 
-def leaflet_html(d: dict, i: int, slug: str, pro_block: str = "") -> str:
-    """The whole package leaflet of document i, in sections that open and close, with a table of
-    contents; `pro_block` (links into the SmPC) goes below it."""
-    doc = d["pil"][i]
-    toc, secs = [], []
-    for s in doc.get("sections", []):
+def _section_rows(doc: dict, prefix: str, open_first: bool) -> str:
+    """Sections as <details>; a parent heading without text of its own («4. ΚΛΙΝΙΚΕΣ
+    ΠΛΗΡΟΦΟΡΙΕΣ» before 4.1) is a plain heading row. A text without sections is one row."""
+    rows = []
+    secs = doc.get("sections", [])
+    if not secs and doc.get("preamble"):
+        return (
+            f'<details class="lf-sec" id="{prefix}-all"{" open" if open_first else ""}><summary><span class="n"></span>'
+            f'<span class="t">Όλο το κείμενο</span></summary><div class="lf-text">{_blocks(doc["preamble"], prefix + "-all")}</div></details>'
+        )
+    for k, s in enumerate(secs):
         num = str(s["number"])
-        sid = f"fo-s{num}"
-        toc.append(f'<li><a href="#{sid}"><span>{e(num)}</span> {e(s["title"])}</a></li>')
-        secs.append(
-            f'<details class="lf-sec" id="{sid}"{" open" if num == "1" else ""}><summary><span class="n">{e(num)}</span>'
+        sid = f"{prefix}-s{num}"
+        nxt = secs[k + 1]["number"] if k + 1 < len(secs) else ""
+        if not s["blocks"] and str(nxt).startswith(num + "."):
+            rows.append(
+                f'<h3 class="lf-group" id="{e(sid)}"><span class="n">{e(num)}</span> {e(s["title"])}</h3>'
+            )
+            continue
+        opened = " open" if open_first and k == 0 else ""
+        rows.append(
+            f'<details class="lf-sec" id="{e(sid)}"{opened}><summary><span class="n">{e(num)}</span>'
             f'<span class="t">{e(s["title"])}</span></summary><div class="lf-text">{_blocks(s["blocks"], sid)}</div></details>'
         )
-    pro = (
-        f'<a class="lf-pro" href="/fylla/{e(slug)}/pxp/">Για επαγγελματίες: ΠΧΠ →</a>'
-        if d.get("smpc")
-        else ""
+    return "".join(rows)
+
+
+def _source_line(d: dict, kind: str = "pil") -> str:
+    src = (d.get("sources") or {}).get(kind) or d.get("source") or {}
+    when = source_date({"source": src}) if src.get("date") else source_date(d)
+    if source_short(d) == "ΕΟΦ":
+        who = "Εθνικός Οργανισμός Φαρμάκων (ΕΟΦ)"
+        fmt = "το αρχείο του ΕΟΦ"
+    else:
+        who = "Ευρωπαϊκός Οργανισμός Φαρμάκων (EMA), ελληνική έκδοση"
+        fmt = "το pdf"
+    return (
+        f'<p class="small lf-src">Πηγή: {who}{f" · {e(when)}" if when else ""}. '
+        f"Το κείμενο εξάγεται αυτόματα από {fmt}· αν κάτι διαφέρει, ισχύει {fmt}.</p>"
     )
+
+
+def leaflet_html(d: dict, i: int, slug: str | None, pro_block: str = "") -> str:
+    """The whole package leaflet of document i, in sections that open and close, with a table of
+    contents; `pro_block` (the SmPC, or links into it) goes below it. `slug` is None for texts
+    that have no pages of their own under /fylla/ (EOF): the original file is the print copy."""
+    doc = d["pil"][i]
+    toc = []
+    for s in doc.get("sections", []):
+        num = str(s["number"])
+        toc.append(f'<li><a href="#fo-s{e(num)}"><span>{e(num)}</span> {e(s["title"])}</a></li>')
+    if d.get("smpc") and slug:
+        pro = f'<a class="lf-pro" href="/fylla/{e(slug)}/pxp/">Για επαγγελματίες: ΠΧΠ →</a>'
+    elif d.get("smpc"):
+        pro = '<a class="lf-pro" href="#pxp">Για επαγγελματίες: ΠΧΠ ↓</a>'
+    else:
+        pro = ""
     names = doc.get("products") or []
     products = " · ".join(names[:4]) + (f" και {len(names) - 4} ακόμη" if len(names) > 4 else "")
     others = (
-        f' · <a href="/fylla/{e(slug)}/">άλλες μορφές ({len(d["pil"]) - 1})</a>' if len(d["pil"]) > 1 else ""
+        f' · <a href="/fylla/{e(slug)}/">άλλες μορφές ({len(d["pil"]) - 1})</a>'
+        if slug and len(d["pil"]) > 1
+        else ""
     )
-    src = d.get("source") or {}
-    when = source_date(d)
+    src = (d.get("sources") or {}).get("pil") or d.get("source") or {}
+    fmt = "pdf" if str(src.get("url", "")).lower().endswith(".pdf") or source_short(d) == "EMA" else "αρχείο"
+    links = [f'<a href="/fylla/{e(slug)}/">για εκτύπωση</a>'] if slug else []
+    links.append(f'<a href="{e(src.get("url", ""))}" rel="noopener">{fmt} {e(source_short(d))} ↗</a>')
+    toc_html = (
+        f'<nav class="lf-toc" aria-label="Ενότητες φύλλου οδηγιών"><ol>{"".join(toc)}</ol>{pro}</nav>'
+        if toc
+        else ""
+    )
     return f"""<section class="card leaflet" id="fyllo" aria-labelledby="fyllo-h">
       <div class="section-head"><h2 id="fyllo-h">Φύλλο οδηγιών χρήσης</h2>
-        <span class="small"><a href="/fylla/{e(slug)}/">για εκτύπωση</a> · <a href="{e(src.get("url", ""))}" rel="noopener">pdf ↗</a></span></div>
+        <span class="small">{" · ".join(links)}</span></div>
       {f'<p class="small lf-for">Κείμενο για: {e(products)}{others}</p>' if products else ""}
       <div class="lf-layout">
-        <nav class="lf-toc" aria-label="Ενότητες φύλλου οδηγιών"><ol>{"".join(toc)}</ol>{pro}</nav>
-        <div class="lf-body">{"".join(secs)}</div>
+        {toc_html}
+        <div class="lf-body">{_section_rows(doc, "fo", True)}</div>
       </div>
       {pro_block}
-      <p class="small lf-src">Πηγή: Ευρωπαϊκός Οργανισμός Φαρμάκων (EMA), ελληνική έκδοση{f" · {e(when)}" if when else ""}. Το κείμενο εξάγεται αυτόματα από το pdf· αν κάτι διαφέρει, ισχύει το pdf.</p>
+      {_source_line(d)}
+    </section>"""
+
+
+def smpc_html(d: dict) -> str:
+    """The SmPC on the package page (EOF texts, which have no page of their own): sections closed,
+    with links to the clinical ones."""
+    docs = d.get("smpc") or []
+    if not docs:
+        return ""
+    doc = docs[0]
+    have = {str(s["number"]) for s in doc.get("sections", [])}
+    chips = "".join(
+        f'<a class="chip" href="#fp-s{e(num)}">{e(label)}</a>' for label, num in SMPC_QUICK if num in have
+    )
+    src = (d.get("sources") or {}).get("smpc") or {}
+    link = (
+        f' · <a href="{e(src["url"])}" rel="noopener">αρχείο {e(source_short(d))} ↗</a>'
+        if src.get("url")
+        else ""
+    )
+    return f"""<section class="card leaflet smpc" id="pxp" aria-labelledby="pxp-h">
+      <div class="section-head"><h2 id="pxp-h">Περίληψη χαρακτηριστικών (ΠΧΠ)</h2>
+        <span class="small">Για επαγγελματίες υγείας{link}</span></div>
+      {f'<div class="chips lf-quick">{chips}</div>' if chips else ""}
+      <div class="lf-body lf-full">{_section_rows(doc, "fp", False)}</div>
+      {_source_line(d, "smpc")}
     </section>"""
 
 
@@ -546,21 +631,59 @@ def pick_doc(d_products: list[list[str]], package_name: str) -> int:
 
 
 def package_parts(lf: dict, package_name: str) -> tuple[str, str]:
-    """(«Με μια ματιά», the leaflet section) for a package page; empty strings without a leaflet."""
+    """(«Με μια ματιά», the leaflet and SmPC sections) for a package page; empty strings without texts.
+    «Με μια ματιά» only for leaflets that follow the QRD template (its rules read that template)."""
     texts = lf.get("texts") or {}
     docs = texts.get("pil") or []
+    if len(docs) > 1 and any(not (x.get("sections") or x.get("preamble")) for x in docs):
+        keep = [k for k, x in enumerate(docs) if x.get("sections") or x.get("preamble")]
+        layouts = (texts.get("layout") or {}).get("pil") or []
+        texts = {**texts, "pil": [docs[k] for k in keep]}
+        if len(layouts) == len(docs):
+            texts["layout"] = {**texts["layout"], "pil": [layouts[k] for k in keep]}
+        docs = texts["pil"]
+    slug = lf.get("slug")
     if not docs:
-        return "", ""
+        return "", smpc_html(texts) if not slug else ""
     i = pick_doc([x.get("products") or [] for x in docs], package_name)
-    date = source_date(texts)
-    pro = ""
-    if lf.get("smpc_quick"):
-        chips = "".join(
-            f'<a class="chip" href="/fylla/{e(lf["slug"])}/pxp/#{e(frag)}">{e(label)}</a>'
-            for label, frag in lf["smpc_quick"]
-        )
-        pro = f'<div class="lf-smpc"><h3>Για επαγγελματίες υγείας · ΠΧΠ</h3><div class="chips">{chips}</div></div>'
-    return glance_html(glance(docs[i]), date), leaflet_html(texts, i, lf["slug"], pro)
+    layouts = (texts.get("layout") or {}).get("pil") or ["qrd"]
+    qrd = (layouts[i] if i < len(layouts) else layouts[0]) == "qrd"
+    top = glance_html(glance(docs[i]), source_date(texts), source_short(texts)) if qrd else ""
+    if slug:
+        pro = ""
+        if lf.get("smpc_quick"):
+            chips = "".join(
+                f'<a class="chip" href="/fylla/{e(slug)}/pxp/#{e(frag)}">{e(label)}</a>'
+                for label, frag in lf["smpc_quick"]
+            )
+            pro = f'<div class="lf-smpc"><h3>Για επαγγελματίες υγείας · ΠΧΠ</h3><div class="chips">{chips}</div></div>'
+        return top, leaflet_html(texts, i, slug, pro)
+    return top, leaflet_html(texts, i, None) + smpc_html(texts)
+
+
+def load_eof(src: Path) -> dict[str, dict]:
+    """EOF texts in sections (python -m ingest.eof_pi parse): "EOF-<product code>" -> entry.
+    They get no pages under /fylla/ (the file limit of the host): leaflet and SmPC go on the
+    package pages themselves."""
+    index: dict[str, dict] = {}
+    if not src.exists():
+        return index
+    for f in sorted(src.glob("[0-9]*.json")):
+        d = json.loads(f.read_text(encoding="utf-8"))
+        if not (d.get("pil") or d.get("smpc")):
+            continue
+        texts = {k: d.get(k) for k in ("pil", "smpc", "source", "sources", "layout")}
+        index[d["product_number"]] = {
+            "slug": None,
+            "name": d.get("name"),
+            "pil": bool(d.get("pil")),
+            "smpc": bool(d.get("smpc")),
+            "flags": flags(d),
+            "quick": [],
+            "texts": texts,
+            "smpc_quick": [],
+        }
+    return index
 
 
 def build(ctx, src: Path, out: Path) -> dict[str, dict]:

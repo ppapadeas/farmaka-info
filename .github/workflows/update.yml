@@ -105,6 +105,8 @@ jobs:
       - name: Build site
         run: |
           if [ -f data/eof-links/eof_docs.csv ]; then cp data/eof-links/eof_docs.csv data/current/eof_docs.csv; fi
+          # EOF texts in sections (Δ-24), parsed by the nightly crawl
+          if [ -d data/eof-links/eof_pi ]; then rm -rf data/current/eof_pi && cp -r data/eof-links/eof_pi data/current/eof_pi; fi
           python -m sitegen.build --data data/current --out dist
           test "$(find dist -type f | wc -l)" -gt 10000
       - name: Deploy

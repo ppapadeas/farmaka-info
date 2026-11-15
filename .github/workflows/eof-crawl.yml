@@ -1,8 +1,9 @@
-# Nightly, very slow crawl of EOF SmPC / package leaflet documents (Δ-18).
+# Nightly, very slow crawl of EOF SmPC / package leaflet documents (Δ-18), then the
+# documents in sections (Δ-24).
 # The crawler itself refuses to run outside 00:00-07:00 Athens time, keeps
 # >=10 s between requests, stops on 403/429 and on a data/eof/STOP file.
-# Documents stay in the Actions cache; the daily job only needs the small
-# links file, kept in its own cache.
+# Documents stay in the Actions cache; the daily job only needs the links file and
+# the texts in sections, kept in their own small cache.
 name: eof-crawl
 on:
   schedule:
@@ -17,13 +18,20 @@ on:
         description: "Run now, outside the 00:00-07:00 window (same pacing; owner's decision)"
         type: boolean
         default: true
+      until_done:
+        description: "When this run ends with products left, start the next one (same pacing)"
+        type: boolean
+        default: false
 concurrency:
   group: eof-crawl
   cancel-in-progress: false
+permissions:
+  contents: read
+  actions: write # only to start the next run when until_done is set
 jobs:
   crawl:
     runs-on: ubuntu-latest
-    timeout-minutes: 350
+    timeout-minutes: 355
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -54,7 +62,7 @@ jobs:
         id: crawl
         run: |
           set +e
-          python -m ingest.eof crawl --packages data/current/packages.csv --out data/eof --max-minutes 330 ${{ (github.event_name == 'workflow_dispatch' && inputs.any_time) && '--any-time' || '' }}
+          python -m ingest.eof crawl --packages data/current/packages.csv --out data/eof --max-minutes 300 ${{ (github.event_name == 'workflow_dispatch' && inputs.any_time) && '--any-time' || '' }}
           code=$?
           if [ $code -eq 2 ]; then echo "Outside the 00:00-07:00 Athens window or stopped by data/eof/STOP: nothing to do."; exit 0; fi
           exit $code
@@ -65,15 +73,41 @@ jobs:
           if [ -f data/eof/manifest.json ]; then
             python -m ingest.eof links --manifest data/eof/manifest.json --out data/eof-links/eof_docs.csv
           fi
+      - name: LibreOffice, for the Word and RTF documents
+        if: always()
+        run: |
+          if [ -d data/eof/pdf ] && ls data/eof/pdf | grep -qiE '\.(docx?|rtf)$'; then
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq --no-install-recommends libreoffice-writer-nogui || sudo apt-get install -y -qq --no-install-recommends libreoffice-writer
+          fi
+      - name: Documents in sections (only the new or changed ones)
+        if: always()
+        continue-on-error: true
+        run: |
+          if [ -f data/eof/manifest.json ]; then
+            python -m ingest.eof_pi parse --root data/eof --out data/eof/pi --jobs 4
+            rm -rf data/eof-links/eof_pi && cp -r data/eof/pi data/eof-links/eof_pi
+          fi
       - name: Save EOF documents
         if: always()
         uses: actions/cache/save@v4
         with:
           path: data/eof
           key: eof-docs-${{ github.run_id }}
-      - name: Save links for the daily job
+      - name: Save links and texts for the daily job
         if: always()
         uses: actions/cache/save@v4
         with:
           path: data/eof-links
           key: eof-links-${{ github.run_id }}
+      - name: Next run, while products are left (until_done)
+        if: success() && github.event_name == 'workflow_dispatch' && inputs.until_done && steps.crawl.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ -f data/eof/STOP ]; then echo "data/eof/STOP exists: not starting another run"; exit 0; fi
+          left=$(python -m ingest.eof remaining --packages data/current/packages.csv --manifest data/eof/manifest.json)
+          echo "products left: $left"
+          if [ "$left" -gt 0 ]; then
+            gh workflow run eof-crawl.yml --ref "${{ github.ref_name }}" -f any_time=${{ inputs.any_time }} -f until_done=true
+          fi

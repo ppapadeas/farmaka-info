@@ -818,10 +818,10 @@ def package(ctx: Context, p: dict) -> str:
     fam, form_label = form_kind(p["name"])
     if fam != "other":
         chips.append(f'<span class="chip">{e(form_label)}</span>')
-    for pi in p.get("product_information") or []:
-        for flag in (ctx.leaflets.get(pi.get("product_number")) or {}).get("flags", []):
-            chips.append(f'<span class="chip flag" title="Από το επίσημο κείμενο (EMA)">{e(flag)}</span>')
-        break
+    pis = [pi.get("product_number") for pi in p.get("product_information") or []][:1]
+    for key, who in [(k, "EMA") for k in pis] or [(f"EOF-{p['eof_code'][:7]}", "ΕΟΦ")]:
+        for flag in (ctx.leaflets.get(key) or {}).get("flags", []):
+            chips.append(f'<span class="chip flag" title="Από το επίσημο κείμενο ({who})">{e(flag)}</span>')
     if p["mah"]:
         chips.append(f'<span class="chip" title="{e(p["mah"])}">{e(short_mah(p["mah"]))}</span>')
     disp = dispensing_label(p["reimbursement"][0]["dispensing"]) if p["reimbursement"] else None
@@ -849,6 +849,7 @@ def package(ctx: Context, p: dict) -> str:
             f'<li><a href="{e(rs["url"])}" rel="noopener">Κατάλογος αποζημίωσης ↗</a><div>Υπουργείο Υγείας · {date_gr(rs["published"])}</div></li>'
         )
     # the package leaflet on the page itself: answers first, the whole text below (Δ-23)
+    # EMA text for centrally authorised medicines, else the EOF one (Δ-24)
     glance, leaflet = "", ""
     lf = next(
         (
@@ -857,25 +858,43 @@ def package(ctx: Context, p: dict) -> str:
             if ((ctx.leaflets.get(pi.get("product_number")) or {}).get("texts") or {}).get("pil")
         ),
         None,
-    )
+    ) or ctx.leaflets.get(f"EOF-{p['eof_code'][:7]}")
     if lf:
         from . import leaflets  # imports this module
 
         glance, leaflet = leaflets.package_parts(lf, p["name"])
-        src = lf["texts"].get("source") or {}
-        when = leaflets.source_date(lf["texts"])
-        srcs.append(
-            f'<li><a href="{e(src.get("url", ""))}" rel="noopener">Φύλλο οδηγιών &amp; ΠΧΠ ↗</a>'
-            f"<div>EMA{f' · {when}' if when else ''}</div></li>"
-        )
-        pxp = (
-            f'<a class="doc" href="/fylla/{e(lf["slug"])}/pxp/">Περίληψη χαρακτηριστικών (ΠΧΠ)</a><div>Για επαγγελματίες · σε ενότητες</div>'
-            if lf.get("smpc")
-            else ""
-        )
+    if leaflet:
+        texts = lf["texts"]
+        who = leaflets.source_short(texts)
+        for kind, label in (("pil", "Φύλλο οδηγιών"), ("smpc", "ΠΧΠ")):
+            src = (texts.get("sources") or {}).get(kind) or (texts.get("source") if kind == "pil" else None)
+            if not src or not src.get("url"):
+                continue
+            if who == "EMA":
+                label = "Φύλλο οδηγιών &amp; ΠΧΠ"
+            when = leaflets.source_date({"source": src}) or leaflets.source_date(texts)
+            srcs.append(
+                f'<li><a href="{e(src["url"])}" rel="noopener">{label} ↗</a>'
+                f"<div>{e(who)}{f' · {when}' if when else ''}</div></li>"
+            )
+            if who == "EMA":
+                break
+        rows = []
+        if texts.get("pil"):
+            rows.append(
+                '<a class="doc" href="#fyllo">Φύλλο οδηγιών χρήσης ↓</a><div>Σε αυτή τη σελίδα · σε ενότητες</div>'
+            )
+        if texts.get("smpc") and lf.get("slug"):
+            rows.append(
+                f'<a class="doc" href="/fylla/{e(lf["slug"])}/pxp/">Περίληψη χαρακτηριστικών (ΠΧΠ)</a><div>Για επαγγελματίες · σε ενότητες</div>'
+            )
+        elif texts.get("smpc"):
+            rows.append(
+                '<a class="doc" href="#pxp">Περίληψη χαρακτηριστικών (ΠΧΠ) ↓</a><div>Για επαγγελματίες · σε αυτή τη σελίδα</div>'
+            )
         docs = f"""<section class="card side">
       <h2>Επίσημα κείμενα</h2>
-      <div class="docs"><a class="doc" href="#fyllo">Φύλλο οδηγιών χρήσης ↓</a><div>Σε αυτή τη σελίδα · σε ενότητες</div>{pxp}</div>
+      <div class="docs">{"".join(rows)}<p class="small">Πηγή: {e(who)}</p></div>
     </section>"""
     else:
         docs = docs_card(ctx, p)
@@ -924,7 +943,7 @@ def package(ctx: Context, p: dict) -> str:
         body,
         f"/farmako/{p['eof_code']}/",
         f"{p['name']} ({subst}). Λιανική {eur(pr['retail'])}, αποζημίωση, φθηνότερα ισοδύναμα και ιστορικό τιμής, "
-        "από το Υπουργείο Υγείας." + (" Φύλλο οδηγιών χρήσης σε ενότητες (EMA)." if leaflet else ""),
+        "από το Υπουργείο Υγείας." + (" Φύλλο οδηγιών χρήσης σε ενότητες." if leaflet else ""),
     )
 
 

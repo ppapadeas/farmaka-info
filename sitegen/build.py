@@ -659,6 +659,8 @@ def build(data: Path, out: Path, built_at: str) -> dict:
     (out / "_templates" / "search.html").write_text(pages.search_template(ctx), encoding="utf-8")
     ctx.leaflets = leaflets.build(ctx, data / "ema_pi", out)
     urls += [f"/fylla/{v['slug']}/" for v in ctx.leaflets.values()]
+    # EOF texts in sections: on the package pages only (Δ-24)
+    ctx.leaflets.update(leaflets.load_eof(data / "eof_pi"))
     for p in pkgs:
         d = out / "farmako" / p["eof_code"]
         d.mkdir(parents=True)
