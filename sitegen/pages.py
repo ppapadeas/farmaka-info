@@ -61,6 +61,7 @@ class Context:
     downloads: list
     equiv: dict = field(default_factory=dict)  # eof_code -> codes with same substances, strength, form
     leaflets: dict = field(default_factory=dict)  # EMA product number -> {slug, name, pil, smpc}
+    compared: dict = field(default_factory=dict)  # eof_code -> Equivalents | None (cache of comparable())
 
 
 def sname(ctx: Context, inn: str) -> str:
@@ -399,44 +400,95 @@ def reimbursement_card(ctx: Context, p: dict) -> str:
 </section>"""
 
 
-def equivalents_card(ctx: Context, p: dict) -> str:
+EOF_LISTS = ("limited_availability", "shortage", "discontinuation")
+
+
+def in_shortage(p: dict) -> bool:
+    """On an EOF limited-availability, shortage or discontinuation list. EMA entries
+    do not count: they do not say whether they concern Greece (Δ-21)."""
+    return any(a["type"] in EOF_LISTS for a in p.get("availability") or [])
+
+
+@dataclass
+class Equivalents:
+    """Packages that compare with one package under Δ-16, that package included,
+    cheapest first (per unit, or per pack when all have the same size)."""
+
+    rows: list[dict]
+    per_unit: bool
+    counts: dict[str, int | None]
+
+    def key(self, q: dict) -> float:
+        return q["prices"]["retail"] / self.counts[q["eof_code"]] if self.per_unit else q["prices"]["retail"]
+
+    def available(self, p: dict) -> list[dict]:
+        """The others that are on no EOF shortage or discontinuation list, cheapest first."""
+        return [q for q in self.rows if q is not p and not in_shortage(q)]
+
+
+def comparable(ctx: Context, p: dict) -> Equivalents | None:
+    if p["eof_code"] in ctx.compared:
+        return ctx.compared[p["eof_code"]]
+    eq = None
     codes = ctx.equiv.get(p["eof_code"], [])
-    if len(codes) < 2:
+    if len(codes) >= 2:
+        rows = [ctx.by_code[c] for c in codes]
+        counts = {q["eof_code"]: unit_count(q["name"]) for q in rows}
+        # Compare like with like: per unit when the number of tablets/capsules is
+        # known; otherwise only boxes of the same size. Never box against box of
+        # different sizes (a 28-pack is not "62% cheaper" than a 56-pack).
+        per_unit = counts[p["eof_code"]] is not None
+        if per_unit:
+            rows = [q for q in rows if counts[q["eof_code"]]]
+        else:
+            n = pack_count(p["name"])
+            rows = [q for q in rows if n is not None and pack_count(q["name"]) == n]
+        if len(rows) >= 2:
+            eq = Equivalents(rows, per_unit, counts)
+            rows.sort(key=lambda q: (eq.key(q), q["prices"]["retail"], q["name"]))
+    ctx.compared[p["eof_code"]] = eq
+    return eq
+
+
+def _gap_note(p: dict, q: dict) -> str:
+    """What the reimbursement leaves to the patient for one pack of `q`, when `p` is reimbursed."""
+    if not p["reimbursement"]:
+        return ""
+    if not q["reimbursement"]:
+        return '<span class="rd">χωρίς αποζημίωση</span>'
+    gap = max(q["prices"]["retail"] - q["reimbursement"][0]["reimbursement_price"], 0)
+    return f'<span class="rd">{"διαφορά " + eur(gap) if gap > 0.004 else "χωρίς διαφορά"}</span>'
+
+
+def equivalents_card(ctx: Context, p: dict) -> str:
+    eq = comparable(ctx, p)
+    if not eq:
         return ""
     st = strength(p["name"])
-    rows = [ctx.by_code[c] for c in codes]
-    counts = {q["eof_code"]: unit_count(q["name"]) for q in rows}
-    # Compare like with like: per unit when the number of tablets/capsules is
-    # known; otherwise only boxes of the same size. Never box against box of
-    # different sizes (a 28-pack is not "62% cheaper" than a 56-pack).
-    per_unit = counts[p["eof_code"]] is not None
-    if per_unit:
-        rows = [q for q in rows if counts[q["eof_code"]]]
-    else:
-        n = pack_count(p["name"])
-        rows = [q for q in rows if n is not None and pack_count(q["name"]) == n]
-    if len(rows) < 2:
-        return ""
-
-    def key(q: dict) -> float:
-        return q["prices"]["retail"] / counts[q["eof_code"]] if per_unit else q["prices"]["retail"]
-
-    rows.sort(key=lambda q: (key(q), q["prices"]["retail"], q["name"]))
+    rows, key, per_unit = eq.rows, eq.key, eq.per_unit
     mine = key(p)
     cheaper = [q for q in rows if key(q) < mine * 0.995]
-    shown = rows[:7]
-    if p not in shown:
+    # A package in shortage: first the equivalents that are on no EOF list, so
+    # the reader sees what can be found; then the rest, in the same price order.
+    short = bool(p.get("availability"))
+    avail = eq.available(p) if short else []
+    ordered = (avail + [q for q in rows if q is p or in_shortage(q)]) if short else rows
+    shown = ordered[:7]
+    if not any(q is p for q in shown):
         shown.append(p)
+    gaps = bool(short and p["reimbursement"] and any(q["reimbursement"] for q in shown if q is not p))
     lis = []
     for q in shown:
-        n = counts.get(q["eof_code"]) or pack_count(q["name"])
+        n = eq.counts.get(q["eof_code"]) or pack_count(q["name"])
         extra = " · ".join(x for x in ((f"×{n}" if n else ""), short_mah(q["mah"])) if x)
         label = f"<b>{e(split_name(q['name'])[0])}</b> <span>· {e(extra)}</span>{avail_tag(q)}"
+        gap = _gap_note(p, q) if gaps else ""
         u = f'<span class="u">{eur(key(q))}/τεμ.</span>' if per_unit else ""
         price = f'<span class="p">{eur(q["prices"]["retail"])}</span>'
         if q is p:
             lis.append(
-                f'<li class="me"><span class="nm">{label}</span>{u}{price}<span class="pill here">αυτό</span></li>'
+                f'<li class="me"><span class="nm">{label}</span>{gap}{u}{price}'
+                '<span class="pill here">αυτό</span></li>'
             )
             continue
         k = key(q)
@@ -445,14 +497,37 @@ def equivalents_card(ctx: Context, p: dict) -> str:
             if abs(k - mine) / mine > 0.005
             else '<span class="pill same">ίδια</span>'
         )
-        lis.append(f'<li><a class="nm" href="/farmako/{e(q["eof_code"])}/">{label}</a>{u}{price}{rel}</li>')
+        cls = ' class="short"' if short and in_shortage(q) else ""
+        lis.append(
+            f'<li{cls}><a class="nm" href="/farmako/{e(q["eof_code"])}/">{label}</a>{gap}{u}{price}{rel}</li>'
+        )
     basis = "ανά τεμάχιο" if per_unit else "για ίδιο μέγεθος συσκευασίας"
-    if cheaper:
+    if short and avail:
+        first = "εμφανίζεται πρώτο" if len(avail) == 1 else "εμφανίζονται πρώτα, από το φθηνότερο"
+        word = "ισοδύναμο δεν είναι" if len(avail) == 1 else "ισοδύναμα δεν είναι"
+        summary = f"{len(avail)} {word} σε λίστα ελλείψεων ή διακοπής του ΕΟΦ· {first}"
+        summary += " ανά τεμάχιο." if per_unit and len(avail) > 1 else "."
+    elif short:
+        summary = "Όλα τα ισοδύναμα είναι κι αυτά σε λίστα ελλείψεων ή διακοπής του ΕΟΦ."
+    elif cheaper:
         best = (mine - key(cheaper[0])) / mine * 100
         word = "φθηνότερη" if len(cheaper) == 1 else "φθηνότερες"
         summary = f"{len(cheaper)} {word} {basis}, έως <b>{num(best, 0)}%</b> λιγότερο."
     else:
         summary = f"Η φθηνότερη επιλογή {basis}."
+    notes = ""
+    if short:
+        notes = (
+            '<p class="small">Ενδείξεις έλλειψης από τις λίστες του ΕΟΦ (<a href="/elleipseis/">ελλείψεις</a>)· '
+            "η διαθεσιμότητα επιβεβαιώνεται στο φαρμακείο."
+        )
+        if gaps:
+            rs = p["reimbursement"][0]["source"]
+            notes += (
+                " Διαφορά: όσο η λιανική ξεπερνά την τιμή αποζημίωσης, ανά συσκευασία "
+                f"(κατάλογος αποζημίωσης {date_gr(rs['published'])})."
+            )
+        notes += "</p>"
     subs = " + ".join(sname(ctx, s) for s in p["substances"])
     more = (
         f'<a href="/ousia/{e(ctx.slug_of[p["substances"][0]])}/">Όλες οι {len(rows)}</a>'
@@ -463,6 +538,7 @@ def equivalents_card(ctx: Context, p: dict) -> str:
   <div class="section-head"><h2>{e(subs)} {e(st[1] if st else "")}</h2>{more}</div>
   <p class="small top">{summary}</p>
   <ul class="rows eq">{"".join(lis)}</ul>
+  {notes}
   <p class="small">Ίδια δραστική ουσία, περιεκτικότητα και μορφή. Αλλαγή σκευάσματος μόνο με τη γνώμη γιατρού ή φαρμακοποιού.</p>
 </section>"""
 
@@ -574,10 +650,39 @@ def availability_card(ctx: Context, p: dict) -> str:
         rows.append(
             f'<div class="av {cls}"><strong>{e(title)}</strong>{detail}{alt}<p class="avsrc">{link}</p></div>'
         )
-    more = ""
-    if ctx.equiv.get(p["eof_code"]):
-        more = '<p class="av-more"><a href="#isodynama">Ισοδύναμα με την ίδια ουσία ↓</a></p>'
+    eq = comparable(ctx, p)
+    if not eq:
+        s = p["substances"][0] if p["substances"] else None
+        link = (
+            f'· <a href="/ousia/{e(ctx.slug_of[s])}/">όλες οι συσκευασίες με {e(sname(ctx, s))}</a>'
+            if s in ctx.slug_of
+            else "."
+        )
+        more = f'<p class="av-more">Δεν βρέθηκε ισοδύναμο με ίδια ουσία, περιεκτικότητα και μορφή{link}</p>'
+    elif n := len(eq.available(p)):
+        word = "ισοδύναμο" if n == 1 else "ισοδύναμα"
+        more = f'<p class="av-more"><a href="#isodynama">{n} {word} χωρίς ένδειξη έλλειψης ↓</a></p>'
+    else:
+        more = (
+            '<p class="av-more">Κανένα ισοδύναμο χωρίς ένδειξη έλλειψης· '
+            '<a href="#isodynama">όλα τα ισοδύναμα ↓</a></p>'
+        )
     return f'<section class="card avail" aria-label="Διαθεσιμότητα">{"".join(rows)}{more}</section>'
+
+
+def available_equivalents(ctx: Context, p: dict) -> str:
+    """For the shortages list: how many equivalents are on no EOF list, linking to them."""
+    eq = comparable(ctx, p)
+    if not eq:
+        return '<span class="eqn none">κανένα ισοδύναμο</span>'
+    n = len(eq.available(p))
+    text = (
+        f"{n} {'ισοδύναμο' if n == 1 else 'ισοδύναμα'} χωρίς έλλειψη"
+        if n
+        else "κανένα ισοδύναμο χωρίς έλλειψη"
+    )
+    cls = "eqn" if n else "eqn none"
+    return f'<a class="{cls}" href="/farmako/{e(p["eof_code"])}/#isodynama">{text}</a>'
 
 
 def avail_tag(p: dict) -> str:
@@ -1058,7 +1163,7 @@ def shortages_page(ctx: Context) -> str:
             start = span
             lis.append(
                 f'<li><a class="nm" href="/farmako/{e(p["eof_code"])}/">{name_html(p["name"])}</a>'
-                f'<span class="mah">{e(why)}</span><span class="p">{start}</span></li>'
+                f'<span class="mah">{e(why)}</span>{available_equivalents(ctx, p)}<span class="p">{start}</span></li>'
             )
         when = f" · {src} {date_gr(info['published'])}" if info.get("published") else f" · {src}"
         groups.append(
@@ -1073,8 +1178,9 @@ def shortages_page(ctx: Context) -> str:
   <p>Από τις επίσημες λίστες επάρκειας του ΕΟΦ και τον κατάλογο ελλείψεων της EMA. Ο ΕΟΦ τις ενημερώνει περίπου
   μηνιαία. Η λίστα απαγόρευσης παράλληλων εξαγωγών δεν περιλαμβάνεται, γιατί δημοσιεύεται μόνο σκαναρισμένη.</p>
 </div>
-<p class="note">Κάθε σελίδα φαρμάκου δείχνει ισοδύναμα με την ίδια ουσία. Η αλλαγή γίνεται μόνο με τη γνώμη γιατρού ή
-φαρμακοποιού.</p>
+<p class="note">Δίπλα σε κάθε φάρμακο: πόσα ισοδύναμα (ίδια ουσία, περιεκτικότητα και μορφή) δεν είναι σε λίστα
+ελλείψεων ή διακοπής του ΕΟΦ. Η διαθεσιμότητα επιβεβαιώνεται στο φαρμακείο· η αλλαγή σκευάσματος γίνεται μόνο με τη
+γνώμη γιατρού ή φαρμακοποιού.</p>
 {"".join(groups) or empty}
 </div>
 """

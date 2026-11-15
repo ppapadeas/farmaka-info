@@ -451,6 +451,11 @@ a.stat-link span { text-decoration: underline; text-decoration-color: var(--line
 .av .avsrc a { text-decoration: none; }
 .av-more { font-size: 14px; }
 .av-more a { font-weight: 600; text-decoration: none; }
+.rows .rd { font-size: 13px; color: var(--muted); white-space: nowrap; }
+.rows.eq li.short .nm b, .rows.eq li.short .p { color: var(--muted); }
+.rows .eqn { flex: none; font-size: 13px; font-weight: 500; text-decoration: none; white-space: nowrap; }
+.rows .eqn.none { color: var(--faint); font-weight: 400; }
+a.eqn.none:hover { color: var(--ink); text-decoration: underline; }
 .tag.warn { background: var(--up-bg); color: var(--up-ink); }
 .tag.stop { background: #fde2d6; color: #8a2c0a; }
 @media (prefers-color-scheme: dark) {

@@ -199,6 +199,121 @@ def test_shortage_alert(tmp_path):
     assert got["1"][0]["reason"] == "Καθυστέρηση παράδοσης"
 
 
+LA = {"type": "limited_availability", "published": "2026-10-31", "source_url": "https://www.eof.gr/x/"}
+STOP = {"type": "discontinuation", "published": "2025-12-31", "source_url": "https://www.eof.gr/y/"}
+
+
+def _pkg(code, brand, retail, n=30, *, rp=None, availability=(), strength="20MG"):
+    from sitegen.build import REIMBURSEMENT_SOURCE
+
+    reimb = []
+    if rp is not None:
+        reimb = [
+            {
+                "list": "main",
+                "reimbursement_price": rp,
+                "retail_in_list": retail,
+                "daily_cost": None,
+                "daily_doses_per_pack": None,
+                "dispensing": None,
+                "restrictions": [],
+                "source": REIMBURSEMENT_SOURCE,
+            }
+        ]
+    return {
+        "eof_code": code,
+        "barcode": f"280{code}0",
+        "name": f"{brand} F.C.TAB {strength}/TAB BTx{n}",
+        "atc": "C10AA05",
+        "substances": ["ATORVASTATIN"],
+        "mah": f"{brand} ΑΕ",
+        "vat": 0.06,
+        "non_reimbursed": False,
+        "kind": "regulated",
+        "prices": {"exfactory": None, "wholesale": None, "retail": retail},
+        "price_source": {"published": "2026-10-05", "moh_article": 14818, "url": "https://www.moh.gov.gr/a"},
+        "price_history": [],
+        "reimbursement": reimb,
+        "availability": [dict(a) for a in availability],
+    }
+
+
+def _ctx(pkgs):
+    from sitegen import pages
+    from sitegen.build import REIMBURSEMENT_SOURCE, equivalents, substance_index
+
+    subst = substance_index(pkgs)
+    meta = {
+        "built_at": "2026-11-15T00:00:00+00:00",
+        "reimbursement_source": REIMBURSEMENT_SOURCE,
+        "shortages": {"limited_availability": {"packages": 1, "published": "2026-10-31"}},
+    }
+    return pages.Context(
+        meta=meta,
+        by_code={p["eof_code"]: p for p in pkgs},
+        subst=subst,
+        slug_of={v["name"]: k for k, v in subst.items()},
+        downloads=[],
+        equiv=equivalents(pkgs),
+    )
+
+
+def test_shortage_points_to_available_equivalents():
+    from sitegen import pages
+
+    p = _pkg("100000001", "SHORTY", 10.0, rp=8.0, availability=[LA])
+    pkgs = [
+        p,
+        _pkg("100000002", "ALSOSHORT", 6.0, rp=6.0, availability=[LA]),  # cheapest, but in shortage too
+        _pkg("100000003", "BETA", 7.0, rp=8.0),
+        _pkg("100000004", "GAMMA", 9.0, rp=8.0),
+        _pkg("100000005", "DELTA", 5.0, rp=5.0, availability=[STOP]),
+        _pkg("100000006", "EPSILON", 8.0),  # not reimbursed
+        _pkg("100000007", "OTHER", 4.0, strength="40MG"),  # another strength: no group
+    ]
+    ctx = _ctx(pkgs)
+
+    card = pages.equivalents_card(ctx, p)
+    order = [card.index(f">{b}<") for b in ("BETA", "EPSILON", "GAMMA", "DELTA", "ALSOSHORT", "SHORTY")]
+    assert order == sorted(order)  # the three on no EOF list first, cheapest per unit first
+    assert "3 ισοδύναμα δεν είναι σε λίστα ελλείψεων ή διακοπής του ΕΟΦ" in card
+    assert "χωρίς διαφορά" in card  # BETA: reimbursement price above retail
+    assert "διαφορά 1,00 €" in card  # GAMMA: 9 € retail, 8 € reimbursement
+    assert "διαφορά 2,00 €" in card  # this one
+    assert "χωρίς αποζημίωση" in card  # EPSILON
+    assert 'class="tag stop"' in card and 'class="tag warn"' in card
+    assert "επιβεβαιώνεται στο φαρμακείο" in card
+
+    alert = pages.availability_card(ctx, p)
+    assert '<a href="#isodynama">3 ισοδύναμα χωρίς ένδειξη έλλειψης ↓</a>' in alert
+
+    page = pages.shortages_page(ctx)
+    assert '<a class="eqn" href="/farmako/100000001/#isodynama">3 ισοδύναμα χωρίς έλλειψη</a>' in page
+
+    # the same group seen from a package that is not in shortage: cheapest first, as before
+    beta = pages.equivalents_card(ctx, ctx.by_code["100000003"])
+    assert beta.index(">DELTA<") < beta.index(">ALSOSHORT<") < beta.index(">BETA<")
+    assert "διαφορά" not in beta
+
+
+def test_shortage_without_available_equivalents_says_so():
+    from sitegen import pages
+
+    p = _pkg("200000001", "SHORTY", 10.0, availability=[LA])
+    q = _pkg("200000002", "ALSOSHORT", 9.0, availability=[STOP])
+    alone = _pkg("200000003", "ALONE", 9.0, availability=[LA], strength="80MG")
+    ctx = _ctx([p, q, alone])
+
+    assert "Όλα τα ισοδύναμα είναι κι αυτά σε λίστα" in pages.equivalents_card(ctx, p)
+    assert "Κανένα ισοδύναμο χωρίς ένδειξη έλλειψης" in pages.availability_card(ctx, p)
+    alert = pages.availability_card(ctx, alone)
+    assert "Δεν βρέθηκε ισοδύναμο με ίδια ουσία, περιεκτικότητα και μορφή" in alert
+    assert "#isodynama" not in alert and pages.equivalents_card(ctx, alone) == ""
+    page = pages.shortages_page(ctx)
+    assert 'href="/farmako/200000001/#isodynama">κανένα ισοδύναμο χωρίς έλλειψη</a>' in page
+    assert '<span class="eqn none">κανένα ισοδύναμο</span>' in page
+
+
 def test_leaflet_flags_and_quick_links():
     from sitegen.leaflets import flags, quick_links
 
