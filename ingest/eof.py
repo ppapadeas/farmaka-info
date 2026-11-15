@@ -1004,6 +1004,16 @@ def new_session() -> requests.Session:
     return requests.Session()
 
 
+def _packages(paths: Iterable[Path]) -> list[dict[str, str]]:
+    """The rows of every list that exists, each EOF code once (the first list wins)."""
+    rows: dict[str, dict[str, str]] = {}
+    for path in paths:
+        if path.exists():
+            for r in read_csv(path):
+                rows.setdefault(r["eof_code"], r)
+    return list(rows.values())
+
+
 def _cmd_crawl(args: argparse.Namespace) -> int:
     out: Path = args.out
     if (out / "STOP").exists():
@@ -1023,7 +1033,7 @@ def _cmd_crawl(args: argparse.Namespace) -> int:
     ema = {r["eof_code"] for r in read_csv(args.ema_links)} if args.ema_links.exists() else set()
     if not args.ema_links.exists():
         print(f"warning: {args.ema_links} not found, no product is skipped as EMA")
-    targets = plan(read_csv(args.packages), ema)
+    targets = plan(_packages(args.packages), ema)
     try:
         lock = Lock(out / ".lock")
         with lock:
@@ -1067,7 +1077,7 @@ def _cmd_remaining(args: argparse.Namespace) -> int:
     ema = {r["eof_code"] for r in read_csv(args.ema_links)} if args.ema_links.exists() else set()
     manifest = read_manifest(args.manifest)
     done = {k for k, v in manifest["products"].items() if v.get("state") in ("done", "not_found")}
-    print(sum(1 for t in plan(read_csv(args.packages), ema) if t.code not in done))
+    print(sum(1 for t in plan(_packages(args.packages), ema) if t.code not in done))
     return 0
 
 
@@ -1082,7 +1092,13 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="SmPC and leaflet PDFs from the EOF product search.")
     sub = ap.add_subparsers(dest="cmd", required=True)
     c = sub.add_parser("crawl", help="download documents of products not yet in the manifest")
-    c.add_argument("--packages", type=Path, default=Path("data/current/packages.csv"))
+    c.add_argument(
+        "--packages",
+        type=Path,
+        nargs="+",
+        default=[Path("data/current/packages.csv")],
+        help="price lists (packages.csv, otc_packages.csv); a code in two lists counts once",
+    )
     c.add_argument("--ema-links", type=Path, default=Path("data/current/ema_links.csv"))
     c.add_argument("--out", type=Path, default=Path("data/eof"))
     c.add_argument("--limit", type=int, help="at most N products in this run")
@@ -1102,7 +1118,7 @@ def main(argv: list[str] | None = None) -> int:
     lk.add_argument("--manifest", type=Path, default=Path("data/eof/manifest.json"))
     lk.add_argument("--out", type=Path, default=Path("data/current/eof_docs.csv"))
     rm = sub.add_parser("remaining", help="print how many products are still to crawl")
-    rm.add_argument("--packages", type=Path, default=Path("data/current/packages.csv"))
+    rm.add_argument("--packages", type=Path, nargs="+", default=[Path("data/current/packages.csv")])
     rm.add_argument("--ema-links", type=Path, default=Path("data/current/ema_links.csv"))
     rm.add_argument("--manifest", type=Path, default=Path("data/eof/manifest.json"))
     args = ap.parse_args(argv)

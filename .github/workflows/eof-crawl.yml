@@ -62,7 +62,7 @@ jobs:
         id: crawl
         run: |
           set +e
-          python -m ingest.eof crawl --packages data/current/packages.csv --out data/eof --max-minutes 300 ${{ (github.event_name == 'workflow_dispatch' && inputs.any_time) && '--any-time' || '' }}
+          python -m ingest.eof crawl --packages data/current/packages.csv data/current/otc_packages.csv --out data/eof --max-minutes 300 ${{ (github.event_name == 'workflow_dispatch' && inputs.any_time) && '--any-time' || '' }}
           code=$?
           if [ $code -eq 2 ]; then echo "Outside the 00:00-07:00 Athens window or stopped by data/eof/STOP: nothing to do."; exit 0; fi
           exit $code
@@ -106,7 +106,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           if [ -f data/eof/STOP ]; then echo "data/eof/STOP exists: not starting another run"; exit 0; fi
-          left=$(python -m ingest.eof remaining --packages data/current/packages.csv --manifest data/eof/manifest.json)
+          left=$(python -m ingest.eof remaining --packages data/current/packages.csv data/current/otc_packages.csv --manifest data/eof/manifest.json)
           echo "products left: $left"
           if [ "$left" -gt 0 ]; then
             gh workflow run eof-crawl.yml --ref "${{ github.ref_name }}" -f any_time=${{ inputs.any_time }} -f until_done=true
