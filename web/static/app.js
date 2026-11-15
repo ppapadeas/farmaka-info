@@ -261,3 +261,25 @@ window.addEventListener("appinstalled", () => {
 
 // Print buttons (no inline handlers: the CSP allows only our own scripts)
 document.querySelectorAll("[data-print]").forEach((b) => b.addEventListener("click", () => window.print()));
+
+// Leaflet on the package page: a link to a section or heading inside a closed
+// <details> opens it first (browsers without fragment auto-expand need this),
+// and printing shows every section.
+function openTarget(hash) {
+  if (!hash || hash.length < 2) return;
+  const t = document.getElementById(decodeURIComponent(hash.slice(1)));
+  const d = t?.closest("details");
+  if (d && !d.open) {
+    d.open = true;
+    t.scrollIntoView();
+  }
+}
+openTarget(location.hash);
+window.addEventListener("hashchange", () => openTarget(location.hash));
+document.addEventListener("click", (ev) => {
+  const a = ev.target.closest?.('a[href^="#"]');
+  if (a) openTarget(a.getAttribute("href"));
+});
+window.addEventListener("beforeprint", () => {
+  document.querySelectorAll("details.lf-sec").forEach((d) => (d.open = true));
+});

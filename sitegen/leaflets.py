@@ -15,6 +15,7 @@ from email.utils import parsedate_to_datetime
 from pathlib import Path
 
 from . import pages
+from .drug import strength
 from .pages import e
 from .text import date_gr, slugify
 
@@ -221,6 +222,347 @@ def _page(ctx, d: dict, slug: str, kind: str) -> str:
     )
 
 
+# --- The leaflet inside the package page --------------------------------------
+#
+# «Με μια ματιά» answers are picked by fixed rules from the leaflet text and shown
+# word for word (cut only at a sentence or clause boundary, marked with «…»): never
+# rewritten. Each answer links to its section, which is on the same page.
+
+_SENT = re.compile(r"(?<=[.!;])\s+(?=[«(\"Α-ΩΆΈΉΊΌΎΏA-Z0-9])")
+_USE = re.compile(
+    r"χρησιμοποιείται|χρησιμοποιούνται|ενδείκνυται|χορηγείται\s+για|για\s+(?:τη|την)\s+θεραπεία"
+)
+_USE_SELF = re.compile(r"(?:χρησιμοποιείται|ενδείκνυται|χορηγείται)\s+(?:για|σε|στ|μαζί|ως|επίσης)")
+_BOILER_HOW = re.compile(
+    r"^(?:Πάντοτε|Πάντα)\s+να|^Εάν\s+έχετε\s+(?:αμφιβολ|περαιτέρω|οποιεσδήποτε)|^(?:Ρωτήστε|Απευθυνθείτε|Ελέγξτε\s+με)"
+)
+_BOILER_STORE = re.compile(
+    r"παιδιά|ημερομηνία\s+λήξης|EXP|[Μμ]ην\s+πετ[άα]τε|[Ρρ]ωτήστε\s+τον\s+φαρμακοποιό|απόρριψη|απορρίμματα|λήγει"
+)
+_DOSE = re.compile(r"\d\s*(?:mg|g|ml|μg|mcg|IU|μονάδ|δισκ|κάψουλ|σταγ|ψεκ|εισπν|φορ)", re.I)
+_VERY_COMMON = re.compile(r"πολύ\s+συχνές", re.I)
+_FREQ = re.compile(r"συχνές|σπάνιες|συχνότητα|μη\s+γνωστ", re.I)
+# «Φυλάσσετε (και μεταφέρετε) σε ψυγείο (2°C - 8°C)», not «Μη φυλάσσετε σε ψυγείο» and not
+# «…μπορεί να αποθηκευτεί σε ψυγείο… για έως και 24 ώρες» after reconstitution
+_FRIDGE_PIL = re.compile(
+    r"(?<!Μη )(?<!Μην )[Φφ]υλάσσετε[^.]{0,40}?σε\s+ψυγείο\s*\(\s*2\s*°?\s*C?\s*(?:[–-]|έως)\s*8"
+)
+_HOW_SUBS = re.compile(r"^Εάν\s+(?:ξεχάσετε|πάρετε|χρησιμοποιήσετε|σας\s+χορηγηθεί|σταματήσετε|χάσετε)")
+
+
+def _sentences(text: str) -> list[str]:
+    return [s.strip() for s in _SENT.split(" ".join(text.split())) if s.strip()]
+
+
+def _clip(text: str, limit: int) -> str:
+    """Word-for-word, cut at a word boundary with «…» when longer than the limit."""
+    text = " ".join(text.split())
+    if len(text) <= limit:
+        return text
+    cut = text[:limit].rsplit(" ", 1)[0].rstrip(",;:·-– ")
+    return cut + "…"
+
+
+def _item(text: str) -> str:
+    """A list item reduced to its first clause: «Απώλεια μαλλιών (η πλειοψηφία…)» -> «Απώλεια μαλλιών»."""
+    first = _sentences(text)[0] if text.strip() else ""
+    head = re.split(r"\s+\(|:\s", first, maxsplit=1)[0].rstrip(".,;: ")
+    return _clip(head if len(head) >= 3 else first, 70)
+
+
+def _commas(text: str) -> list[str]:
+    """Split «Zάλη, κόπωση, γρήγορος κτύπος (αίσθημα παλμών), ναυτία.» at the commas outside brackets."""
+    out, depth, cur = [], 0, ""
+    for ch in " ".join(text.split()).rstrip("."):
+        depth += ch == "("
+        depth -= ch == ")"
+        if ch == "," and depth == 0:
+            out.append(cur.strip())
+            cur = ""
+        else:
+            cur += ch
+    out.append(cur.strip())
+    return [x for x in out if x]
+
+
+def _section(doc: dict, num: str) -> dict | None:
+    for s in doc.get("sections", []):
+        if str(s.get("number")) == num:
+            return s
+    return None
+
+
+def glance(doc: dict) -> dict:
+    """The «Με μια ματιά» answers of one leaflet; a key is missing when the rule finds nothing."""
+    out: dict = {}
+    s1 = _section(doc, "1")
+    if s1:
+        blocks = s1.get("blocks", [])
+
+        def find(rx: re.Pattern) -> tuple[int, str] | None:
+            for i, b in enumerate(blocks):
+                texts = [b["text"]] if b.get("type") == "paragraph" else list(b.get("items", []))
+                hit = next((s for t in texts for s in _sentences(t) if rx.search(s)), None)
+                if hit:
+                    return i, hit
+            return None
+
+        # the medicine as the subject («Το X χρησιμοποιείται για…») before a sentence about its
+        # class («…ταξάνες που χρησιμοποιούνται στον καρκίνο»)
+        found = find(_USE_SELF) or find(_USE)
+        for i, hit in [found] if found else []:
+            items: list[str] = []
+            if hit.endswith(":"):
+                for nb in blocks[i + 1 :]:
+                    if nb.get("type") == "subheading":
+                        break
+                    if nb.get("type") == "list" and not items:
+                        items = [_item(x) for x in nb.get("items", [])]
+                        break
+                    if (
+                        nb.get("type") == "paragraph"
+                        and len(nb["text"]) <= 60
+                        and not nb["text"].endswith(".")
+                    ):
+                        items.append(_item(nb["text"]))
+                if not items:
+                    hit = hit.rstrip(":") + "…"
+            out["use"] = {"text": _clip(hit, 260), "items": items[:5], "more": max(len(items) - 5, 0)}
+            break
+    s2 = _section(doc, "2")
+    if s2:
+        heads = [b["text"].rstrip(": ") for b in s2.get("blocks", []) if b.get("type") == "subheading"]
+        if heads:
+            out["before"] = [(_clip(h, 60), f"fo-s2-h{k}") for k, h in enumerate(heads)][:9]
+    s3 = _section(doc, "3")
+    if s3:
+        text = next(
+            (
+                s
+                for b in s3.get("blocks", [])
+                if b.get("type") == "paragraph"
+                for s in _sentences(b["text"])
+                if not _BOILER_HOW.search(s) and not s.endswith(":")
+            ),
+            None,
+        )
+        heads = [
+            (b["text"].rstrip(": "), k)
+            for k, b in enumerate(x for x in s3.get("blocks", []) if x.get("type") == "subheading")
+        ]
+        subs = [(_clip(h, 60), f"fo-s3-h{k}") for h, k in heads if _HOW_SUBS.search(h)]
+        # a dose taken out of its context (indication, weight, kidney function) can mislead
+        if text and not _DOSE.search(text):
+            out["how"] = {"text": _clip(text, 220), "subs": subs}
+        elif subs:
+            out["how"] = {"text": "", "subs": subs}
+    s4 = _section(doc, "4")
+    if s4:
+        blocks = s4.get("blocks", [])
+        for i, b in enumerate(blocks):
+            if b.get("type") == "list" or not _VERY_COMMON.search(b.get("text", "")):
+                continue
+            # the items: lines after the heading in the same block ("Πολύ συχνές (…)" + newline
+            # + "Πόνος…"), the lists that follow, or one short paragraph of comma-separated items
+            items = [_item(x) for x in b.get("text", "").split("\n")[1:] if x.strip()]
+            for k, nb in enumerate(blocks[i + 1 :]):
+                if nb.get("type") == "list":
+                    items += [_item(x) for x in nb.get("items", [])]
+                elif _FREQ.search(nb.get("text", "")) or nb.get("type") == "subheading":
+                    break
+                elif k == 0 and not items and len(nb.get("text", "")) <= 300:
+                    items = [_item(x) for x in _commas(nb["text"])]
+                else:
+                    break
+            if items:
+                out["very_common"] = {"items": items[:6], "more": max(len(items) - 6, 0)}
+                break
+    s5 = _section(doc, "5")
+    if s5:
+        text = _text(s5)
+        labels = []
+        if _FRIDGE_PIL.search(text):
+            labels.append("Ψυγείο 2–8 °C")
+        if _FREEZER.search(text):
+            labels.append("Κατάψυξη")
+        first = next((s for s in _sentences(text) if not _BOILER_STORE.search(s)), "")
+        if first or labels:
+            out["storage"] = {"text": _clip(first, 200), "labels": labels}
+    return out
+
+
+def source_date(d: dict) -> str:
+    src = d.get("source") or {}
+    try:
+        return date_gr(parsedate_to_datetime(src["last_modified"]).date().isoformat())
+    except (KeyError, TypeError, ValueError):
+        return ""
+
+
+def glance_html(g: dict, date: str) -> str:
+    if not g:
+        return ""
+    tiles = []
+    if "use" in g:
+        u = g["use"]
+        items = "".join(f"<li>{e(x)}</li>" for x in u["items"])
+        more = f'<li class="more">και {u["more"]} ακόμη</li>' if u["more"] else ""
+        lst = f"<ul>{items}{more}</ul>" if items else ""
+        tiles.append(
+            f'<div class="tile"><h3><a href="#fo-s1">Για τι χρησιμοποιείται</a></h3><p>{e(u["text"])}</p>{lst}</div>'
+        )
+    if "how" in g:
+        h = g["how"]
+        subs = "".join(f'<a class="chip" href="#{e(a)}">{e(t)}</a>' for t, a in h["subs"])
+        text = f"<p>{e(h['text'])}</p>" if h["text"] else ""
+        subs = f'<div class="chips">{subs}</div>' if subs else ""
+        tiles.append(f'<div class="tile"><h3><a href="#fo-s3">Πώς χρησιμοποιείται</a></h3>{text}{subs}</div>')
+    if "before" in g:
+        chips = "".join(f'<a class="chip" href="#{e(a)}">{e(t)}</a>' for t, a in g["before"])
+        tiles.append(
+            f'<div class="tile"><h3><a href="#fo-s2">Πριν από τη χρήση</a></h3><div class="chips">{chips}</div></div>'
+        )
+    if "very_common" in g:
+        v = g["very_common"]
+        chips = "".join(f'<span class="chip warn">{e(x)}</span>' for x in v["items"])
+        more = (
+            f'<p class="small">και {v["more"]} ακόμη · <a href="#fo-s4">ενότητα 4</a></p>'
+            if v["more"]
+            else ""
+        )
+        tiles.append(
+            f'<div class="tile"><h3><a href="#fo-s4">Πολύ συχνές ανεπιθύμητες ενέργειες</a></h3>'
+            f'<p class="small">σε περισσότερους από 1 στους 10</p><div class="chips">{chips}</div>{more}</div>'
+        )
+    if "storage" in g:
+        s = g["storage"]
+        chips = "".join(f'<span class="chip flag">{e(x)}</span>' for x in s["labels"])
+        chips = f'<div class="chips">{chips}</div>' if chips else ""
+        text = f"<p>{e(s['text'])}</p>" if s["text"] else ""
+        tiles.append(f'<div class="tile"><h3><a href="#fo-s5">Φύλαξη</a></h3>{chips}{text}</div>')
+    when = f" · {e(date)}" if date else ""
+    return f"""<section class="card glance" aria-labelledby="glance-h">
+      <div class="section-head"><h2 id="glance-h">Με μια ματιά</h2><span class="small">Αυτούσια από το φύλλο οδηγιών · EMA{when}</span></div>
+      <div class="tiles">{"".join(tiles)}</div>
+    </section>"""
+
+
+def leaflet_html(d: dict, i: int, slug: str, pro_block: str = "") -> str:
+    """The whole package leaflet of document i, in sections that open and close, with a table of
+    contents; `pro_block` (links into the SmPC) goes below it."""
+    doc = d["pil"][i]
+    toc, secs = [], []
+    for s in doc.get("sections", []):
+        num = str(s["number"])
+        sid = f"fo-s{num}"
+        toc.append(f'<li><a href="#{sid}"><span>{e(num)}</span> {e(s["title"])}</a></li>')
+        secs.append(
+            f'<details class="lf-sec" id="{sid}"{" open" if num == "1" else ""}><summary><span class="n">{e(num)}</span>'
+            f'<span class="t">{e(s["title"])}</span></summary><div class="lf-text">{_blocks(s["blocks"], sid)}</div></details>'
+        )
+    pro = (
+        f'<a class="lf-pro" href="/fylla/{e(slug)}/pxp/">Για επαγγελματίες: ΠΧΠ →</a>'
+        if d.get("smpc")
+        else ""
+    )
+    names = doc.get("products") or []
+    products = " · ".join(names[:4]) + (f" και {len(names) - 4} ακόμη" if len(names) > 4 else "")
+    others = (
+        f' · <a href="/fylla/{e(slug)}/">άλλες μορφές ({len(d["pil"]) - 1})</a>' if len(d["pil"]) > 1 else ""
+    )
+    src = d.get("source") or {}
+    when = source_date(d)
+    return f"""<section class="card leaflet" id="fyllo" aria-labelledby="fyllo-h">
+      <div class="section-head"><h2 id="fyllo-h">Φύλλο οδηγιών χρήσης</h2>
+        <span class="small"><a href="/fylla/{e(slug)}/">για εκτύπωση</a> · <a href="{e(src.get("url", ""))}" rel="noopener">pdf ↗</a></span></div>
+      {f'<p class="small lf-for">Κείμενο για: {e(products)}{others}</p>' if products else ""}
+      <div class="lf-layout">
+        <nav class="lf-toc" aria-label="Ενότητες φύλλου οδηγιών"><ol>{"".join(toc)}</ol>{pro}</nav>
+        <div class="lf-body">{"".join(secs)}</div>
+      </div>
+      {pro_block}
+      <p class="small lf-src">Πηγή: Ευρωπαϊκός Οργανισμός Φαρμάκων (EMA), ελληνική έκδοση{f" · {e(when)}" if when else ""}. Το κείμενο εξάγεται αυτόματα από το pdf· αν κάτι διαφέρει, ισχύει το pdf.</p>
+    </section>"""
+
+
+def _norm(text: str) -> str:
+    t = re.sub(r"(?<=\d),(?=\d)", ".", text)  # decimal comma only: «1,5 mg, 3 mg» keeps its list comma
+    t = re.sub(r"μg|µg|μικρογραμμάρι\w*|microgram\w*", "mcg", t, flags=re.I)
+    t = re.sub(r"διεθνείς\s+μονάδες", "IU", t, flags=re.I)
+    t = re.sub(r"μονάδ\w*", "U", t, flags=re.I)
+    return re.sub(r"\s+", "", t.upper())
+
+
+# package-name words -> how the leaflet names the form (stems)
+_FORM_WORDS = [
+    (r"VIAL", "ΦΙΑΛΊΔΙ"),
+    (r"CARTRIDGE|PENFILL", "ΦΥΣΊΓΓΙ"),
+    (r"\bPEN\b|PEN\b|PENS?\b|FLEXPEN|KWIKPEN|SOLOSTAR", "ΠΈΝΑ"),
+    (r"SYR|SYRINGE", "ΣΎΡΙΓΓ"),
+    (r"PATCH|TTS|TRANSDERMAL", "ΈΜΠΛΑΣΤΡ"),
+    (r"\bCAP|CAPS\b", "ΚΑΨΆΚΙ"),
+    (r"TAB", "ΔΙΣΚΊ"),
+    (r"OR\.SOL|ORAL\s*SOL", "ΠΌΣΙΜΟ"),
+]
+
+
+def _strength_keys(key: str) -> list[str]:
+    """'150+12.5MG' -> also '150MG/12.5MG' (how leaflets write combinations); '20MG/ML' -> also '20MG'."""
+    key = key.upper()
+    keys = [key]
+    m = re.fullmatch(r"([\d.+]+)([A-Z]+)(/.*)?", key)
+    if m and "+" in m.group(1):
+        keys.append("/".join(f"{x}{m.group(2)}" for x in m.group(1).split("+")))
+    if "/" in key:
+        keys.append(key.split("/")[0])
+    return keys
+
+
+def pick_doc(d_products: list[list[str]], package_name: str) -> int:
+    """Which leaflet of a product belongs to a package. Each leaflet's product lines are scored:
+    the package strength named (3), the same form (vial, cartridge, pen, tablet: 1), a sub-brand
+    word of the package name such as PENFILL or MIX25 (1). The best score wins, the earlier
+    leaflet on a tie; the first leaflet when nothing matches."""
+    if len(d_products) <= 1:
+        return 0
+    st = strength(package_name)
+    keys = _strength_keys(st[0]) if st else []
+    up = package_name.upper()
+    forms = [stem for rx, stem in _FORM_WORDS if re.search(rx, up)]
+    words = [w for w in re.findall(r"[A-Z][A-Z0-9]{3,}", up.split(" ", 1)[1] if " " in up else "")]
+    best, best_score = 0, 0
+    for i, products in enumerate(d_products):
+        names = [_norm(x) for x in products]
+        score = 0
+        if any(re.search(rf"(?<![\d.]){re.escape(k)}(?![\d])", n) for k in keys for n in names):
+            score += 3
+        if any(stem in n for stem in forms[:1] for n in names):
+            score += 1
+        if any(w in n for w in words for n in names):
+            score += 1
+        if score > best_score:
+            best, best_score = i, score
+    return best
+
+
+def package_parts(lf: dict, package_name: str) -> tuple[str, str]:
+    """(«Με μια ματιά», the leaflet section) for a package page; empty strings without a leaflet."""
+    texts = lf.get("texts") or {}
+    docs = texts.get("pil") or []
+    if not docs:
+        return "", ""
+    i = pick_doc([x.get("products") or [] for x in docs], package_name)
+    date = source_date(texts)
+    pro = ""
+    if lf.get("smpc_quick"):
+        chips = "".join(
+            f'<a class="chip" href="/fylla/{e(lf["slug"])}/pxp/#{e(frag)}">{e(label)}</a>'
+            for label, frag in lf["smpc_quick"]
+        )
+        pro = f'<div class="lf-smpc"><h3>Για επαγγελματίες υγείας · ΠΧΠ</h3><div class="chips">{chips}</div></div>'
+    return glance_html(glance(docs[i]), date), leaflet_html(texts, i, lf["slug"], pro)
+
+
 def build(ctx, src: Path, out: Path) -> dict[str, dict]:
     """Write every product's pages; return product_number -> {slug, name, pil, smpc}."""
     index: dict[str, dict] = {}
@@ -250,6 +592,13 @@ def build(ctx, src: Path, out: Path) -> dict[str, dict]:
             "smpc": bool(d.get("smpc")),
             "flags": flags(d),
             "quick": quick_links(d, "pil"),
+            # for the package pages: the leaflets themselves (the SmPC stays on its own page)
+            "texts": {
+                "pil": d.get("pil") or [],
+                "smpc": bool(d.get("smpc")),
+                "source": d.get("source") or {},
+            },
+            "smpc_quick": quick_links(d, "smpc"),
         }
     lis = "".join(
         f'<li><a href="/fylla/{e(v["slug"])}/">{e(v["name"])}</a></li>'

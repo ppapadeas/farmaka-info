@@ -517,3 +517,68 @@ h4[id] { scroll-margin-top: 16px; }
   .pi-sec h3, .pi-sec h4 { break-after: avoid; }
   a { color: inherit; text-decoration: none; }
 }
+
+/* the package leaflet on the package page: «Με μια ματιά» and the whole text (Δ-23) */
+.card.glance { background: var(--panel); border-color: var(--line-2); }
+.card.glance .section-head { flex-wrap: wrap; }
+.card.glance .section-head .small { margin: 0; }
+.tiles { margin-top: 16px; display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; }
+.tile { min-width: 0; display: flex; flex-direction: column; gap: 8px; padding: 14px 16px; border-radius: 12px; border: 1px solid var(--line); background: var(--bg); }
+.tile h3 { font-size: 13px; font-weight: 600; }
+.tile h3 a { color: var(--accent); text-decoration: none; }
+.tile h3 a:hover { text-decoration: underline; }
+.tile p { font-size: 15px; line-height: 1.5; overflow-wrap: anywhere; }
+.tile p.small { margin: 0; font-size: 13px; color: var(--faint); }
+.tile ul { margin: 0; padding-left: 18px; font-size: 15px; line-height: 1.5; }
+.tile ul .more { list-style: none; margin-left: -18px; font-size: 13px; color: var(--faint); }
+.tile .chips { gap: 6px; font-size: 13px; }
+.tile .chip { padding: 3px 10px; }
+.tile a.chip { background: var(--soft); }
+.tile a.chip:hover { background: var(--accent-soft); color: var(--accent-ink); }
+
+.card.leaflet { margin-top: 24px; scroll-margin-top: 16px; }
+.card.leaflet .section-head { flex-wrap: wrap; }
+.card.leaflet .section-head .small { margin: 0; }
+.lf-for { margin-top: 6px; }
+.lf-layout { margin-top: 16px; display: flex; flex-wrap: wrap; gap: 28px; align-items: flex-start; }
+.lf-toc { flex: 1 1 220px; max-width: 280px; position: sticky; top: 16px; font-size: 14px; }
+.lf-toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.lf-toc a { display: block; padding: 6px 10px; border-radius: 8px; color: var(--ink-2); text-decoration: none; }
+.lf-toc a:hover { background: var(--soft); color: var(--ink); }
+.lf-toc a span { margin-right: 4px; color: var(--faint); font-variant-numeric: tabular-nums; }
+.lf-toc .lf-pro { margin-top: 10px; font-weight: 500; color: var(--accent); }
+.lf-body { flex: 999 1 480px; min-width: 0; max-width: 740px; border-top: 1px solid var(--line-2); }
+.lf-sec { border-bottom: 1px solid var(--line-2); scroll-margin-top: 16px; }
+.lf-sec > summary { display: flex; align-items: center; gap: 12px; min-height: 24px; padding: 12px 4px; font-weight: 600; cursor: pointer; list-style: none; }
+.lf-sec > summary::-webkit-details-marker { display: none; }
+.lf-sec > summary::after { content: "›"; margin-left: auto; color: var(--faint); transition: transform 0.15s; }
+.lf-sec[open] > summary::after { transform: rotate(90deg); }
+.lf-sec > summary:hover .t { color: var(--accent); }
+.lf-sec .n { flex: none; width: 22px; color: var(--accent); font-variant-numeric: tabular-nums; }
+.lf-text { padding: 0 4px 18px 38px; }
+.lf-text h4 { margin: 16px 0 4px; font-size: 15px; font-weight: 700; scroll-margin-top: 16px; }
+.lf-text h4:target { background: var(--accent-soft); border-radius: 6px; padding: 2px 6px; margin-left: -6px; }
+.lf-text p { margin: 8px 0; line-height: 1.65; }
+.lf-text ul { margin: 8px 0; padding-left: 22px; line-height: 1.55; }
+.lf-text ul.l2 { padding-left: 40px; }
+.lf-text ul.l3 { padding-left: 58px; }
+.lf-text li { margin: 4px 0; }
+.lf-smpc { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--line); }
+.lf-smpc h3 { margin-bottom: 10px; font-size: 15px; font-weight: 700; }
+.lf-smpc .chips { font-size: 13px; gap: 6px; }
+.lf-smpc .chip { background: var(--bg); border: 1px solid var(--line); }
+.lf-smpc .chip:hover { border-color: var(--accent-line); background: var(--accent-soft); color: var(--accent-ink); }
+.lf-src { margin-top: 16px; }
+@media (max-width: 760px) {
+  /* on a phone the price stays near the top; the answers follow it */
+  .cols > .main > .card.price { order: -1; }
+  .cols > .main > .card.avail { order: -2; }
+  .lf-toc { display: none; }
+  .lf-text { padding-left: 4px; }
+  .card.leaflet { padding: 18px 14px; }
+}
+@media print {
+  .card.glance, .lf-toc, .lf-smpc { display: none; }
+  .lf-sec > summary::after { display: none; }
+  .card.leaflet { break-inside: auto; }
+}

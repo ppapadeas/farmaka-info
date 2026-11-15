@@ -848,6 +848,37 @@ def package(ctx: Context, p: dict) -> str:
         srcs.append(
             f'<li><a href="{e(rs["url"])}" rel="noopener">Κατάλογος αποζημίωσης ↗</a><div>Υπουργείο Υγείας · {date_gr(rs["published"])}</div></li>'
         )
+    # the package leaflet on the page itself: answers first, the whole text below (Δ-23)
+    glance, leaflet = "", ""
+    lf = next(
+        (
+            ctx.leaflets[pi["product_number"]]
+            for pi in p.get("product_information") or []
+            if ((ctx.leaflets.get(pi.get("product_number")) or {}).get("texts") or {}).get("pil")
+        ),
+        None,
+    )
+    if lf:
+        from . import leaflets  # imports this module
+
+        glance, leaflet = leaflets.package_parts(lf, p["name"])
+        src = lf["texts"].get("source") or {}
+        when = leaflets.source_date(lf["texts"])
+        srcs.append(
+            f'<li><a href="{e(src.get("url", ""))}" rel="noopener">Φύλλο οδηγιών &amp; ΠΧΠ ↗</a>'
+            f"<div>EMA{f' · {when}' if when else ''}</div></li>"
+        )
+        pxp = (
+            f'<a class="doc" href="/fylla/{e(lf["slug"])}/pxp/">Περίληψη χαρακτηριστικών (ΠΧΠ)</a><div>Για επαγγελματίες · σε ενότητες</div>'
+            if lf.get("smpc")
+            else ""
+        )
+        docs = f"""<section class="card side">
+      <h2>Επίσημα κείμενα</h2>
+      <div class="docs"><a class="doc" href="#fyllo">Φύλλο οδηγιών χρήσης ↓</a><div>Σε αυτή τη σελίδα · σε ενότητες</div>{pxp}</div>
+    </section>"""
+    else:
+        docs = docs_card(ctx, p)
     issue = quote(f"Λάθος στη συσκευασία {p['eof_code']}")
     body = f"""
 <div class="wrap">
@@ -860,6 +891,7 @@ def package(ctx: Context, p: dict) -> str:
 <div class="cols">
   <div class="main">
     {availability_card(ctx, p)}
+    {glance}
     {price_card(p, vat, was)}
     {"" if otc else reimbursement_card(ctx, p)}
     {equivalents_card(ctx, p)}
@@ -874,7 +906,7 @@ def package(ctx: Context, p: dict) -> str:
         <div><dt>Κάτοχος άδειας</dt><dd class="txt">{e(p["mah"] or "—")}</dd></div>
       </dl>
     </section>
-    {docs_card(ctx, p)}
+    {docs}
     <section class="card side">
       <h2>Πηγές</h2>
       <ul class="srcs">{"".join(srcs)}</ul>
@@ -882,6 +914,7 @@ def package(ctx: Context, p: dict) -> str:
     <div class="links"><a href="/api/v1/packages/{e(p["eof_code"])}">JSON</a><a href="{REPO}/issues/new?title={issue}">Αναφορά λάθους</a></div>
   </aside>
 </div>
+{leaflet}
 </div>
 """
     subst = ", ".join(sname(ctx, s) for s in subs) or "—"
@@ -891,7 +924,7 @@ def package(ctx: Context, p: dict) -> str:
         body,
         f"/farmako/{p['eof_code']}/",
         f"{p['name']} ({subst}). Λιανική {eur(pr['retail'])}, αποζημίωση, φθηνότερα ισοδύναμα και ιστορικό τιμής, "
-        "από το Υπουργείο Υγείας.",
+        "από το Υπουργείο Υγείας." + (" Φύλλο οδηγιών χρήσης σε ενότητες (EMA)." if leaflet else ""),
     )
 
 

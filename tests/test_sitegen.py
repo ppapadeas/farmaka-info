@@ -609,3 +609,48 @@ def test_equal_strengths_group_together():
     assert strength("XANAX TABLET 0,5MG/TAB BT x 30")[1] == "0,5 mg"
     # '10.000 IU' may be ten thousand: never folded into '10'
     assert strength("DEFILL SOFT.CAPS 10.000 IU/CAP BT X 4")[0] == "10.000IU"
+
+
+def test_package_page_holds_the_leaflet():
+    import re
+
+    from sitegen import pages
+    from test_leaflet_glance import ABRAXANE  # same folder (pytest puts it on the path)
+
+    p = _pkg("100000001", "ABRAXANE", 240.42, rp=240.42)
+    p["product_information"] = [
+        {"product_number": "EMEA/H/C/000778", "smpc_pil_el_url": "https://e.org/a.pdf"}
+    ]
+    other = _pkg("100000002", "PLAIN", 10.0)
+    other["product_information"] = []
+    ctx = _ctx([p, other])
+    ctx.meta["sources"] = [
+        {"published": "2020-06-26", "moh_article": 7309, "url": "https://www.moh.gov.gr/b"}
+    ]
+    ctx.leaflets = {
+        "EMEA/H/C/000778": {
+            "slug": "abraxane",
+            "name": "Abraxane",
+            "pil": True,
+            "smpc": True,
+            "flags": [],
+            "quick": [],
+            "texts": {
+                "pil": [ABRAXANE],
+                "smpc": True,
+                "source": {"url": "https://e.org/a.pdf", "last_modified": "Thu, 08 Oct 2026 09:40:54 GMT"},
+            },
+            "smpc_quick": [("Ενδείξεις", "d0-s4.1")],
+        }
+    }
+    html = pages.package(ctx, p)
+    # answers first in the main column, before the price; the whole leaflet below the columns
+    assert html.index('class="card glance"') < html.index("Λιανική τιμή") < html.index('id="fyllo"')
+    assert "Αυτούσια από το φύλλο οδηγιών · EMA · 08/10/2026" in html
+    assert 'href="#fyllo">Φύλλο οδηγιών χρήσης ↓' in html  # the side card points down, not away
+    assert 'href="/fylla/abraxane/pxp/"' in html
+    ids = set(re.findall(r'id="([^"]+)"', html))
+    assert set(re.findall(r'href="#(fo-[^"]+)"', html)) <= ids
+    # no leaflet: the page is as before
+    plain = pages.package(ctx, other)
+    assert "glance" not in plain and 'id="fyllo"' not in plain
