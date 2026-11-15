@@ -215,6 +215,17 @@ a.nm:hover b { text-decoration: underline; }
 .legend i.b { background: var(--gap-amber); }
 .legend strong { display: block; font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .legend span { font-size: 14px; color: var(--muted); }
+.pay { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line-2); }
+.pay h3 { font-size: 16px; font-weight: 700; }
+.pay-t { width: 100%; max-width: 520px; border-collapse: collapse; margin-top: 8px; font-size: 15px; font-variant-numeric: tabular-nums; }
+.pay-t th, .pay-t td { padding: 7px 0 7px 16px; text-align: right; border-bottom: 1px solid var(--line-2); }
+.pay-t th:first-child { padding-left: 0; text-align: left; }
+.pay-t thead th { font-size: 13px; font-weight: 600; color: var(--muted); vertical-align: bottom; }
+.pay-t thead th a { text-decoration: none; }
+.pay-t thead th span { font-weight: 400; color: var(--faint); white-space: nowrap; }
+.pay-t tbody th { font-weight: 500; color: var(--muted); }
+.pay-t td { font-weight: 600; white-space: nowrap; }
+.pay .small { margin-top: 8px; }
 .small { margin-top: 14px; font-size: 13px; color: var(--faint); }
 .small.top { margin-top: 4px; font-size: 14px; color: var(--muted); }
 .small b { color: var(--ink); }

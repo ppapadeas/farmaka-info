@@ -8,6 +8,7 @@ import hashlib
 import json
 from dataclasses import dataclass, field
 from datetime import date
+from decimal import ROUND_HALF_UP, Decimal
 from html import escape
 from pathlib import Path
 from urllib.parse import quote
@@ -389,15 +390,101 @@ def reimbursement_card(ctx: Context, p: dict) -> str:
         if r["restrictions"]
         else ""
     )
-    lst = "" if r["list"] == "main" else f" · {e(LIST_LABELS.get(r['list'], r['list']))}"
     return f"""<section class="card">
   <div class="reimb-head"><h2>Αποζημίωση</h2>{head}</div>
   {bar}
   {legend}
-  <p class="small">Συν τη συμμετοχή (0, 10 ή 25%) επί της τιμής αποζημίωσης{lst}.</p>
+  {pay_table(ctx, p)}
   {stale}
   {restr}
 </section>"""
+
+
+RATES = (0, 10, 25)  # participation, % (the prescription says which applies)
+
+
+def patient_cost(retail: float, rp: float, rate: int) -> float:
+    """Indicative amount the patient pays for one pack at `rate`% participation (Δ-22):
+    the participation on what the reimbursement covers (the reimbursement price, or
+    the retail price when that is lower) plus the part of the retail price above the
+    reimbursement price. Rounded to the cent, half up."""
+    r, b = Decimal(str(retail)), Decimal(str(rp))
+    cost = Decimal(rate) / 100 * min(b, r) + max(r - b, Decimal(0))
+    return float(cost.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
+
+
+def _costs(q: dict) -> list[float]:
+    rp = q["reimbursement"][0]["reimbursement_price"]
+    return [patient_cost(q["prices"]["retail"], rp, x) for x in RATES]
+
+
+def cheaper_reimbursed(ctx: Context, p: dict) -> dict | None:
+    """The reimbursed equivalent (Δ-16, on no EOF shortage list) that costs the patient
+    least at 25%, among those that cost no more than `p` at any rate and at least 0.5%
+    less at one; per unit when the unit counts are known."""
+    eq = comparable(ctx, p)
+    if not eq or not p["reimbursement"]:
+        return None
+
+    def per_unit(q: dict) -> list[float]:
+        n = eq.counts[q["eof_code"]] if eq.per_unit else 1
+        return [c / n for c in _costs(q)]
+
+    mine = per_unit(p)
+    best, best_key = None, None
+    for q in eq.rows:
+        if q is p or not q["reimbursement"] or in_shortage(q):
+            continue
+        c = per_unit(q)
+        if any(a > b + 1e-9 for a, b in zip(c, mine)) or not any(a < b * 0.995 for a, b in zip(c, mine)):
+            continue
+        k = (c[2], c[1], c[0], eq.key(q), q["name"])
+        if best_key is None or k < best_key:
+            best, best_key = q, k
+    return best
+
+
+def pay_table(ctx: Context, p: dict) -> str:
+    """«Πόσο θα πληρώσω;»: a static table for each participation rate, for this package
+    and, if it costs less, the cheapest reimbursed equivalent (Δ-22)."""
+    r = p["reimbursement"][0]
+    q = cheaper_reimbursed(ctx, p)
+    cols = [p] + ([q] if q else [])
+    costs = [_costs(x) for x in cols]
+    sizes = [unit_count(x["name"]) or pack_count(x["name"]) for x in cols]
+    head = '<th scope="col">Συμμετοχή</th>'
+    for x, n in zip(cols, sizes):
+        label = (
+            "Αυτό" if x is p else f'<a href="/farmako/{e(x["eof_code"])}/">{e(split_name(x["name"])[0])}</a>'
+        )
+        head += f'<th scope="col">{label}{f" <span>×{n}</span>" if n else ""}</th>'
+    body = "".join(
+        f'<tr><th scope="row">{x}%</th>{"".join(f"<td>{eur(c[i])}</td>" for c in costs)}</tr>'
+        for i, x in enumerate(RATES)
+    )
+    notes = []
+    if q:
+        notes.append("Δίπλα, το φθηνότερο αποζημιούμενο ισοδύναμο χωρίς ένδειξη έλλειψης.")
+        if sizes[0] != sizes[1]:
+            notes.append("Διαφορετικό μέγεθος συσκευασίας· η σύγκριση έγινε ανά τεμάχιο.")
+    notes.append(
+        "Ενδεικτικά: η συμμετοχή επί της τιμής αποζημίωσης (ή της λιανικής, αν είναι χαμηλότερη), συν τη "
+        "διαφορά. Το ποσοστό το ορίζει η συνταγή, ανάλογα με την πάθηση· το τελικό ποσό το λέει ο φαρμακοποιός."
+    )
+    when = date_gr(p["price_source"]["published"])
+    if q and q["price_source"]["published"] != p["price_source"]["published"]:
+        when += f" ({e(split_name(q['name'])[0])}: {date_gr(q['price_source']['published'])})"
+    lst = "" if r["list"] == "main" else f", {e(LIST_LABELS.get(r['list'], r['list']))}"
+    src = (
+        f"Λιανική από το δελτίο τιμών {when}· τιμή αποζημίωσης από τον κατάλογο "
+        f"{date_gr(r['source']['published'])}{lst}."
+    )
+    return f"""<div class="pay">
+    <h3>Πόσο θα πληρώσω;</h3>
+    <table class="pay-t"><thead><tr>{head}</tr></thead><tbody>{body}</tbody></table>
+    {"".join(f'<p class="small">{x}</p>' for x in notes)}
+    <p class="small">{src}</p>
+  </div>"""
 
 
 EOF_LISTS = ("limited_availability", "shortage", "discontinuation")

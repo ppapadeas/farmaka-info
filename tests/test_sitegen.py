@@ -314,6 +314,55 @@ def test_shortage_without_available_equivalents_says_so():
     assert '<span class="eqn none">κανένα ισοδύναμο</span>' in page
 
 
+def test_patient_cost():
+    from sitegen.pages import patient_cost
+
+    # retail 10, reimbursement price 8: participation on 8, plus the 2 € difference
+    assert [patient_cost(10.0, 8.0, r) for r in (0, 10, 25)] == [2.0, 2.8, 4.0]
+    # reimbursement price above retail: participation on the retail price, no difference
+    assert [patient_cost(5.0, 8.0, r) for r in (0, 10, 25)] == [0.0, 0.5, 1.25]
+    assert patient_cost(12.35, 12.35, 10) == 1.24  # 1.235: half up, not to even
+    assert patient_cost(7.77, 7.0, 25) == 2.52  # 1.75 + 0.77
+
+
+def test_what_will_i_pay():
+    from sitegen import pages
+
+    p = _pkg("300000001", "DEAR", 10.0, rp=8.0)
+    pkgs = [
+        p,
+        _pkg("300000002", "CHEAP", 8.5, rp=8.0),  # cheaper at every rate
+        _pkg("300000003", "CHEAPEST", 6.0, rp=6.0, availability=[LA]),  # in shortage: not offered
+        _pkg("300000004", "NOREIMB", 4.0),  # not reimbursed: not offered
+    ]
+    ctx = _ctx(pkgs)
+    card = pages.reimbursement_card(ctx, p)
+    assert "Πόσο θα πληρώσω;" in card and "<table" in card
+    rows = [r.split("</tr>")[0] for r in card.split('<tr><th scope="row">')[1:]]
+    assert rows == [
+        "0%</th><td>2,00 €</td><td>0,50 €</td>",
+        "10%</th><td>2,80 €</td><td>1,30 €</td>",
+        "25%</th><td>4,00 €</td><td>2,50 €</td>",
+    ]
+    assert '<a href="/farmako/300000002/">CHEAP</a>' in card
+    assert "το τελικό ποσό το λέει ο φαρμακοποιός" in card and "Ενδεικτικά" in card
+    assert "κατάλογο 22/10/2026" in card and "δελτίο τιμών 05/10/2026" in card
+    assert "διαφορετικό μέγεθος" not in card.lower()
+
+    # the cheapest is the package itself: only its own column
+    cheap = pages.reimbursement_card(ctx, ctx.by_code["300000002"])
+    assert cheap.count('<th scope="col">') == 2 and "<td>0,50 €</td></tr>" in cheap
+
+    # a bigger box with a lower retail price per unit that leaves a difference to pay: not "cheaper"
+    p2 = _pkg("400000001", "DEAR", 10.0, n=30, rp=10.0)
+    big = _pkg("400000002", "BIGBOX", 18.0, n=60, rp=16.0)  # 0%: 2 € for 60 against 0 € for 30
+    assert pages.cheaper_reimbursed(_ctx([p2, big]), p2) is None
+    # per unit cheaper at every rate: offered, with a note on the pack sizes
+    big = _pkg("400000002", "BIGBOX", 18.0, n=60, rp=18.0)
+    card = pages.reimbursement_card(_ctx([p2, big]), p2)
+    assert "BIGBOX" in card and "Διαφορετικό μέγεθος συσκευασίας" in card and "×60" in card
+
+
 def test_leaflet_flags_and_quick_links():
     from sitegen.leaflets import flags, quick_links
 
