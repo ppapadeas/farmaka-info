@@ -13,6 +13,7 @@ from html import escape
 from pathlib import Path
 from urllib.parse import quote
 
+from . import changes
 from .drug import (
     FORM_FAMILIES,
     dispensing_label,
@@ -112,6 +113,7 @@ def layout(
 <link rel="canonical" href="{SITE}{e(path)}">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="manifest" href="/manifest.webmanifest">
+<link rel="alternate" type="application/rss+xml" title="farmaka.info · Τι άλλαξε" href="/allages/rss.xml">
 <link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
 <meta name="theme-color" content="#0a6b5b">
 <meta name="mobile-web-app-capable" content="yes">
@@ -144,6 +146,7 @@ def layout(
     <nav class="foot-links" aria-label="Υποσέλιδο">
       <a href="/ousies/">Δραστικές ουσίες</a>
       <a href="/elleipseis/">Ελλείψεις</a>
+      <a href="/allages/">Τι άλλαξε</a>
       <a href="/fylla/">Φύλλα οδηγιών</a>
       <a href="/dedomena/">Δεδομένα &amp; API</a>
       <a href="/sxetika/">Σχετικά</a>
@@ -203,7 +206,8 @@ def home(ctx: Context, history: list[dict]) -> str:
             f'<a class="nm" href="/farmako/{e(p["eof_code"])}/">{name_html(p["name"])}</a>{prices}{pill}</li>'
         )
     recent = (
-        '<section class="wrap narrow recent"><div class="section-head"><h2>Πρόσφατες αλλαγές</h2></div>'
+        '<section class="wrap narrow recent"><div class="section-head"><h2>Πρόσφατες αλλαγές</h2>'
+        '<a href="/allages/">Όλες οι αλλαγές</a></div>'
         f'<ul class="changes">{"".join(rows)}</ul></section>'
         if rows
         else ""
@@ -1008,6 +1012,8 @@ DOWNLOAD_INFO = {
     "build_report.json": "Έλεγχοι, ουρά ελέγχου, δελτία σε αναμονή",
     "ema_links.csv": "Σύνδεσμοι σε ΠΧΠ/ΦΟΧ της EMA (πηγή: EMA)",
     "otc_packages.csv": "Μη συνταγογραφούμενα (ΜΗΣΥΦΑ) με ενδεικτική τιμή λιανικής",
+    "shortages.csv": "Ελλείψεις και διακοπές από τις λίστες του ΕΟΦ και την EMA",
+    "allages.csv": f"Οι αλλαγές της σελίδας «Τι άλλαξε» ({changes.WINDOW_DAYS} ημέρες), με το δελτίο ή τη λίστα τους",
 }
 
 PACKAGE_FIELDS = [
@@ -1069,6 +1075,7 @@ def data_page(ctx: Context) -> str:
 <h2 id="lipseis">Λήψεις</h2>
 <div class="tw"><table class="table"><thead><tr><th>Αρχείο</th><th>Περιεχόμενο</th><th class="r">Μέγεθος</th></tr></thead><tbody>{dls}</tbody></table></div>
 <p class="small">UTF-8, δεκαδικά με τελεία. Έλεγχος: <a href="/data/SHA256SUMS">SHA256SUMS</a>.</p>
+<p class="small">Ροή <a href="/allages/rss.xml">RSS</a> με τις αλλαγές της σελίδας <a href="/allages/">Τι άλλαξε</a>, μία εγγραφή ανά ημερομηνία δελτίου ή λίστας.</p>
 
 <h2 id="api">API</h2>
 <div class="tw"><table class="table"><tbody>
@@ -1277,6 +1284,113 @@ def shortages_page(ctx: Context) -> str:
         body,
         "/elleipseis/",
         "Φάρμακα σε έλλειψη ή διακοπή στην Ελλάδα, από τις επίσημες λίστες του ΕΟΦ και της EMA.",
+    )
+
+
+CHANGES_LIMIT = 50  # rows per kind of change in one bulletin; all of them are in data/allages.csv
+LIST_LIMIT = 20  # an EOF list longer than this shows only its size
+
+
+def _change_row(ctx: Context, it: dict) -> str:
+    code = it["eof_code"]
+    name = name_html(it["name"]) if it["name"] else f"<b>κωδικός ΕΟΦ {e(code)}</b>"
+    # withdrawn packages have no page any more
+    nm = (
+        f'<a class="nm" href="/farmako/{e(code)}/">{name}</a>'
+        if code in ctx.by_code
+        else f'<span class="nm">{name}</span>'
+    )
+    c = changes.category(it)
+    if c in ("cut", "rise"):
+        tail = (
+            f'<span class="old">{eur(it["old"])}</span><span class="new">{eur(it["new"])}</span>'
+            f'<span class="pill {"down" if c == "cut" else "up"}">{changes.pct_label(it["old"], it["new"])}</span>'
+        )
+    elif c in ("new", "reappeared"):
+        tail = f'<span class="new">{eur(it["new"])}</span>'
+    elif c == "withdrawn":
+        tail = f'<span class="old" title="Τελευταία τιμή">{eur(it["old"])}</span>'
+    else:
+        tail = ""
+    return f"<li>{nm}{tail}</li>"
+
+
+def _change_doc(ctx: Context, d: dict) -> str:
+    moh = d["publisher"] == "moh"
+    if moh:
+        what = "Υπουργείο Υγείας · " + ("πλήρης κατάλογος" if d["kind"] == "full" else "δελτίο τιμών")
+    else:
+        what = "ΕΟΦ · " + changes.LIST_TITLES[d["kind"]].lower()
+    title = e(d["title"] or ("Δελτίο τιμών" if moh else changes.LIST_TITLES[d["kind"]]))
+    src = f'<a href="{e(d["url"])}" rel="noopener">{title} ↗</a>' if d["url"] else f"<b>{title}</b>"
+    parts = [f'<p class="bsrc">{src}<span>{what}</span></p>']
+    if d["pending"]:
+        parts.append(
+            '<p class="small">Σε αναμονή: δεν έχει ενσωματωθεί ακόμη '
+            '(<a href="/dedomena/#katastasi">κατάσταση δεδομένων</a>).</p>'
+        )
+    elif d["baseline"]:
+        parts.append(
+            '<p class="small">Ο πρώτος κατάλογος που έχουμε· δεν υπάρχει προηγούμενος για σύγκριση.</p>'
+        )
+    elif not d["items"]:
+        parts.append('<p class="small">Καμία αλλαγή λιανικής τιμής.</p>')
+    if not moh and len(d["items"]) > LIST_LIMIT:
+        parts.append(
+            f'<p class="small">{num(len(d["items"]), 0)} φάρμακα στη λίστα. '
+            'Η τρέχουσα εικόνα: <a href="/elleipseis/">ελλείψεις</a>.</p>'
+        )
+        return f'<article class="bul">{"".join(parts)}</article>'
+    for c in changes.CATEGORIES:
+        its = [it for it in d["items"] if changes.category(it) == c]
+        if not its:
+            continue
+        head = changes.TITLES[c][0] if c in changes.TITLES else "Φάρμακα"
+        rows = "".join(_change_row(ctx, it) for it in its[:CHANGES_LIMIT])
+        parts.append(f'<h3>{head} <span>{num(len(its), 0)}</span></h3><ul class="changes">{rows}</ul>')
+        if len(its) > CHANGES_LIMIT:
+            which = "μεγαλύτερες" if c in ("cut", "rise") else "πρώτες αλφαβητικά"
+            parts.append(
+                f'<p class="more">Εδώ οι {CHANGES_LIMIT} {which}· όλες οι {num(len(its), 0)} στο '
+                '<a href="/data/allages.csv">allages.csv</a>.</p>'
+            )
+    return f'<article class="bul">{"".join(parts)}</article>'
+
+
+def changes_page(ctx: Context, ch: dict) -> str:
+    """/allages/: changes by publication date, newest first, under their bulletin or list."""
+    days = ch["days"]
+    chips = "".join(f'<a class="chip" href="#d-{g["date"]}">{date_gr(g["date"])[:5]}</a>' for g in days)
+    secs = "".join(
+        f'<section class="day" id="d-{g["date"]}"><h2>{date_gr(g["date"])}</h2>'
+        f'<p class="small top">{e(changes.summary(g["docs"]))}</p>'
+        + "".join(_change_doc(ctx, d) for d in g["docs"])
+        + "</section>"
+        for g in days
+    )
+    span = f" ({date_gr(ch['start'])} – {date_gr(ch['end'])})" if days else ""
+    body = f"""
+<div class="wrap narrow">
+<div class="page-head">
+  <h1>Τι άλλαξε</h1>
+  <p>Αλλαγές τιμών, νέες συσκευασίες και όσες βγήκαν από το δελτίο τιμών του Υπουργείου Υγείας, και οι νέες λίστες
+  ελλείψεων και διακοπών του ΕΟΦ, για τις {changes.WINDOW_DAYS} ημέρες έως το νεότερο στοιχείο{span}. Κάθε αλλαγή
+  κάτω από το δελτίο ή τη λίστα από όπου προέρχεται.</p>
+</div>
+<p class="feeds">Οι ίδιες αλλαγές ως <a href="/allages/rss.xml">RSS</a> και <a href="/data/allages.csv">CSV</a>.</p>
+<div class="chips days">{chips}</div>
+{secs or '<p class="empty">Καμία αλλαγή.</p>'}
+<p class="small">Ημερομηνία: η δημοσίευση του δελτίου ή η ημερομηνία της λίστας· η ισχύς μιας τιμής μπορεί να
+διαφέρει.</p>
+</div>
+"""
+    return layout(
+        ctx,
+        "Τι άλλαξε · farmaka.info",
+        body,
+        "/allages/",
+        "Πρόσφατες αλλαγές τιμών, νέες συσκευασίες και λίστες ελλείψεων φαρμάκων στην Ελλάδα, από το Υπουργείο Υγείας "
+        "και τον ΕΟΦ.",
     )
 
 

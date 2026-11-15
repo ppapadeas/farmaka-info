@@ -7,9 +7,10 @@ Input: the files written by `python -m ingest.build` (and, if present,
 `reimbursement_*.csv` from `python -m ingest.reimbursement`).
 Output (served as static assets by the worker in web/worker.js):
     index.html, farmako/<eof_code>/, ousia/<slug>/, dedomena/, sxetika/, 404.html
+    allages/, allages/rss.xml recent changes (page and RSS)
     search-index.tsv          compact search index (browser and API)
     api/pk/<nn>.json          package records in 256 shards (API)
-    data/*                    downloads: csv, json, sqlite, SHA256SUMS
+    data/*                    downloads: csv (allages.csv: the recent changes), json, sqlite, SHA256SUMS
 """
 
 from __future__ import annotations
@@ -25,7 +26,7 @@ from collections import defaultdict
 from datetime import UTC, datetime
 from pathlib import Path
 
-from . import leaflets, pages, trivia
+from . import changes, leaflets, pages, trivia
 from .drug import form_group, strength
 from .text import skeleton, slugify
 
@@ -581,9 +582,16 @@ def build(data: Path, out: Path, built_at: str) -> dict:
         "license": {"data": "CC0-1.0", "code": "AGPL-3.0-or-later"},
     }
 
+    # recent changes; packages dropped by the newest full list keep the name it last had
+    names = {p["eof_code"]: p["name"] for p in pkgs}
+    for w in report.get("withdrawn_since_last_full", []):
+        names.setdefault(w["eof_code"], w["name"])
+    recent = changes.collect(history, sources, names, data / "shortages.csv", meta["pending_bulletins"])
+
     # downloads
     dl = out / "data"
     dl.mkdir()
+    changes.write_csv(recent, dl / "allages.csv")
     for name in ("packages.csv", "price_history.csv", "sources.json", "build_report.json"):
         shutil.copy2(data / name, dl / name)
     for name in ("ema_links.csv", "otc_packages.csv", "shortages.csv"):
@@ -628,13 +636,14 @@ def build(data: Path, out: Path, built_at: str) -> dict:
     ctx = pages.Context(
         meta=meta, by_code=by_code, subst=subst, slug_of=slug_of, downloads=downloads, equiv=equivalents(pkgs)
     )
-    urls = ["/", "/dedomena/", "/sxetika/", "/ousies/", "/elleipseis/"]
+    urls = ["/", "/dedomena/", "/sxetika/", "/ousies/", "/elleipseis/", "/allages/"]
     (out / "index.html").write_text(pages.home(ctx, history), encoding="utf-8")
     for path, html in (
         ("dedomena", pages.data_page(ctx)),
         ("sxetika", pages.about(ctx)),
         ("ousies", pages.substances_index(ctx)),
         ("elleipseis", pages.shortages_page(ctx)),
+        ("allages", pages.changes_page(ctx, recent)),
         (
             "perierga",
             pages.trivia_page(
@@ -644,6 +653,7 @@ def build(data: Path, out: Path, built_at: str) -> dict:
     ):
         (out / path).mkdir()
         (out / path / "index.html").write_text(html, encoding="utf-8")
+    (out / "allages" / "rss.xml").write_text(changes.rss(recent, built_at, SITE), encoding="utf-8")
     (out / "404.html").write_text(pages.not_found(ctx), encoding="utf-8")
     (out / "_templates").mkdir()
     (out / "_templates" / "search.html").write_text(pages.search_template(ctx), encoding="utf-8")

@@ -363,6 +363,186 @@ def test_what_will_i_pay():
     assert "BIGBOX" in card and "Διαφορετικό μέγεθος συσκευασίας" in card and "×60" in card
 
 
+def test_changes_collect(tmp_path):
+    import csv
+    import xml.etree.ElementTree as ET
+
+    from sitegen import changes
+
+    sources = [
+        {
+            "moh_article": 1,
+            "published": "2026-01-10",
+            "kind": "full",
+            "title": "Πρώτος κατάλογος",
+            "url": "https://m/1",
+        },
+        {
+            "moh_article": 2,
+            "published": "2026-08-01",
+            "kind": "delta",
+            "title": "Παλιό δελτίο",
+            "url": "https://m/2",
+        },
+        {
+            "moh_article": 3,
+            "published": "2026-10-01",
+            "kind": "full",
+            "title": "Νέος κατάλογος",
+            "url": "https://m/3",
+        },
+        {
+            "moh_article": 4,
+            "published": "2026-10-20",
+            "kind": "delta",
+            "title": "Δελτίο",
+            "url": "https://m/4",
+        },
+    ]
+
+    def ev(code, change, old, new, art, field="price_retail"):
+        pub = next(s["published"] for s in sources if s["moh_article"] == art)
+        return {
+            "eof_code": code,
+            "field": field,
+            "old": old,
+            "new": new,
+            "change": change,
+            "published": pub,
+            "moh_article": str(art),
+        }
+
+    history = [
+        ev("A", "first_seen", "", "10.0", 1),  # the baseline: not a change
+        ev("A", "update", "10.0", "12.0", 2),  # before the window
+        ev("A", "update", "12.0", "9.0", 3),
+        ev("A", "update", "5.1", "5.0", 3, field="price_exfactory"),  # not the retail price
+        ev("B", "withdrawn", "7.5", "", 3),
+        ev("C", "first_seen", "", "4.0", 3),  # first seen in a later full list: new
+        ev("D", "new", "", "3.0", 4),
+        ev("E", "reappeared", "", "6.0", 4),
+        ev("A", "update", "9.0", "9.9", 4),
+    ]
+    lists = tmp_path / "shortages.csv"
+    with lists.open("w", newline="", encoding="utf-8") as fh:
+        w = csv.DictWriter(
+            fh, fieldnames=["eof_code", "list_type", "published", "name", "source_url", "source_title"]
+        )
+        w.writeheader()
+        for code, t in (("A", "limited_availability"), ("", "limited_availability"), ("C", "eu_shortage")):
+            w.writerow(
+                {"eof_code": code, "list_type": t, "published": "2026-10-31", "name": f"LIST {code or 'X'}"}
+                | {"source_url": "https://e/la", "source_title": "Λίστα 31/10"}
+            )
+    names = {
+        "A": "ALPHA TABLET 1MG/TAB BTx30",
+        "B": "BETA TABLET 1MG/TAB BTx30",
+        "C": "GAMMA",
+        "D": "DELTA",
+        "E": "EPS",
+    }
+    pending = [
+        {
+            "moh_article": 5,
+            "published": "2026-10-25",
+            "title": "Σε αναμονή",
+            "url": "https://m/5",
+            "kind": "delta",
+        }
+    ]
+    ch = changes.collect(history, sources, names, lists, pending)
+
+    assert (ch["start"], ch["end"]) == ("2026-09-01", "2026-10-31")
+    assert [g["date"] for g in ch["days"]] == ["2026-10-31", "2026-10-25", "2026-10-20", "2026-10-01"]
+    la, wait, d4, d3 = (g["docs"] for g in ch["days"])
+    assert [(it["eof_code"], it["name"]) for it in la[0]["items"]] == [
+        ("A", names["A"]),
+        ("", "LIST X"),
+    ]  # no EMA
+    assert wait[0]["pending"] and not wait[0]["items"]
+    assert [(it["eof_code"], changes.category(it)) for it in d3[0]["items"]] == [
+        ("A", "cut"),
+        ("C", "new"),
+        ("B", "withdrawn"),
+    ]
+    assert changes.summary(d3) == "1 μείωση τιμής, 1 νέα συσκευασία, 1 βγήκε από το δελτίο"
+    assert changes.summary(d4) == "1 αύξηση τιμής, 1 νέα συσκευασία, 1 ξανά στο δελτίο"
+
+    out = tmp_path / "allages.csv"
+    assert changes.write_csv(ch, out) == 8
+    rows = list(csv.DictReader(out.open(encoding="utf-8")))
+    assert rows[-1] == {
+        "published": "2026-10-01",
+        "publisher": "moh",
+        "source_id": "3",
+        "source_title": "Νέος κατάλογος",
+        "source_url": "https://m/3",
+        "change": "withdrawn",
+        "eof_code": "B",
+        "name": names["B"],
+        "old": "7.50",
+        "new": "",
+        "pct": "",
+    }
+    assert next(r for r in rows if r["change"] == "price" and r["source_id"] == "3")["pct"] == "-25.0"
+
+    rss = ET.fromstring(changes.rss(ch, "2026-11-15T06:00:00+00:00", "https://farmaka.info"))
+    items = rss.findall("./channel/item")
+    assert [i.findtext("link") for i in items][0] == "https://farmaka.info/allages/#d-2026-10-31"
+    assert (
+        items[3].findtext("title") == "01/10/2026 · 1 μείωση τιμής, 1 νέα συσκευασία, 1 βγήκε από το δελτίο"
+    )
+    assert "ALPHA TABLET 1MG/TAB BTx30: 12,00 € → 9,00 € (−25,0%)" in items[3].findtext("description")
+    assert items[3].findtext("pubDate") == "Thu, 01 Oct 2026 00:00:00 +0000"
+    assert changes.pct_label(4.34, 4.35) == "+0,2%"  # a small rise never reads "+0%"
+
+
+def test_changes_page_feed_and_csv(site):
+    import csv
+    import xml.etree.ElementTree as ET
+
+    out, info = site
+    html = (out / "allages" / "index.html").read_text(encoding="utf-8")
+    assert html.index('id="d-2026-11-06"') < html.index('id="d-2026-10-21"') < html.index('id="d-2026-10-05"')
+    assert "14930-symplhrwmatiko" in html  # XYDALBA's price cut, under the bulletin that made it
+    assert (
+        '<span class="old">823,64 €</span><span class="new">547,94 €</span><span class="pill down">−33,5%</span>'
+        in html
+    )
+    assert "Ο πρώτος κατάλογος που έχουμε" in html  # 14818 is the baseline of the samples
+    assert "Σε αναμονή: δεν έχει ενσωματωθεί" in html  # 14870, 14871 are listed but not applied
+    assert "<script>" not in html
+
+    feed = ET.fromstring((out / "allages" / "rss.xml").read_text(encoding="utf-8"))
+    links = [i.findtext("link") for i in feed.findall("./channel/item")]
+    assert links[0] == "https://farmaka.info/allages/#d-2026-11-06"
+    assert all(x.startswith("https://farmaka.info/allages/#d-") for x in links)
+
+    with (out / "data" / "allages.csv").open(encoding="utf-8") as fh:
+        rows = list(csv.DictReader(fh))
+    x = next(r for r in rows if r["eof_code"] == "312080101")
+    assert (x["change"], x["old"], x["new"], x["pct"], x["source_id"]) == (
+        "price",
+        "823.64",
+        "547.94",
+        "-33.5",
+        "14930",
+    )
+    assert not any(r["source_id"] == "14818" for r in rows)  # first_seen of the baseline are not changes
+    assert "new" in {r["change"] for r in rows}  # the generics of 14872
+
+    home = (out / "index.html").read_text(encoding="utf-8")
+    assert (
+        '<link rel="alternate" type="application/rss+xml" title="farmaka.info · Τι άλλαξε" href="/allages/rss.xml">'
+        in home
+    )
+    assert '<a href="/allages/">Τι άλλαξε</a>' in home
+    data = (out / "dedomena" / "index.html").read_text(encoding="utf-8")
+    assert 'href="/data/allages.csv"' in data and 'href="/allages/rss.xml"' in data
+    assert "allages.csv" in (out / "data" / "SHA256SUMS").read_text(encoding="utf-8")
+    assert "https://farmaka.info/allages/</loc>" in (out / "sitemap.xml").read_text(encoding="utf-8")
+
+
 def test_leaflet_flags_and_quick_links():
     from sitegen.leaflets import flags, quick_links
 

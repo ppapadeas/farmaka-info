@@ -474,6 +474,27 @@ a.eqn.none:hover { color: var(--ink); text-decoration: underline; }
   .av.stop { border-left-color: #f08a5d; }
 }
 
+/* changes: /allages/ */
+.feeds { margin-top: 10px; font-size: 14px; color: var(--muted); }
+.chips.days { margin-top: 16px; font-size: 13px; font-variant-numeric: tabular-nums; }
+.day { margin-top: 36px; scroll-margin-top: 16px; }
+.day > h2 { font-size: 22px; font-weight: 700; }
+.bul { margin-top: 14px; border: 1px solid var(--line); border-radius: 16px; padding: 16px 20px; }
+.bul .bsrc a { font-weight: 600; text-decoration: none; }
+.bul .bsrc span { display: block; margin-top: 2px; font-size: 13px; color: var(--faint); }
+.bul h3 { margin-top: 18px; font-size: 15px; font-weight: 700; }
+.bul h3 span { color: var(--faint); font-weight: 500; margin-left: 4px; }
+.bul .changes { margin-top: 6px; }
+.bul .changes li { padding: 10px 0; }
+.bul .changes li:last-child { border-bottom: 0; }
+.bul .small { margin-top: 10px; }
+.bul .more { margin-top: 10px; font-size: 14px; color: var(--muted); }
+@media (max-width: 640px) {
+  .bul { padding: 14px 16px; }
+  .bul .changes .nm { flex-basis: 100%; }
+  .bul .changes .old { margin-left: 0; }
+}
+
 /* leaflet quick buttons, flags, print */
 .quick { margin-top: 14px; display: flex; flex-wrap: wrap; gap: 6px; font-size: 14px; }
 .quick .chip { background: var(--bg); border: 1px solid var(--line); }
