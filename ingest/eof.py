@@ -173,6 +173,8 @@ class Policy:
     """When a request may be sent. Clocks, sleep and randomness are injectable."""
 
     testing_budget: int | None = None  # --now-for-testing N; None = only inside the window
+    any_time: bool = False  # --any-time: owner's decision (Δ-18 note, 15/11/2026); pacing unchanged
+    deadline: float | None = None  # --max-minutes: stop cleanly at this wall time
     interval: float = MIN_INTERVAL
     jitter: float = JITTER
     clock: Callable[[], float] = time.monotonic
@@ -185,9 +187,13 @@ class Policy:
     _last: float = float("-inf")
 
     def check_allowed(self) -> None:
+        if self.deadline is not None and self.wall() >= self.deadline:
+            raise BudgetExhausted("--max-minutes: time budget used up")
         if self.testing_budget is not None:
             if self.sent >= self.testing_budget:
                 raise BudgetExhausted(f"--now-for-testing {self.testing_budget}: budget used up")
+            return
+        if self.any_time:
             return
         now = self.now()
         if not in_window(now):
@@ -1003,7 +1009,12 @@ def _cmd_crawl(args: argparse.Namespace) -> int:
     if (out / "STOP").exists():
         print(f"refusing to run: {out / 'STOP'} exists (remove it to allow crawling again)")
         return 2
-    policy = Policy(testing_budget=args.now_for_testing, now=athens_now)
+    policy = Policy(
+        testing_budget=args.now_for_testing,
+        now=athens_now,
+        any_time=args.any_time,
+        deadline=time.time() + args.max_minutes * 60 if args.max_minutes else None,
+    )
     try:
         policy.check_allowed()
     except OutsideWindow as e:
@@ -1072,6 +1083,12 @@ def main(argv: list[str] | None = None) -> int:
         metavar="N",
         help="run outside 00:00-07:00 Athens time, at most N requests (keep N small)",
     )
+    c.add_argument(
+        "--any-time",
+        action="store_true",
+        help="ignore the 00:00-07:00 window (same >=10 s pacing, STOP file and 403/429 rules)",
+    )
+    c.add_argument("--max-minutes", type=int, help="stop cleanly after N minutes (CI job limits)")
     lk = sub.add_parser("links", help="write eof_docs.csv from the manifest")
     lk.add_argument("--manifest", type=Path, default=Path("data/eof/manifest.json"))
     lk.add_argument("--out", type=Path, default=Path("data/current/eof_docs.csv"))

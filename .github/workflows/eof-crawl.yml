@@ -12,6 +12,11 @@ on:
     - cron: "5 22 * * *" # 00:05 Athens in winter, 01:05 in summer
     - cron: "35 0 * * *" # 02:35 Athens in winter, 03:35 in summer
   workflow_dispatch:
+    inputs:
+      any_time:
+        description: "Run now, outside the 00:00-07:00 window (same pacing; owner's decision)"
+        type: boolean
+        default: true
 concurrency:
   group: eof-crawl
   cancel-in-progress: false
@@ -49,7 +54,7 @@ jobs:
         id: crawl
         run: |
           set +e
-          python -m ingest.eof crawl --packages data/current/packages.csv --out data/eof
+          python -m ingest.eof crawl --packages data/current/packages.csv --out data/eof --max-minutes 330 ${{ (github.event_name == 'workflow_dispatch' && inputs.any_time) && '--any-time' || '' }}
           code=$?
           if [ $code -eq 2 ]; then echo "Outside the 00:00-07:00 Athens window or stopped by data/eof/STOP: nothing to do."; exit 0; fi
           exit $code

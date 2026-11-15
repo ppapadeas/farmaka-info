@@ -658,3 +658,19 @@ def test_lock_allows_one_run_and_takes_over_a_stale_one(tmp_path):
     with Lock(path):
         pass
     assert not path.exists()
+
+
+def test_any_time_and_deadline():
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+
+    import pytest
+
+    from ingest.eof import BudgetExhausted, OutsideWindow, Policy
+
+    noon = lambda: datetime(2026, 11, 15, 12, 0, tzinfo=ZoneInfo("Europe/Athens"))  # noqa: E731
+    with pytest.raises(OutsideWindow):
+        Policy(now=noon).check_allowed()
+    Policy(now=noon, any_time=True).check_allowed()  # owner override: no window, same pacing
+    with pytest.raises(BudgetExhausted):
+        Policy(now=noon, any_time=True, deadline=100.0, wall=lambda: 101.0).check_allowed()
