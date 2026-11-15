@@ -29,8 +29,10 @@ SITE = "https://farmaka.info"
 REPO = "https://github.com/ppapadeas/farmaka-info"
 STATIC = Path(__file__).resolve().parent.parent / "web" / "static"
 
+# Same value on Windows (CRLF checkout) and Linux (LF): otherwise every deploy from
+# another machine changes every page and re-uploads all of them.
 ASSET_VERSION = hashlib.sha256(
-    b"".join(p.read_bytes() for p in sorted(STATIC.iterdir()) if p.is_file())
+    b"".join(p.read_bytes().replace(b"\r\n", b"\n") for p in sorted(STATIC.iterdir()) if p.is_file())
 ).hexdigest()[:10]
 
 LIST_LABELS = {"main": "Κύριος κατάλογος", "n3816": "Κατάλογος ν. 3816/2010"}

@@ -85,7 +85,13 @@ jobs:
       - name: Shortage lists (EOF, EMA); a failure keeps yesterday's list
         continue-on-error: true
         run: |
-          python -m ingest.shortages fetch --out data/shortages --max-requests 30 || [ $? -eq 1 ]
+          # once on a fresh cache: read every EOF listing page, so older lists (e.g. the
+          # discontinuation list of 12/2025) are found; afterwards only the newest pages
+          if [ ! -f data/shortages/.backfill-done ]; then
+            python -m ingest.shortages fetch --out data/shortages --backfill --max-requests 120 && touch data/shortages/.backfill-done
+          else
+            python -m ingest.shortages fetch --out data/shortages --max-requests 30 || [ $? -eq 1 ]
+          fi
           python -m ingest.shortages build --cache data/shortages --packages data/current/packages.csv --otc data/current/otc_packages.csv --out data/current
       - name: Save downloaded bulletins
         if: always()
