@@ -98,6 +98,25 @@ _COMBO = re.compile(
 )
 
 
+_NUM = re.compile(r"\d+(?:\.\d+)?")
+
+
+def _number(s: str) -> str:
+    """'0.50' -> '0.5', '1.0' -> '1', '20' -> '20'. A dot followed by exactly three
+    digits after a non-zero integer part ('1.000', '10.000') may be a thousands
+    separator, so it is left as written rather than guessed."""
+    if re.fullmatch(r"[1-9]\d{0,2}\.\d{3}", s):
+        return s
+    if "." not in s:
+        return s.lstrip("0") or "0"
+    return f"{float(s):.6f}".rstrip("0").rstrip(".")
+
+
+def _numbers(text: str) -> str:
+    """Normalise every number inside a strength part: '0.50MG' -> '0.5MG', '10+5.0' -> '10+5'."""
+    return _NUM.sub(lambda m: _number(m.group(0)), text)
+
+
 def strength(name: str) -> tuple[str, str] | None:
     """(key, label): '20MG/TAB' -> ('20MG', '20 mg'); '(10+5)MG/TAB' -> ('10+5MG', '10+5 mg');
     '20MG/0,2 ML' -> ('20MG/0.2ML', '20 mg/0,2 ml'). Keys compare packages, labels are for people.
@@ -107,7 +126,7 @@ def strength(name: str) -> tuple[str, str] | None:
     rest = split_name(name)[1]
     combo = _COMBO.search(rest)
     if combo:
-        parts = [re.sub(r"\s+", "", x).upper().replace(",", ".") for x in combo.group(1).split("+")]
+        parts = [_numbers(re.sub(r"\s+", "", x).upper().replace(",", ".")) for x in combo.group(1).split("+")]
         label = " + ".join(
             re.sub(r"(\d)([A-Z%])", r"\1 \2", x).replace("MG", "mg").replace("MCG", "mcg") for x in parts
         )
@@ -115,9 +134,9 @@ def strength(name: str) -> tuple[str, str] | None:
     m = _STRENGTH.search(rest)
     if not m:
         return None
-    amount = re.sub(r"[()\s]", "", m.group(1)).replace(",", ".")
+    amount = _numbers(re.sub(r"[()\s]", "", m.group(1)).replace(",", "."))
     unit = m.group(2).upper().replace("I.U.", "IU")
-    per = (m.group(3) or "").upper().replace(" ", "").replace(",", ".")
+    per = _numbers((m.group(3) or "").upper().replace(" ", "").replace(",", "."))
     if per in ("TAB", "CAP", "DOSE", "SACHET"):
         per = ""
     key = f"{amount}{unit}" + (f"/{per}" if per else "")

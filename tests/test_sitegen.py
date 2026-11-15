@@ -245,3 +245,23 @@ def test_leaflet_flags_and_quick_links():
     )
     d["smpc"][0]["sections"][1] = sec("6.4", "Δεν απαιτούνται ιδιαίτερες συνθήκες φύλαξης.")
     assert "Ψυγείο 2–8 °C" not in flags(d)
+
+
+def test_equal_strengths_group_together():
+    from sitegen.drug import strength
+
+    # same strength written four ways (moh price list, alprazolam)
+    keys = {
+        strength(n)[0]
+        for n in (
+            "ALPRAZOLAM/GRINDEKS TABLET 0.5MG/TAB BT X 30 TABS",
+            "XANAX TABLET 0,5MG/TAB BT x 30",
+            "ALPRAZOLAM/AUROBINDO TABLET 0,50MG/TAB BTx30(BLISTER)",
+            "SATURNIL TABLET 0.50MG/TAB BTX30",
+        )
+    }
+    assert keys == {"0.5MG"}
+    assert strength("X TABLET 1.0MG/TAB BTx30")[0] == strength("Y TABLET 1MG/TAB BTx30")[0] == "1MG"
+    assert strength("XANAX TABLET 0,5MG/TAB BT x 30")[1] == "0,5 mg"
+    # '10.000 IU' may be ten thousand: never folded into '10'
+    assert strength("DEFILL SOFT.CAPS 10.000 IU/CAP BT X 4")[0] == "10.000IU"
