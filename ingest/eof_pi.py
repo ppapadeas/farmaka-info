@@ -343,6 +343,11 @@ def main(argv: list[str] | None = None) -> int:
     if not (args.root / "manifest.json").exists():
         print(f"no {args.root / 'manifest.json'}: nothing to parse")
         return 0
+    try:
+        import pdfplumber  # noqa: F401
+    except ImportError:
+        print('pdfplumber is not installed: pip install -e ".[pdf]"')
+        return 1
     parse_all(args.root, args.out, args.jobs)
     return 0
 
