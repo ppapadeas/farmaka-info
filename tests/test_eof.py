@@ -235,7 +235,7 @@ def test_user_agent_is_honest():
 # --- stop on blocking ----------------------------------------------------------------
 
 
-@pytest.mark.parametrize("status", [401, 403, 429, 503])
+@pytest.mark.parametrize("status", [401, 403, 429])
 def test_blocking_status_stops_without_retry(status):
     fc = FakeClock()
     site = FakeSite(fc)
@@ -244,6 +244,16 @@ def test_blocking_status_stops_without_retry(status):
     with pytest.raises(Blocked):
         client.request("GET", HOME)
     assert len(site.calls) == 1
+
+
+@pytest.mark.parametrize("status", [502, 503, 504])
+def test_service_down_is_unavailable_not_blocked(status):
+    fc = FakeClock()
+    site = FakeSite(fc)
+    site.override[HOME] = resp(status, b"down", url=HOME)
+    with pytest.raises(eof.Unavailable):
+        Client(make_policy(fc), session=site).request("GET", HOME)
+    assert len(site.calls) == 1  # the client itself never retries
 
 
 def test_server_error_stops_too():
@@ -551,6 +561,54 @@ def test_blocked_mid_crawl_stops_everything(tmp_path):
         crawl(targets, tmp_path, Client(make_policy(fc), session=site))
     assert site.urls() == [HOME, HOME, BASE + "view.xhtml?id=" + VIEW_ID]  # 0000903 never searched
     assert read_manifest(tmp_path / "manifest.json")["products"] == {}
+
+
+class Down(FakeSite):
+    """services.eof.gr at 06:00 Athens time: 503 for the first `n` requests, then normal."""
+
+    def __init__(self, fc, n):
+        super().__init__(fc)
+        self.n = n
+
+    def request(self, method, url, **kw):
+        if len(self.calls) < self.n:
+            self.calls.append((self.fc.t, method, url))
+            return resp(503, b"Service Unavailable", url=url)
+        return super().request(method, url, **kw)
+
+
+def test_a_short_outage_is_waited_out(tmp_path):
+    # the daily 503 at 06:00 Athens time stopped every night's crawl (16-20/11/2026)
+    fc = FakeClock()
+    site = Down(fc, 2)
+    targets = [Target("0000902", ("000090201",), "")]
+    stats, m = crawl(targets, tmp_path, Client(make_policy(fc), session=site))
+    assert m["products"]["0000902"]["state"] == "done"
+    assert stats.outages == 2 and not stats.unavailable and eof.exit_code(stats) == 0
+    assert fc.sleeps.count(eof.OUTAGE_PAUSE) == 2
+    # nothing is sent while waiting; after it, a new session starts with the home page
+    assert site.urls()[:3] == [HOME, HOME, HOME]
+
+
+def test_a_long_outage_stops_the_run_cleanly(tmp_path):
+    fc = FakeClock()
+    site = Down(fc, 10_000)
+    targets = [Target("0000902", ("000090201",), ""), Target("0000903", ("000090302",), "")]
+    stats, m = crawl(targets, tmp_path, Client(make_policy(fc), session=site))
+    assert stats.unavailable and "service unavailable" in stats.stopped
+    assert len(site.calls) == eof.OUTAGE_WAITS + 1  # one try, then one after each wait
+    assert m["products"] == {}
+    assert eof.exit_code(stats) == 5  # nothing fetched: the next run is not started at once
+    stats.products_done = 1
+    assert eof.exit_code(stats) == 0  # some progress before the outage: carry on later
+
+
+def test_an_outage_past_the_night_window_stops_without_a_request(tmp_path):
+    fc = FakeClock(start=datetime(2026, 11, 20, 6, 55, tzinfo=ATH))
+    site = Down(fc, 1)
+    stats, _ = crawl([Target("0000902", ("000090201",), "")], tmp_path, Client(make_policy(fc), session=site))
+    assert "07:00" in stats.stopped or "Athens" in stats.stopped
+    assert len(site.calls) == 1
 
 
 def test_expired_view_gets_one_new_session(tmp_path):

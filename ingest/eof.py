@@ -9,8 +9,12 @@ be relaxed:
   - only between 00:00 and 07:00 Europe/Athens; outside it the crawler refuses to run,
     unless --now-for-testing N, which allows at most N requests;
   - an honest User-Agent naming the project; no browser impersonation, no proxies;
-  - stop at once, exit non-zero, never retry on HTTP 401/403/429/503, other 5xx, a
+  - stop at once, exit non-zero, never retry on HTTP 401/403/429, 500 and other 5xx, a
     connection error, a CAPTCHA or a WAF page;
+  - 502/503/504 mean the service is down (every day around 06:00 Athens time): wait
+    OUTAGE_PAUSE without sending anything, then go on with a new session; after
+    OUTAGE_WAITS waits in a row (or MAX_OUTAGES in a run) stop cleanly, exit 5 if the
+    run fetched nothing;
   - everything cached (raw responses and PDFs, sha256 + retrieved_at in the manifest);
     a product in the manifest is not searched again and a document URL is never
     fetched twice;
@@ -76,6 +80,11 @@ import requests
 USER_AGENT = "farmaka-info/0.1 (+https://github.com/ppapadeas/farmaka-info; open data project)"
 MIN_INTERVAL = 10.0  # seconds between ANY two requests (pages, AJAX postbacks, PDFs)
 JITTER = 5.0  # plus a random 0..JITTER seconds
+# 502/503/504: the service is down for a while (every day around 06:00 Athens time, a few
+# minutes). Wait without sending anything, then try the same product with a new session.
+OUTAGE_PAUSE = 600.0  # seconds
+OUTAGE_WAITS = 3  # waits in a row before giving up for this run
+MAX_OUTAGES = 6  # outages in one run before giving up
 WINDOW_HOURS = (0, 7)  # crawl only 00:00-07:00 Europe/Athens
 ATHENS = "Europe/Athens"
 TIMEOUT = 60
@@ -137,7 +146,12 @@ class Stop(Exception):
 
 
 class Blocked(Stop):
-    """401/403/429/503, a CAPTCHA, a WAF page, a dropped connection."""
+    """401/403/429, a CAPTCHA, a WAF page, a dropped connection."""
+
+
+class Unavailable(Stop):
+    """502/503/504: the service is down (maintenance), not refusing us. The crawl waits
+    OUTAGE_PAUSE and tries again, at most OUTAGE_WAITS times in a row."""
 
 
 class OutsideWindow(Stop):
@@ -218,9 +232,12 @@ class Policy:
 
 
 def check_response(r: requests.Response) -> None:
-    """Raise Blocked on 401/403/429/503 or a CAPTCHA/WAF page; Stop on other 5xx."""
-    if r.status_code in (401, 403, 429, 503):
+    """Raise Blocked on 401/403/429 or a CAPTCHA/WAF page, Unavailable on 502/503/504,
+    Stop on other 5xx."""
+    if r.status_code in (401, 403, 429):
         raise Blocked(f"HTTP {r.status_code} for {r.url}", r)
+    if r.status_code in (502, 503, 504):
+        raise Unavailable(f"HTTP {r.status_code} for {r.url}", r)
     if r.status_code >= 500:
         raise Stop(f"HTTP {r.status_code} for {r.url}", r)
     ctype = r.headers.get("Content-Type", "")
@@ -806,6 +823,8 @@ class CrawlStats:
     documents_reused: int = 0
     unknown_formats: list[str] = field(default_factory=list)
     stopped: str = ""
+    outages: int = 0  # 502/503/504 answers waited out
+    unavailable: bool = False  # stopped because the service stayed down
 
 
 def _response_entry(kind: str, url: str, rel: str, data: bytes, at: str) -> dict:
@@ -949,13 +968,36 @@ def crawl(
         todo = todo[:limit]
     stats = CrawlStats()
     session = Session(client)
-    for t in todo:
+    i, in_a_row = 0, 0
+    while i < len(todo):
         try:
-            crawl_product(t, session, client, out, manifest, stats)
+            crawl_product(todo[i], session, client, out, manifest, stats)
+            i, in_a_row = i + 1, 0
         except (OutsideWindow, BudgetExhausted) as e:
             stats.stopped = str(e)
             break
+        except Unavailable as e:
+            stats.outages += 1
+            in_a_row += 1
+            if in_a_row > OUTAGE_WAITS or stats.outages > MAX_OUTAGES:
+                stats.stopped = f"service unavailable: {e}"
+                stats.unavailable = True
+                break
+            client.policy.sleep(OUTAGE_PAUSE)  # nothing is sent meanwhile
+            session = Session(client)  # a restarted server has forgotten the old JSF session
+            try:
+                client.policy.check_allowed()
+            except (OutsideWindow, BudgetExhausted) as e2:
+                stats.stopped = str(e2)
+                break
     return stats, manifest
+
+
+def exit_code(stats: CrawlStats) -> int:
+    """0, or 5 when the service stayed down and nothing was fetched: the caller should not
+    start another run straight away."""
+    progress = stats.products_done or stats.not_found or stats.documents_fetched
+    return 5 if stats.unavailable and not progress else 0
 
 
 # --- links -------------------------------------------------------------------------
@@ -1067,9 +1109,11 @@ def _cmd_crawl(args: argparse.Namespace) -> int:
     print("document formats: " + ", ".join(f"{f} {formats.count(f)}" for f in sorted(set(formats))))
     for url in stats.unknown_formats:
         print(f"  unknown format (kept as .bin): {url}")
+    if stats.outages:
+        print(f"service outages waited out: {stats.outages}")
     if stats.stopped:
         print(f"stopped: {stats.stopped}")
-    return 0
+    return exit_code(stats)
 
 
 def _cmd_remaining(args: argparse.Namespace) -> int:

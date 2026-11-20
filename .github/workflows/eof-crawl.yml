@@ -65,6 +65,11 @@ jobs:
           python -m ingest.eof crawl --packages data/current/packages.csv data/current/otc_packages.csv --out data/eof --max-minutes 300 ${{ (github.event_name == 'workflow_dispatch' && inputs.any_time) && '--any-time' || '' }}
           code=$?
           if [ $code -eq 2 ]; then echo "Outside the 00:00-07:00 Athens window or stopped by data/eof/STOP: nothing to do."; exit 0; fi
+          if [ $code -eq 5 ]; then
+            echo "services.eof.gr stayed unavailable (502/503/504) and nothing was fetched: no next run now."
+            echo "chain=no" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           exit $code
       - name: Links
         if: always()
@@ -101,7 +106,7 @@ jobs:
           path: data/eof-links
           key: eof-links-${{ github.run_id }}
       - name: Next run, while products are left (until_done)
-        if: success() && github.event_name == 'workflow_dispatch' && inputs.until_done && steps.crawl.outcome == 'success'
+        if: success() && github.event_name == 'workflow_dispatch' && inputs.until_done && steps.crawl.outcome == 'success' && steps.crawl.outputs.chain != 'no'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
