@@ -142,7 +142,7 @@ def layout(
   <div class="wrap foot-grid">
     <div class="foot-about">
       <a class="brand" href="/">{LOGO}<span>farmaka<span class="tld">.info</span></span></a>
-      <p>Ενημερωτικό· δεν αντικαθιστά γιατρό ή φαρμακοποιό. Πηγές: Υπουργείο Υγείας, EMA.</p>
+      <p>Ενημερωτικό· δεν αντικαθιστά γιατρό ή φαρμακοποιό. Πηγές: Υπουργείο Υγείας, ΕΟΦ, EMA.</p>
     </div>
     <nav class="foot-links" aria-label="Υποσέλιδο">
       <a href="/ousies/">Δραστικές ουσίες</a>
