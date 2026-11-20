@@ -685,7 +685,12 @@ def build(data: Path, out: Path, built_at: str) -> dict:
     (out / "_headers").write_text(pages.HEADERS, encoding="utf-8")
     (out / "manifest.webmanifest").write_text(pages.webmanifest(), encoding="utf-8")
     n_files = sum(1 for _ in out.rglob("*") if _.is_file())
-    return {"packages": len(pkgs), "substances": len(subst), "files": n_files}
+    return {
+        "packages": len(pkgs),
+        "substances": len(subst),
+        "files": n_files,
+        "glance_failed": ctx.glance_failed,
+    }
 
 
 def main() -> None:
@@ -697,6 +702,11 @@ def main() -> None:
     built_at = a.built_at or datetime.now(UTC).replace(microsecond=0).isoformat()
     r = build(a.data, a.out, built_at)
     print(f"{r['packages']} packages, {r['substances']} substances, {r['files']} files -> {a.out}")
+    if r["glance_failed"]:
+        # the summary is left out on these pages; the full leaflet is still there
+        print(f"«Με μια ματιά» left out on {len(r['glance_failed'])} pages:")
+        for name, err in r["glance_failed"][:20]:
+            print(f"  {name}: {err}")
 
 
 if __name__ == "__main__":

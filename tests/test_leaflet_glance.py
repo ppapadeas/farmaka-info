@@ -6,6 +6,9 @@ Exelon, CoAprovel, NovoRapid) as `python -m ingest.ema_pi parse` writes them.
 
 import re
 
+import pytest
+
+from sitegen import leaflets
 from sitegen.leaflets import glance, package_parts, pick_doc
 
 
@@ -175,6 +178,19 @@ def test_glance_very_common_in_other_layouts():
         ]
     }
     assert glance(xagrid)["very_common"]["items"] == ["Πονοκέφαλος", "ζάλη", "ναυτία"]
+    # EOF leaflet: a table right after the heading (a table block has rows, no text): no answer,
+    # and the build goes on (the table itself stays in the full text)
+    table = {
+        "sections": [
+            sec(
+                "4",
+                "",
+                P("Πολύ συχνές (μπορεί να επηρεάσουν περισσότερους από 1 στους 10 ανθρώπους):"),
+                {"type": "table", "rows": [["Διαταραχές του νευρικού συστήματος", "Πονοκέφαλος"]]},
+            )
+        ]
+    }
+    assert "very_common" not in glance(table)
     # no very common category at all: no answer rather than the wrong one
     efient = {"sections": [sec("4", "", P("Συχνές ανεπιθύμητες ενέργειες:"), L("Ρινική αιμορραγία"))]}
     assert "very_common" not in glance(efient)
@@ -225,3 +241,19 @@ def test_package_parts_links_land_on_the_page():
     assert 'href="/fylla/abraxane/pxp/#d0-s4.1"' in body
     assert "Κείμενο για: Abraxane 5 mg/ml" in body
     assert package_parts({"slug": "x", "texts": {"pil": []}}, "X") == ("", "")
+
+
+def test_a_summary_that_does_not_fit_leaves_the_page_whole(monkeypatch):
+    # a text the summary rules do not expect: no «Με μια ματιά», the leaflet still in full, the
+    # package listed for the build report; without the list (tests) the error raises
+    def odd(doc):
+        raise KeyError("text")
+
+    monkeypatch.setattr(leaflets, "glance", odd)
+    lf = {"slug": None, "texts": {"pil": [ABRAXANE], "source": {"url": "https://example.org/a.pdf"}}}
+    failed = []
+    top, body = package_parts(lf, "ABRAXANE PD.DIS.INF 5MG/ML VIALx 100MG", failed)
+    assert top == "" and 'id="fyllo"' in body and "γεμσιταβίνη" in body
+    assert failed == [("ABRAXANE PD.DIS.INF 5MG/ML VIALx 100MG", "KeyError: 'text'")]
+    with pytest.raises(KeyError):
+        package_parts(lf, "ABRAXANE PD.DIS.INF 5MG/ML VIALx 100MG")

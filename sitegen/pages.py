@@ -64,6 +64,7 @@ class Context:
     equiv: dict = field(default_factory=dict)  # eof_code -> codes with same substances, strength, form
     leaflets: dict = field(default_factory=dict)  # EMA product number -> {slug, name, pil, smpc}
     compared: dict = field(default_factory=dict)  # eof_code -> Equivalents | None (cache of comparable())
+    glance_failed: list = field(default_factory=list)  # «Με μια ματιά» left out: (package, error)
 
 
 def sname(ctx: Context, inn: str) -> str:
@@ -862,7 +863,7 @@ def package(ctx: Context, p: dict) -> str:
     if lf:
         from . import leaflets  # imports this module
 
-        glance, leaflet = leaflets.package_parts(lf, p["name"])
+        glance, leaflet = leaflets.package_parts(lf, p["name"], ctx.glance_failed)
     if leaflet:
         texts = lf["texts"]
         who = leaflets.source_short(texts)

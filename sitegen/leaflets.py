@@ -374,7 +374,7 @@ def glance(doc: dict) -> dict:
                     items += [_item(x) for x in nb.get("items", [])]
                 elif _FREQ.search(nb.get("text", "")) or nb.get("type") == "subheading":
                     break
-                elif k == 0 and not items and len(nb.get("text", "")) <= 300:
+                elif k == 0 and not items and nb.get("type") == "paragraph" and len(nb["text"]) <= 300:
                     items = [_item(x) for x in _commas(nb["text"])]
                 else:
                     break
@@ -630,9 +630,11 @@ def pick_doc(d_products: list[list[str]], package_name: str) -> int:
     return best
 
 
-def package_parts(lf: dict, package_name: str) -> tuple[str, str]:
+def package_parts(lf: dict, package_name: str, failed: list | None = None) -> tuple[str, str]:
     """(«Με μια ματιά», the leaflet and SmPC sections) for a package page; empty strings without texts.
-    «Με μια ματιά» only for leaflets that follow the QRD template (its rules read that template)."""
+    «Με μια ματιά» only for leaflets that follow the QRD template (its rules read that template).
+    With `failed`, a text the summary rules do not fit gets no summary and is listed there
+    (package, error) for the build report; its full text still shows. Without it, the error raises."""
     texts = lf.get("texts") or {}
     docs = texts.get("pil") or []
     if len(docs) > 1 and any(not (x.get("sections") or x.get("preamble")) for x in docs):
@@ -648,7 +650,14 @@ def package_parts(lf: dict, package_name: str) -> tuple[str, str]:
     i = pick_doc([x.get("products") or [] for x in docs], package_name)
     layouts = (texts.get("layout") or {}).get("pil") or ["qrd"]
     qrd = (layouts[i] if i < len(layouts) else layouts[0]) == "qrd"
-    top = glance_html(glance(docs[i]), source_date(texts), source_short(texts)) if qrd else ""
+    top = ""
+    if qrd:
+        try:
+            top = glance_html(glance(docs[i]), source_date(texts), source_short(texts))
+        except Exception as err:
+            if failed is None:
+                raise
+            failed.append((package_name, f"{type(err).__name__}: {err}"))
     if slug:
         pro = ""
         if lf.get("smpc_quick"):
