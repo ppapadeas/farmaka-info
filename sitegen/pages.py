@@ -66,6 +66,7 @@ class Context:
     leaflets: dict = field(default_factory=dict)  # EMA product number -> {slug, name, pil, smpc}
     compared: dict = field(default_factory=dict)  # eof_code -> Equivalents | None (cache of comparable())
     glance_failed: list = field(default_factory=list)  # «Με μια ματιά» left out: (package, error)
+    names: dict = field(default_factory=dict)  # substances -> product names on sale (cache of has_generic())
 
 
 def sname(ctx: Context, inn: str) -> str:
@@ -409,19 +410,39 @@ def reimbursement_card(ctx: Context, p: dict) -> str:
 RATES = (0, 10, 25)  # participation, % (the prescription says which applies)
 
 
-def patient_cost(retail: float, rp: float, rate: int) -> float:
+def patient_cost(retail: float, rp: float, rate: int, half_gap: bool = False) -> float:
     """Indicative amount the patient pays for one pack at `rate`% participation (Δ-22):
     the participation on what the reimbursement covers (the reimbursement price, or
     the retail price when that is lower) plus the part of the retail price above the
-    reimbursement price. Rounded to the cent, half up."""
+    reimbursement price, or half of that part for a medicine without a generic
+    (Δ3(α) 34943/2022, article 5). Rounded to the cent, half up."""
     r, b = Decimal(str(retail)), Decimal(str(rp))
-    cost = Decimal(rate) / 100 * min(b, r) + max(r - b, Decimal(0))
+    gap = max(r - b, Decimal(0)) / (2 if half_gap else 1)
+    cost = Decimal(rate) / 100 * min(b, r) + gap
     return float(cost.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
 
 
-def _costs(q: dict) -> list[float]:
+def _brand(q: dict) -> str:
+    return split_name(q["name"])[0].replace("®", "").replace("™", "").strip().upper()
+
+
+def has_generic(ctx: Context, p: dict) -> bool:
+    """Whether the same substances have a price under another name, in any strength or
+    form. Without one the patient pays half the difference between retail and
+    reimbursement price, not all of it (Δ3(α) 34943/2022, article 5). Read broadly on
+    purpose: half is shown only when a single name exists, and unknown substances
+    count as having a generic."""
+    if not ctx.names:
+        for q in ctx.by_code.values():
+            ctx.names.setdefault(tuple(q["substances"]), set()).add(_brand(q))
+    subs = tuple(p["substances"])
+    return not subs or len(ctx.names.get(subs, ())) > 1
+
+
+def _costs(ctx: Context, q: dict) -> list[float]:
     rp = q["reimbursement"][0]["reimbursement_price"]
-    return [patient_cost(q["prices"]["retail"], rp, x) for x in RATES]
+    half = not has_generic(ctx, q)
+    return [patient_cost(q["prices"]["retail"], rp, x, half) for x in RATES]
 
 
 def cheaper_reimbursed(ctx: Context, p: dict) -> dict | None:
@@ -434,7 +455,7 @@ def cheaper_reimbursed(ctx: Context, p: dict) -> dict | None:
 
     def per_unit(q: dict) -> list[float]:
         n = eq.counts[q["eof_code"]] if eq.per_unit else 1
-        return [c / n for c in _costs(q)]
+        return [c / n for c in _costs(ctx, q)]
 
     mine = per_unit(p)
     best, best_key = None, None
@@ -456,7 +477,7 @@ def pay_table(ctx: Context, p: dict) -> str:
     r = p["reimbursement"][0]
     q = cheaper_reimbursed(ctx, p)
     cols = [p] + ([q] if q else [])
-    costs = [_costs(x) for x in cols]
+    costs = [_costs(ctx, x) for x in cols]
     sizes = [unit_count(x["name"]) or pack_count(x["name"]) for x in cols]
     head = '<th scope="col">Συμμετοχή</th>'
     for x, n in zip(cols, sizes):
@@ -474,9 +495,14 @@ def pay_table(ctx: Context, p: dict) -> str:
         if sizes[0] != sizes[1]:
             notes.append("Διαφορετικό μέγεθος συσκευασίας· η σύγκριση έγινε ανά τεμάχιο.")
     issue = quote(f"Συμμετοχή στη συσκευασία {p['eof_code']}")
+    gap = (
+        "το μισό της διαφοράς, γιατί δεν βρέθηκε γενόσημο (Δ3(α) 34943/2022, άρθρο 5)"
+        if p["prices"]["retail"] > r["reimbursement_price"] and not has_generic(ctx, p)
+        else "τη διαφορά"
+    )
     notes.append(
-        "Ενδεικτικά: η συμμετοχή επί της τιμής αποζημίωσης (ή της λιανικής, αν είναι χαμηλότερη), συν τη "
-        "διαφορά. Το ποσοστό το ορίζει η συνταγή, ανάλογα με την πάθηση· το τελικό ποσό το λέει ο φαρμακοποιός. "
+        f"Ενδεικτικά: η συμμετοχή επί της τιμής αποζημίωσης (ή της λιανικής, αν είναι χαμηλότερη), συν {gap}. "
+        "Το ποσοστό το ορίζει η συνταγή, ανάλογα με την πάθηση· το τελικό ποσό το λέει ο φαρμακοποιός. "
         f'Πληρώσατε άλλο; <a href="{REPO}/issues/new?title={issue}">Πείτε μας</a>.'
     )
     when = date_gr(p["price_source"]["published"])

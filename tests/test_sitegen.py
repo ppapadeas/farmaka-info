@@ -371,6 +371,26 @@ def test_patient_cost():
     assert [patient_cost(5.0, 8.0, r) for r in (0, 10, 25)] == [0.0, 0.5, 1.25]
     assert patient_cost(12.35, 12.35, 10) == 1.24  # 1.235: half up, not to even
     assert patient_cost(7.77, 7.0, 25) == 2.52  # 1.75 + 0.77
+    # no generic: half the difference (Δ3(α) 34943/2022, article 5). ARVEKAP 3,75 MG, catalogue
+    # 22/10/2026: retail 76,11 €, reimbursement 37,01 € (February 2026: 48,02 €, so 14,05 € at 0%)
+    assert [patient_cost(76.11, 37.01, r, half_gap=True) for r in (0, 10, 25)] == [19.55, 23.25, 28.8]
+    assert patient_cost(76.11, 48.02, 0, half_gap=True) == 14.05
+
+
+def test_half_the_difference_without_a_generic():
+    from sitegen import pages
+
+    alone = _pkg("600000001", "ARVEKAP", 76.11, rp=37.01)
+    ctx = _ctx([alone, _pkg("600000002", "ARVEKAP", 150.0, n=60, rp=74.02)])  # same name: not a generic
+    assert not pages.has_generic(ctx, alone)
+    card = pages.reimbursement_card(ctx, alone)
+    assert "<td>19,55 €</td>" in card and "το μισό της διαφοράς" in card and "34943/2022" in card
+
+    generic = _pkg("600000003", "TRIPTO/GEN", 40.0, rp=37.01)
+    ctx = _ctx([alone, generic])
+    assert pages.has_generic(ctx, alone)
+    card = pages.reimbursement_card(ctx, alone)
+    assert "<td>39,10 €</td>" in card and "το μισό της διαφοράς" not in card
 
 
 def test_what_will_i_pay():
