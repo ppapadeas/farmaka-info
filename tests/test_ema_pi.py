@@ -692,14 +692,8 @@ def test_parse_all_writes_one_json_per_product_and_a_report(tmp_path, monkeypatc
     assert on_disk["summary"] == report["summary"]
 
 
-def fake_bold_pdf(path: Path, lines: list[tuple[str, bool]]) -> None:
-    """A one-page PDF (Helvetica) whose bold lines are drawn twice, 0.3 pt apart, the way
-    some word processors fake bold type."""
-    ops, y = [], 760
-    for text, bold in lines:
-        for dx in (0, 0.3) if bold else (0,):
-            ops.append(f"BT /F1 12 Tf {72 + dx} {y} Td ({text}) Tj ET")
-        y -= 20
+def one_page_pdf(path: Path, ops: list[str]) -> None:
+    """A one-page A4 PDF (Helvetica as /F1) with these content-stream operators."""
     stream = "\n".join(ops).encode()
     objs = [
         b"<< /Type /Catalog /Pages 2 0 R >>",
@@ -720,6 +714,16 @@ def fake_bold_pdf(path: Path, lines: list[tuple[str, bool]]) -> None:
     path.write_bytes(bytes(out))
 
 
+def fake_bold_pdf(path: Path, lines: list[tuple[str, bool]]) -> None:
+    """Bold lines drawn twice, 0.3 pt apart, the way some word processors fake bold type."""
+    ops, y = [], 760
+    for text, bold in lines:
+        for dx in (0, 0.3) if bold else (0,):
+            ops.append(f"BT /F1 12 Tf {72 + dx} {y} Td ({text}) Tj ET")
+        y -= 20
+    one_page_pdf(path, ops)
+
+
 def test_fake_bold_is_read_once(tmp_path):
     # EOF leaflet of ALGOFREN (11/2026): the bold name came out as "AALLGGOOFFRREENN"
     pdf = tmp_path / "fake-bold.pdf"
@@ -727,3 +731,17 @@ def test_fake_bold_is_read_once(tmp_path):
     (page,) = ema_pi.read_pdf(pdf)
     assert [ln.text for ln in page.lines] == ["ALGOFREN 600 mg", "plain text"]
     assert page.chars_read == page.chars_pdfium == 22  # nothing lost, nothing counted twice
+
+
+def test_table_past_the_page_edge(tmp_path):
+    # EOF SmPC 2786801 (11/2026): a ruled table wider than the page stopped the parse
+    # ("Bounding box ... is not fully within parent page bounding box")
+    pdf = tmp_path / "wide-table.pdf"
+    grid = [f"72 {y} m 650 {y} l S" for y in (700, 680, 660)] + [
+        f"{x} 660 m {x} 700 l S" for x in (72, 300, 650)
+    ]
+    cells = [f"BT /F1 10 Tf {x} {y} Td ({s}) Tj ET" for x, y, s in
+             ((80, 686, "Dose"), (310, 686, "Weight"), (80, 666, "10 mg"), (310, 666, "40 kg"))]  # fmt: skip
+    one_page_pdf(pdf, ["0.5 w", *grid, *cells, "BT /F1 12 Tf 72 760 Td (Text above) Tj ET"])
+    (page,) = ema_pi.read_pdf(pdf)
+    assert [ln.text for ln in page.lines] == ["Text above", "Dose ¦ Weight", "10 mg ¦ 40 kg"]

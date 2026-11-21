@@ -148,3 +148,8 @@ def test_errors_are_listed_in_the_log(tmp_path):
     assert rep["products"] == 2 and rep["errors"] == 1
     (line,) = [x for x in logs if "error:" in x]
     assert line.startswith("  error: 1700000 pil: ") and line.endswith(f"<{url}>")
+    # the next run tries the failed product again (a parser fix reaches it without a new
+    # parser version), and only that one
+    logs.clear()
+    rep = eof_pi.parse_all(root, out, jobs=1, log=logs.append)
+    assert "1 to parse" in logs[0] and rep["errors"] == 1

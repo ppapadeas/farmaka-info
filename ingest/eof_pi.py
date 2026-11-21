@@ -270,11 +270,14 @@ def parse_all(root: Path, out: Path, jobs: int = 1, log=print) -> dict:
         ]
         if got:
             wanted[code] = got
+    # new or changed documents, and every product with a document that failed before:
+    # few, and a fix in the parser reaches them without a new parser version
     todo = {
         code: got
         for code, got in wanted.items()
         if state["products"].get(code) != sorted(d.get("sha256", "") for d in got)
         or not (out / f"{code}.json").exists()
+        or any(d["url"] in state["errors"] for d in got)
     }
     log(f"{len(wanted)} products with documents, {len(todo)} to parse")
 

@@ -498,7 +498,9 @@ def _tables(p):
                     cells=row,
                 )
             )
-        text_page = text_page.outside_bbox(t.bbox)
+        # a table may run past the page edge (EOF 2786801, 11/2026): not strict, so that
+        # pdfplumber does not refuse an area partly outside the page
+        text_page = text_page.outside_bbox(t.bbox, strict=False)
     return text_page, rows_out
 
 
