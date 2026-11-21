@@ -114,6 +114,7 @@ main { flex: 1; }
   background: var(--accent); color: #fff; cursor: pointer;
 }
 .search button:hover { background: var(--accent-ink); }
+.search button svg { display: none; } /* the word on wide screens, the icon on phones */
 .search-big {
   margin-top: 36px; padding: 6px 6px 6px 18px; border: 1px solid var(--field); border-radius: 16px; box-shadow: var(--shadow);
 }
@@ -325,9 +326,14 @@ a.nm:hover b { text-decoration: underline; }
   .hero { padding-top: 44px; padding-bottom: 28px; }
   .hero h1 { font-size: 32px; }
   .hero .sub { font-size: 16px; }
-  .search-big { margin-top: 24px; padding-left: 14px; }
+  /* the text gets the room: the button is a magnifier square (phones also have the search key on
+     the keyboard), and the magnifier on the left would repeat it */
+  .search-big { margin-top: 24px; padding-left: 14px; gap: 6px; }
+  .search-big > svg { display: none; }
   .search-big input { font-size: 16px; }
-  .search button { padding: 0 14px; }
+  .search-big button { display: inline-grid; place-items: center; width: 44px; height: 44px; padding: 0; }
+  .search-big button svg { display: block; }
+  .search-big button .btn-t { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   .stats strong { font-size: 22px; }
   .stats span { font-size: 13px; }
   .recent { margin-top: 40px; }

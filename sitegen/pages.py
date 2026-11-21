@@ -172,7 +172,7 @@ def search_form(value: str = "", autofocus: bool = True) -> str:
   {ICON_SEARCH.format(s=22)}
   <label class="sr" for="q">Αναζήτηση φαρμάκου</label>
   <input id="q" name="q" type="search" value="{e(value)}" placeholder="Όνομα, δραστική ουσία ή barcode" autocomplete="off" spellcheck="false" enterkeyhint="search"{af}>
-  <button type="submit">Αναζήτηση</button>
+  <button type="submit"><span class="btn-t">Αναζήτηση</span>{ICON_SEARCH.format(s=22)}</button>
   <div class="suggest" hidden></div>
 </form>"""
 
@@ -1466,7 +1466,7 @@ def search_template(ctx: Context) -> str:
   {ICON_SEARCH.format(s=22)}
   <label class="sr" for="q">Αναζήτηση φαρμάκου</label>
   <input id="q" name="q" type="search" value="{{{{QUERY}}}}" placeholder="Όνομα, δραστική ουσία ή barcode" autocomplete="off" spellcheck="false" enterkeyhint="search">
-  <button type="submit">Αναζήτηση</button>
+  <button type="submit"><span class="btn-t">Αναζήτηση</span>{ICON_SEARCH.format(s=22)}</button>
   <div class="suggest" hidden></div>
 </form>
 {{{{RESULTS}}}}
