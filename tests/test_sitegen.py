@@ -71,20 +71,18 @@ def test_package_page_shows_price_and_source(site):
     assert "Ήταν 823,64 € έως 06/11/2026" in html
     assert "14930-symplhrwmatiko" in html  # link to the bulletin that set the price
     assert "δεν αντικαθιστά γιατρό ή φαρμακοποιό" in html
-    assert "όχι ότι το φάρμακο κυκλοφορεί σήμερα" in html  # a price is not proof it is on the market
+    assert 'href="/sxetika/#ti-deixnei"' in html  # a price is not proof it is on the market
     assert 'class="spark"' in html
     assert "<script>" not in html  # CSP: no inline scripts
     about = (out / "sxetika" / "index.html").read_text(encoding="utf-8")
     assert 'id="ti-deixnei"' in about and "όχι τα ράφια των φαρμακείων" in about
-    home = (out / "index.html").read_text(encoding="utf-8")
-    assert 'href="/sxetika/#ti-deixnei"' in home
 
 
 def test_otc_price_is_only_a_recommendation():
     from sitegen import pages
 
     card = pages.price_card({"kind": "otc", "prices": {"retail": 3.1}}, "6%", "")
-    assert "Ενδεικτική τιμή λιανικής" in card and "όχι" in card and "υποχρεωτική" in card
+    assert "Ενδεικτική τιμή λιανικής" in card and "το φαρμακείο ορίζει τη δική του" in card
     assert "φθηνότερα" not in card  # the pharmacy sets its own price, either way
 
 
@@ -299,11 +297,11 @@ def test_shortage_points_to_available_equivalents():
 
     alert = pages.availability_card(ctx, p)
     assert '<a href="#isodynama">3 ισοδύναμα χωρίς ένδειξη έλλειψης ↓</a>' in alert
-    assert "όχι από τα φαρμακεία" in alert  # the lists are not the pharmacy shelves
+    assert "όχι το απόθεμα των φαρμακείων" in alert  # the lists are not the pharmacy shelves
 
     page = pages.shortages_page(ctx)
     assert '<a class="eqn" href="/farmako/100000001/#isodynama">3 ισοδύναμα χωρίς έλλειψη</a>' in page
-    assert "Οι λίστες δεν δείχνουν τι υπάρχει στα φαρμακεία" in page
+    assert "όχι το απόθεμα των φαρμακείων" in page
 
     # the same group seen from a package that is not in shortage: cheapest first, as before
     beta = pages.equivalents_card(ctx, ctx.by_code["100000003"])
