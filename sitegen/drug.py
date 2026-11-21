@@ -185,6 +185,13 @@ def unit_count(name: str) -> int | None:
     return n if n > 1 else None
 
 
+def pack_label(name: str) -> str:
+    """What tells packs apart once a list cuts the name off: '2,5 mg · 56 τεμ.' ('' if neither is known)."""
+    st = strength(name)
+    n = unit_count(name) or pack_count(name)
+    return " · ".join(x for x in ((st[1] if st else ""), (f"{n} τεμ." if n else "")) if x)
+
+
 _LEGAL = {
     "LTD",
     "LIMITED",

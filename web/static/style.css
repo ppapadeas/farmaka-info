@@ -379,9 +379,13 @@ a.nm:hover b { text-decoration: underline; }
 .sort { font-size: 14px; color: var(--muted); display: flex; align-items: center; gap: 8px; }
 .sort select { font: inherit; font-size: 14px; color: var(--ink); background: var(--bg); border: 1px solid var(--field); border-radius: 8px; padding: 4px 8px; }
 .group[hidden], .rows li[hidden] { display: none; }
+.rows .sub { display: none; }
+.mahg .rows .mah, .mahg .rows .sm { display: none; } /* grouped by company: the heading names it */
 @media (max-width: 640px) {
   .rows .kind { display: none; }
   .rows li { flex-wrap: wrap; }
+  /* the name is cut off here: strength, pack size and company on a second line */
+  .rows .sub { display: block; flex-basis: 100%; min-width: 0; margin-top: -10px; font-size: 13px; color: var(--faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 }
 
 /* official texts */

@@ -67,7 +67,7 @@ export function queryTokens(q) {
 // Index: one package per line, tab separated, see sitegen/build.py::write_search_index.
 export const COLUMNS = [
   "eof_code", "barcode", "name", "substances", "mah", "price_retail",
-  "non_reimbursed", "reimbursed", "sk_name", "sk_subst", "sk_mah",
+  "non_reimbursed", "reimbursed", "sk_name", "sk_subst", "sk_mah", "pack",
 ];
 
 export function parseIndex(tsv) {
@@ -87,6 +87,7 @@ export function parseIndex(tsv) {
       sk_name: f[8],
       sk_subst: f[9],
       sk_mah: f[10],
+      pack: f[11] || "", // strength and pack size, e.g. "2,5 mg · 56 τεμ."
       hay: `${f[8]} ${f[9]} ${f[10]} ${f[0]} ${f[1]}`,
     });
   }

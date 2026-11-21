@@ -164,7 +164,8 @@ async function searchPage(url, env) {
       .map((r) => {
         const [brand, rest] = splitName(r.name);
         const tag = r.reimbursed ? ' <span class="tag" title="Στον κατάλογο αποζημίωσης">Α</span>' : "";
-        return `<li><a class="nm" href="/farmako/${esc(r.eof_code)}/"><b>${esc(brand)}</b> <span>${esc(rest)}</span></a>${tag}<span class="mah">${esc(r.substances.join(" + "))}</span><span class="p">${esc(eur(r.price_retail))}</span></li>`;
+        const sub = [r.pack, r.substances.join(" + ")].filter(Boolean).join(" · ");
+        return `<li><a class="nm" href="/farmako/${esc(r.eof_code)}/"><b>${esc(brand)}</b> <span>${esc(rest)}</span></a>${tag}<span class="mah">${esc(r.substances.join(" + "))}</span><span class="p">${esc(eur(r.price_retail))}</span>${sub ? `<span class="sub">${esc(sub)}</span>` : ""}</li>`;
       })
       .join("");
     results = subHtml + (total

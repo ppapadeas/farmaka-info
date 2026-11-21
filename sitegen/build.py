@@ -27,7 +27,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from . import changes, leaflets, pages, trivia
-from .drug import form_group, strength
+from .drug import form_group, pack_label, strength
 from .text import skeleton, slugify
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -368,6 +368,7 @@ def write_search_index(pkgs: list[dict], path: Path, el: dict[str, str] | None =
                     skeleton(p["name"]),
                     skeleton(" ".join(p["substances"] + [el[x] for x in p["substances"] if x in el])),
                     skeleton(p["mah"]),
+                    pack_label(p["name"]),
                 ]
             )
         )

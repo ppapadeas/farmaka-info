@@ -96,7 +96,10 @@ def test_api_shard_and_search_index(site):
     assert [(h["old"], h["new"]) for h in updates] == [(823.64, 547.94)]
     lines = (out / "search-index.tsv").read_text(encoding="utf-8").splitlines()
     assert len([x for x in lines if not x.startswith("#")]) == 8922
-    assert all(len(x.split("\t")) == 11 for x in lines[1:])
+    assert all(len(x.split("\t")) == 12 for x in lines[1:])
+    # the last column tells packs apart when the name is cut off (APINOVIA 2,5 mg: 56 and 60 tablets)
+    packs = {x.split("\t")[0]: x.split("\t")[11] for x in lines[1:]}
+    assert packs["000090201"] == "8 mg · 50 τεμ."
 
 
 def test_greek_substance_names_and_substance_index(site):
@@ -267,6 +270,38 @@ def _ctx(pkgs):
         downloads=[],
         equiv=equivalents(pkgs),
     )
+
+
+def test_pack_label():
+    from sitegen.drug import pack_label
+
+    assert (
+        pack_label("APINOVIA® F.C.TAB 2.5MG/TAB BT X 56 TABS (ΣΕ BLISTERS PCTFE/PVC//ALU)")
+        == "2,5 mg · 56 τεμ."
+    )
+    assert (
+        pack_label("APINOVIA® F.C.TAB 2.5MG/TAB BT X 60 TABS (ΣΕ BLISTERS PCTFE/PVC//ALU)")
+        == "2,5 mg · 60 τεμ."
+    )
+    assert pack_label("HUMIRA INJ.SOL 40MG/0,4 ML BTx1 PF.SYR. + 1") == "40 mg/0,4ml · 1 τεμ."
+    assert pack_label("SOMETHING") == ""
+
+
+def test_substance_rows_tell_packs_apart_and_group_by_company():
+    from sitegen import pages
+
+    a = _pkg("500000001", "APINOVIA", 42.17, n=56)
+    b = _pkg("500000002", "APINOVIA", 45.17, n=60)
+    others = [_pkg(f"50000001{i}", "OTHER", 40.0 + i, n=56) for i in range(4)]  # enough rows for the filters
+    ctx = _ctx([a, b, *others])
+    page = pages.substance(ctx, next(iter(ctx.subst.values())))
+    # on phones the name is cut before the pack size: a second line carries it, with the company
+    assert '<span class="sub">20 mg · 56 τεμ.<span class="sm"> · Apinovia</span></span>' in page
+    assert '<span class="sub">20 mg · 60 τεμ.<span class="sm"> · Apinovia</span></span>' in page
+    assert 'data-mah="Apinovia"' in page and 'data-mah="Other"' in page
+    assert '<select data-group><option value="strength">Περιεκτικότητα</option>' in page
+    # one company only: nothing to group
+    assert "data-group" not in pages.substance(_ctx([a, b]), next(iter(_ctx([a, b]).subst.values())))
 
 
 def test_shortage_points_to_available_equivalents():

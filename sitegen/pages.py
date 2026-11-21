@@ -20,6 +20,7 @@ from .drug import (
     form_kind,
     inn_label,
     pack_count,
+    pack_label,
     short_mah,
     split_name,
     strength,
@@ -961,11 +962,19 @@ def _row(p: dict) -> str:
     if p.get("kind") == "otc":
         tag = ' <span class="tag otc" title="Μη συνταγογραφούμενο, ενδεικτική τιμή">ΜΗΣΥΦΑ</span>'
     tag += avail_tag(p)
+    mah = short_mah(p["mah"])
+    # phones cut the name off and hide the columns: a second line says what tells packs apart;
+    # the company part hides when the list is grouped by company
+    pack = e(pack_label(p["name"]))
+    sub = f'{pack}<span class="sm">{" · " if pack else ""}{e(mah)}</span>' if mah else pack
     return (
-        f'<li data-form="{fam}" data-price="{p["prices"]["retail"]:.2f}" data-name="{e(p["name"])}">'
+        f'<li data-form="{fam}" data-price="{p["prices"]["retail"]:.2f}" data-name="{e(p["name"])}" '
+        f'data-mah="{e(mah)}">'
         f'<a class="nm" href="/farmako/{e(p["eof_code"])}/">{name_html(p["name"])}</a>{tag}'
         f'<span class="kind">{e(label)}</span>'
-        f'<span class="mah">{e(short_mah(p["mah"]))}</span><span class="p">{eur(p["prices"]["retail"])}</span></li>'
+        f'<span class="mah">{e(mah)}</span><span class="p">{eur(p["prices"]["retail"])}</span>'
+        + (f'<span class="sub">{sub}</span>' if sub else "")
+        + "</li>"
     )
 
 
@@ -986,8 +995,15 @@ def _filters(rows: list[dict]) -> str:
                 f'<button type="button" class="fchip" data-form="{f}" aria-pressed="false">{e(FORM_FAMILIES[f])} <span>{fams[f]}</span></button>'
             )
     chips_html = "".join(chips) if len(fams) > 1 else ""
+    group = (
+        '<label class="sort">Ομάδες <select data-group><option value="strength">Περιεκτικότητα</option>'
+        '<option value="mah">Εταιρεία</option></select></label>'
+        if len({short_mah(p["mah"]) for p in rows}) > 1
+        else ""
+    )
     return f"""<div class="filters" hidden>
   <div class="fchips" role="group" aria-label="Μορφή">{chips_html}</div>
+  {group}
   <label class="sort">Ταξινόμηση <select data-sort><option value="price">Τιμή</option><option value="name">Όνομα</option></select></label>
 </div>"""
 

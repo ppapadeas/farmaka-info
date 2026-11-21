@@ -140,7 +140,8 @@ function setup(form) {
             "span",
             { class: "t" },
             el("span", { class: "nm" }, el("b", {}, brand), " ", el("span", {}, rest)),
-            el("span", { class: "sub" }, r.substances.join(" + ")),
+            // the name is often cut off: strength and pack size first tell packs apart
+            el("span", { class: "sub" }, [r.pack, r.substances.join(" + ")].filter(Boolean).join(" · ")),
           ),
           el("span", { class: "pr" }, eur(r.price_retail)),
         ),
@@ -192,21 +193,51 @@ function setup(form) {
   });
 }
 
-// Substance pages: filter by dose form, sort by price or name.
+// Packages of one substance by company: the same rows, regrouped under each
+// company's name (A–Ω), in the order they had (strength, then price).
+function companyGroups(groups) {
+  const by = new Map();
+  for (const li of groups.flatMap((g) => [...g.querySelectorAll("li[data-form]")])) {
+    const k = li.dataset.mah || "—";
+    if (!by.has(k)) by.set(k, []);
+    by.get(k).push(li.cloneNode(true));
+  }
+  return [...by.keys()]
+    .sort((a, b) => a.localeCompare(b, "el"))
+    .map((k) =>
+      el(
+        "section",
+        { class: "group mahg", hidden: "" },
+        el("h2", {}, k, " ", el("span", {}, String(by.get(k).length))),
+        el("ul", { class: "rows" }, ...by.get(k)),
+      ),
+    );
+}
+
+// Substance pages: filter by dose form, group by strength or company, sort by price or name.
 function setupFilters(box) {
-  const groups = [...document.querySelectorAll(".group")];
+  const byStrength = [...document.querySelectorAll(".group")];
   const chips = [...box.querySelectorAll(".fchip")];
   const sort = box.querySelector("select[data-sort]");
+  const grouping = box.querySelector("select[data-group]");
+  let byCompany = null;
   let form = "all";
   const apply = () => {
-    for (const g of groups) {
-      const items = [...g.querySelectorAll("li[data-form]")];
-      let shown = 0;
-      for (const li of items) {
-        li.hidden = form !== "all" && li.dataset.form !== form;
-        if (!li.hidden) shown++;
+    const company = grouping?.value === "mah";
+    if (company && !byCompany) {
+      byCompany = companyGroups(byStrength);
+      byStrength.at(-1).after(...byCompany);
+      if (sort && sort.value !== "price") order();
+    }
+    for (const [groups, on] of [[byStrength, !company], [byCompany || [], company]]) {
+      for (const g of groups) {
+        let shown = 0;
+        for (const li of g.querySelectorAll("li[data-form]")) {
+          li.hidden = form !== "all" && li.dataset.form !== form;
+          if (!li.hidden) shown++;
+        }
+        g.hidden = !on || shown === 0;
       }
-      g.hidden = shown === 0;
     }
   };
   const order = () => {
@@ -229,6 +260,7 @@ function setupFilters(box) {
     }),
   );
   sort?.addEventListener("change", order);
+  grouping?.addEventListener("change", apply);
   box.hidden = false;
 }
 

@@ -37,6 +37,16 @@ test("search ranks name prefix first", () => {
   assert.equal(search(rows, "panadol").results[0].eof_code, "2");
 });
 
+test("index carries strength and pack size, empty in older rows", () => {
+  const f = ["1", "", "APINOVIA F.C.TAB 2.5MG/TAB BT X 56 TABS", "APIXABAN", "A", "42.17", "0", "1"];
+  const sk = [skeleton(f[2]), skeleton(f[3]), skeleton(f[4])];
+  const [withPack, without] = parseIndex(
+    [[...f, ...sk, "2,5 mg · 56 τεμ."].join("\t"), [...f, ...sk].join("\t")].join("\n"),
+  );
+  assert.equal(withPack.pack, "2,5 mg · 56 τεμ.");
+  assert.equal(without.pack, "");
+});
+
 test("worker shard function matches Python (tests/test_sitegen.py)", async () => {
   const { shardOf } = await import("../worker.js");
   assert.equal(shardOf("312080101"), "5e");
