@@ -122,3 +122,29 @@ def test_parse_all_then_the_package_page(tmp_path):
     assert 'id="pxp"' in body and 'href="#fp-s4.1"' in body and 'href="#pxp"' in body
     ids = set(re.findall(r'id="([^"]+)"', body))
     assert set(re.findall(r'href="#([^"]+)"', body)) <= ids
+
+
+def test_errors_are_listed_in_the_log(tmp_path):
+    # a file that is not a PDF: reported with its product, type and link, the run goes on
+    root, out = _root(tmp_path), tmp_path / "eof_pi"
+    (root / "pdf" / "eof_PL_1700000_1.pdf").write_bytes(b"not a pdf")
+    manifest = json.loads((root / "manifest.json").read_text(encoding="utf-8"))
+    url = "https://services.eof.gr/human-search/download?id=1700000&type=pil"
+    manifest["documents"][url] = {
+        "path": "pdf/eof_PL_1700000_1.pdf",
+        "format": "pdf",
+        "type": "pil",
+        "sha256": "x",
+    }
+    manifest["products"]["1700000"] = {
+        "state": "done",
+        "name": "X",
+        "eof_codes": ["170000001"],
+        "documents": [{"type": "pil", "url": url}],
+    }
+    (root / "manifest.json").write_text(json.dumps(manifest, ensure_ascii=False), encoding="utf-8")
+    logs = []
+    rep = eof_pi.parse_all(root, out, jobs=1, log=logs.append)
+    assert rep["products"] == 2 and rep["errors"] == 1
+    (line,) = [x for x in logs if "error:" in x]
+    assert line.startswith("  error: 1700000 pil: ") and line.endswith(f"<{url}>")

@@ -34,6 +34,7 @@ from ingest import ema_pi as E
 
 SCHEMA_VERSION = 1
 PARSER_VERSION = 3  # bump to parse every document again
+LOGGED_ERRORS = 50  # errors printed one by one; all of them are in report.json
 PUBLISHER = "Εθνικός Οργανισμός Φαρμάκων (ΕΟΦ)"
 SHORT = "ΕΟΦ"
 ATTRIBUTION = "Πηγή: Εθνικός Οργανισμός Φαρμάκων (ΕΟΦ), αναζήτηση φαρμάκων ανθρώπινης χρήσης."
@@ -329,6 +330,13 @@ def parse_all(root: Path, out: Path, jobs: int = 1, log=print) -> dict:
     }
     (out / "report.json").write_text(json.dumps(report, ensure_ascii=False, indent=1), encoding="utf-8")
     log(f"{report['products']} products in sections; layouts {report['layouts']}; {report['errors']} errors")
+    # each error on its own line, with the document, so it can be found from the job log
+    errs = sorted(state["errors"].items(), key=lambda kv: kv[1])
+    for url, msg in errs[:LOGGED_ERRORS]:
+        msg = " ".join(msg.split())
+        log(f"  error: {msg[:300]}{'…' if len(msg) > 300 else ''} <{url}>")
+    if len(errs) > LOGGED_ERRORS:
+        log(f"  … {len(errs) - LOGGED_ERRORS} more in report.json")
     return report
 
 
