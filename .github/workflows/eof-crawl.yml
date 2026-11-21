@@ -62,7 +62,14 @@ jobs:
         id: crawl
         run: |
           set +e
-          python -m ingest.eof crawl --packages data/current/packages.csv data/current/otc_packages.csv --out data/eof --max-minutes 300 ${{ (github.event_name == 'workflow_dispatch' && inputs.any_time) && '--any-time' || '' }}
+          # A new parser version parses every document again (about 50 minutes): crawl
+          # less, so that crawl and parse fit in the job's time limit.
+          mins=300
+          if [ -f data/eof/pi/_state.json ] && python -c "import json, sys; from ingest.eof_pi import PARSER_VERSION as v; sys.exit(json.load(open('data/eof/pi/_state.json')).get('parser') == v)"; then
+            mins=230
+            echo "New parser version: every document is parsed again after the crawl, which runs $mins minutes."
+          fi
+          python -m ingest.eof crawl --packages data/current/packages.csv data/current/otc_packages.csv --out data/eof --max-minutes $mins ${{ (github.event_name == 'workflow_dispatch' && inputs.any_time) && '--any-time' || '' }}
           code=$?
           if [ $code -eq 2 ]; then echo "Outside the 00:00-07:00 Athens window or stopped by data/eof/STOP: nothing to do."; exit 0; fi
           if [ $code -eq 5 ]; then

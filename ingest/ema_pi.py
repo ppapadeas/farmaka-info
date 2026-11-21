@@ -301,6 +301,9 @@ def read_pdf(path: Path, pages: Iterable[int] | None = None) -> list[Page]:
         for p in pdf.pages:
             if wanted is not None and p.page_number not in wanted:
                 continue
+            # "fake bold": some files draw bold text twice, a fraction of a point apart;
+            # read as is, "ALGOFREN" becomes "AALLGGOOFFRREENN" (pdfium counts it once)
+            p = p.dedupe_chars()
             text_page, table_lines = _tables(p)
             raw = text_page.extract_text_lines(
                 return_chars=True, x_tolerance_ratio=WORD_GAP, y_tolerance=LINE_GAP

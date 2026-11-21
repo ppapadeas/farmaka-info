@@ -39,10 +39,15 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if [ -z "$(ls -A data/current/ema_pi 2>/dev/null)" ]; then
+          # the release is downloaded again when it is newer than the copy in the cache
+          want=$(gh release view data-ema-pi --json assets --jq '.assets[] | select(.name == "ema_pi.tar.gz") | .updatedAt')
+          have=$(cat data/current/ema_pi_release.txt 2>/dev/null || true)
+          if [ -z "$(ls -A data/current/ema_pi 2>/dev/null)" ] || [ "$want" != "$have" ]; then
+            rm -rf data/current/ema_pi
             mkdir -p data/current
             gh release download data-ema-pi --pattern ema_pi.tar.gz --dir "$RUNNER_TEMP" --clobber
             tar xzf "$RUNNER_TEMP/ema_pi.tar.gz" -C data/current
+            echo "$want" > data/current/ema_pi_release.txt
           fi
           ls data/current/ema_pi | wc -l
       - name: Restore EOF document links (from the nightly crawl)

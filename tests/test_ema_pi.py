@@ -690,3 +690,40 @@ def test_parse_all_writes_one_json_per_product_and_a_report(tmp_path, monkeypatc
     assert failed["product_number"] == "EMEA/H/C/000072" and "Annex III B divider" in failed["reason"]
     on_disk = json.loads((tmp_path / "current" / "ema_pi_report.json").read_text(encoding="utf-8"))
     assert on_disk["summary"] == report["summary"]
+
+
+def fake_bold_pdf(path: Path, lines: list[tuple[str, bool]]) -> None:
+    """A one-page PDF (Helvetica) whose bold lines are drawn twice, 0.3 pt apart, the way
+    some word processors fake bold type."""
+    ops, y = [], 760
+    for text, bold in lines:
+        for dx in (0, 0.3) if bold else (0,):
+            ops.append(f"BT /F1 12 Tf {72 + dx} {y} Td ({text}) Tj ET")
+        y -= 20
+    stream = "\n".join(ops).encode()
+    objs = [
+        b"<< /Type /Catalog /Pages 2 0 R >>",
+        b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+        b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 4 0 R >> >> "
+        b"/Contents 5 0 R >>",
+        b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+        b"<< /Length %d >>\nstream\n" % len(stream) + stream + b"\nendstream",
+    ]
+    out, offsets = bytearray(b"%PDF-1.4\n"), []
+    for i, o in enumerate(objs, 1):
+        offsets.append(len(out))
+        out += b"%d 0 obj\n" % i + o + b"\nendobj\n"
+    xref = len(out)
+    out += b"xref\n0 %d\n0000000000 65535 f \n" % (len(objs) + 1)
+    out += b"".join(b"%010d 00000 n \n" % o for o in offsets)
+    out += b"trailer\n<< /Size %d /Root 1 0 R >>\nstartxref\n%d\n%%%%EOF\n" % (len(objs) + 1, xref)
+    path.write_bytes(bytes(out))
+
+
+def test_fake_bold_is_read_once(tmp_path):
+    # EOF leaflet of ALGOFREN (11/2026): the bold name came out as "AALLGGOOFFRREENN"
+    pdf = tmp_path / "fake-bold.pdf"
+    fake_bold_pdf(pdf, [("ALGOFREN 600 mg", True), ("plain text", False)])
+    (page,) = ema_pi.read_pdf(pdf)
+    assert [ln.text for ln in page.lines] == ["ALGOFREN 600 mg", "plain text"]
+    assert page.chars_read == page.chars_pdfium == 22  # nothing lost, nothing counted twice
