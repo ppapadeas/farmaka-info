@@ -33,6 +33,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 355
     steps:
+      - run: echo "JOB_START=$(date +%s)" >> "$GITHUB_ENV"
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
@@ -63,7 +64,8 @@ jobs:
         run: |
           set +e
           # A new parser version parses every document again (about 50 minutes): crawl
-          # less, so that crawl and parse fit in the job's time limit.
+          # less, so that crawl and parse fit in the job's time limit. What does not fit
+          # waits for the next run (the parse stops by itself, see below).
           mins=300
           if [ -f data/eof/pi/_state.json ] && python -c "import json, sys; from ingest.eof_pi import PARSER_VERSION as v; sys.exit(json.load(open('data/eof/pi/_state.json')).get('parser') == v)"; then
             mins=230
@@ -97,7 +99,10 @@ jobs:
         continue-on-error: true
         run: |
           if [ -f data/eof/manifest.json ]; then
-            python -m ingest.eof_pi parse --root data/eof --out data/eof/pi --jobs 4
+            # stop 20 minutes before the job's limit, so that the save steps below run
+            # (21/11/2026 a parse cut off by the limit lost the whole run)
+            mins=$(( 335 - ($(date +%s) - JOB_START) / 60 ))
+            python -m ingest.eof_pi parse --root data/eof --out data/eof/pi --jobs 4 --max-minutes $(( mins > 5 ? mins : 5 ))
             rm -rf data/eof-links/eof_pi && cp -r data/eof/pi data/eof-links/eof_pi
           fi
       - name: Save EOF documents

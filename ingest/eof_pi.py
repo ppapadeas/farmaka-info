@@ -26,6 +26,7 @@ import re
 import shutil
 import subprocess
 import sys
+import time
 from concurrent.futures import ProcessPoolExecutor
 from datetime import UTC, datetime
 from pathlib import Path
@@ -34,6 +35,7 @@ from ingest import ema_pi as E
 
 SCHEMA_VERSION = 1
 PARSER_VERSION = 4  # bump to parse every document again (4: fake bold read once)
+BATCH = 200  # products parsed and saved together
 LOGGED_ERRORS = 50  # errors printed one by one; all of them are in report.json
 PUBLISHER = "Εθνικός Οργανισμός Φαρμάκων (ΕΟΦ)"
 SHORT = "ΕΟΦ"
@@ -249,8 +251,51 @@ def _job(args: tuple[str, str, str]) -> tuple[str, dict | None, str]:
         return key, None, f"{type(e).__name__}: {e}"
 
 
-def parse_all(root: Path, out: Path, jobs: int = 1, log=print) -> dict:
-    """Parse the documents of every product done in root/manifest.json; only what changed."""
+def _parse_batch(root: Path, out: Path, manifest: dict, todo: dict, state: dict, pool) -> None:
+    """Parse these products' documents, write their JSON and update the state in place."""
+    to_convert = [root / d["path"] for got in todo.values() for d in got if d.get("format") in CONVERT]
+    pdfs = convert(to_convert, root / "converted") if to_convert else {}
+    jobs_in: list[tuple[str, str, str]] = []
+    errors: dict[str, str] = {}
+    for code, got in todo.items():
+        for d in got:
+            src = root / d["path"]
+            path = src if d.get("format", "pdf") == "pdf" else pdfs.get(src)
+            if path is None:
+                errors[d["url"]] = f"{code}: {d.get('format')} file LibreOffice could not convert"
+                continue
+            jobs_in.append((d["url"], str(path), d["type"]))
+    results: dict[str, dict] = {}
+    for url, res, err in pool.map(_job, jobs_in) if pool else map(_job, jobs_in):
+        if res is None:
+            errors[url] = err
+        else:
+            results[url] = res
+
+    for code, got in todo.items():
+        parsed: dict[str, list[tuple[dict, dict]]] = {}
+        for d in sorted(got, key=lambda d: (d["type"], d.get("version", ""))):
+            if d["url"] in results:
+                parsed.setdefault(d["type"], []).append((d, results[d["url"]]))
+        for d in got:
+            state["errors"].pop(d["url"], None)
+            if d["url"] in errors:
+                state["errors"][d["url"]] = f"{code} {d['type']}: {errors[d['url']]}"
+        if parsed:
+            prod = manifest["products"][code]
+            (out / f"{code}.json").write_text(
+                json.dumps(product_json(code, prod, parsed), ensure_ascii=False, indent=1), encoding="utf-8"
+            )
+        state["products"][code] = sorted(d.get("sha256", "") for d in got)
+
+
+def parse_all(
+    root: Path, out: Path, jobs: int = 1, log=print, max_minutes: float | None = None, batch: int = BATCH
+) -> dict:
+    """Parse the documents of every product done in root/manifest.json; only what changed.
+    Works in batches of products and saves after each one; with max_minutes it starts no
+    new batch after that time (at least one batch runs) and leaves the rest for the next run."""
+    deadline = time.monotonic() + 60 * max_minutes if max_minutes is not None else None
     manifest = json.loads((root / "manifest.json").read_text(encoding="utf-8"))
     docs_by_url: dict[str, dict] = manifest.get("documents", {})
     out.mkdir(parents=True, exist_ok=True)
@@ -281,42 +326,21 @@ def parse_all(root: Path, out: Path, jobs: int = 1, log=print) -> dict:
     }
     log(f"{len(wanted)} products with documents, {len(todo)} to parse")
 
-    to_convert = [root / d["path"] for got in todo.values() for d in got if d.get("format") in CONVERT]
-    pdfs = convert(to_convert, root / "converted") if to_convert else {}
-    jobs_in: list[tuple[str, str, str]] = []
-    errors: dict[str, str] = {}
-    for code, got in todo.items():
-        for d in got:
-            src = root / d["path"]
-            path = src if d.get("format", "pdf") == "pdf" else pdfs.get(src)
-            if path is None:
-                errors[d["url"]] = f"{code}: {d.get('format')} file LibreOffice could not convert"
-                continue
-            jobs_in.append((d["url"], str(path), d["type"]))
-    results: dict[str, dict] = {}
-    run = ProcessPoolExecutor(max_workers=jobs).map if jobs > 1 else map
-    for url, res, err in run(_job, jobs_in):
-        if res is None:
-            errors[url] = err
-        else:
-            results[url] = res
-
-    for code, got in todo.items():
-        parsed: dict[str, list[tuple[dict, dict]]] = {}
-        for d in sorted(got, key=lambda d: (d["type"], d.get("version", ""))):
-            if d["url"] in results:
-                parsed.setdefault(d["type"], []).append((d, results[d["url"]]))
-        for d in got:
-            state["errors"].pop(d["url"], None)
-            if d["url"] in errors:
-                state["errors"][d["url"]] = f"{code} {d['type']}: {errors[d['url']]}"
-        if parsed:
-            prod = manifest["products"][code]
-            (out / f"{code}.json").write_text(
-                json.dumps(product_json(code, prod, parsed), ensure_ascii=False, indent=1), encoding="utf-8"
-            )
-        state["products"][code] = sorted(d.get("sha256", "") for d in got)
-    state_path.write_text(json.dumps(state, ensure_ascii=False, indent=1), encoding="utf-8")
+    codes = list(todo)
+    pool = ProcessPoolExecutor(max_workers=jobs) if jobs > 1 else None
+    done = 0
+    try:
+        while done < len(codes) and (done == 0 or deadline is None or time.monotonic() < deadline):
+            part = {code: todo[code] for code in codes[done : done + batch]}
+            _parse_batch(root, out, manifest, part, state, pool)
+            state_path.write_text(json.dumps(state, ensure_ascii=False, indent=1), encoding="utf-8")
+            done += len(part)
+    finally:
+        if pool:
+            pool.shutdown()
+    left = len(codes) - done
+    if left:
+        log(f"time is up: {done} parsed, {left} left for the next run")
 
     layouts: dict[str, int] = {}
     for f in out.glob("[0-9]*.json"):
@@ -329,6 +353,7 @@ def parse_all(root: Path, out: Path, jobs: int = 1, log=print) -> dict:
         "products": len(list(out.glob("[0-9]*.json"))),
         "layouts": dict(sorted(layouts.items())),
         "errors": len(state["errors"]),
+        "left": left,
         "error_list": sorted(state["errors"].values()),
     }
     (out / "report.json").write_text(json.dumps(report, ensure_ascii=False, indent=1), encoding="utf-8")
@@ -350,6 +375,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--root", type=Path, default=Path("data/eof"))
     p.add_argument("--out", type=Path, default=Path("data/eof-links/eof_pi"))
     p.add_argument("--jobs", type=int, default=os.cpu_count() or 1)
+    p.add_argument("--max-minutes", type=float, help="start no new batch after this many minutes")
     args = ap.parse_args(argv)
     if not (args.root / "manifest.json").exists():
         print(f"no {args.root / 'manifest.json'}: nothing to parse")
@@ -359,7 +385,7 @@ def main(argv: list[str] | None = None) -> int:
     except ImportError:
         print('pdfplumber is not installed: pip install -e ".[pdf]"')
         return 1
-    parse_all(args.root, args.out, args.jobs)
+    parse_all(args.root, args.out, args.jobs, max_minutes=args.max_minutes)
     return 0
 
 

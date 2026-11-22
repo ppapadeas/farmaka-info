@@ -124,6 +124,19 @@ def test_parse_all_then_the_package_page(tmp_path):
     assert set(re.findall(r'href="#([^"]+)"', body)) <= ids
 
 
+def test_time_limit_keeps_what_was_parsed(tmp_path):
+    # a full parse that ran out of the job's time lost everything (21/11/2026): batches are
+    # saved one by one, and after the time limit the rest waits for the next run
+    root, out = _root(tmp_path), tmp_path / "eof_pi"
+    logs = []
+    rep = eof_pi.parse_all(root, out, jobs=1, log=logs.append, max_minutes=0, batch=1)
+    assert rep["products"] == 1 and rep["left"] == 1
+    assert any("1 parsed, 1 left for the next run" in x for x in logs)
+    logs.clear()
+    rep = eof_pi.parse_all(root, out, jobs=1, log=logs.append)
+    assert "1 to parse" in logs[0] and rep["products"] == 2 and rep["left"] == 0
+
+
 def test_errors_are_listed_in_the_log(tmp_path):
     # a file that is not a PDF: reported with its product, type and link, the run goes on
     root, out = _root(tmp_path), tmp_path / "eof_pi"
