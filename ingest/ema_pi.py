@@ -47,6 +47,7 @@ from collections.abc import Iterable
 from concurrent.futures import ProcessPoolExecutor
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
+from itertools import groupby
 from pathlib import Path
 
 import requests
@@ -236,7 +237,7 @@ class Page:
     width: float
     height: float
     lines: list[Line]
-    chars_read: int = 0  # visible characters pdfplumber read on the page
+    chars_read: int = 0  # visible characters pdfplumber read on the page, doubles included
     chars_pdfium: int | None = None  # the same as pdfium reads them (None: not checked)
 
 
@@ -301,9 +302,13 @@ def read_pdf(path: Path, pages: Iterable[int] | None = None) -> list[Page]:
         for p in pdf.pages:
             if wanted is not None and p.page_number not in wanted:
                 continue
+            # the check against pdfium counts what pdfminer decoded, doubles included:
+            # pdfium drops some doubles (fake bold) and not others (the repeated labels
+            # of a figure in the Alimta SmPC), and only a shortfall matters
+            chars_read = sum(_glyphs(c["text"]) for c in p.chars)
             # "fake bold": some files draw bold text twice, a fraction of a point apart;
-            # read as is, "ALGOFREN" becomes "AALLGGOOFFRREENN" (pdfium counts it once)
-            p = p.dedupe_chars()
+            # read as is, "ALGOFREN" becomes "AALLGGOOFFRREENN"
+            p = _without_doubles(p)
             text_page, table_lines = _tables(p)
             raw = text_page.extract_text_lines(
                 return_chars=True, x_tolerance_ratio=WORD_GAP, y_tolerance=LINE_GAP
@@ -312,10 +317,33 @@ def read_pdf(path: Path, pages: Iterable[int] | None = None) -> list[Page]:
             lines.extend(table_lines)
             lines.sort(key=lambda ln: (round(ln.top, 1), ln.x0))
             pg = Page(p.page_number, float(p.width), float(p.height), lines)
-            pg.chars_read = sum(_glyphs(c["text"]) for c in p.chars)
+            pg.chars_read = chars_read
             pg.chars_pdfium = expected[p.page_number - 1] if p.page_number <= len(expected) else None
             out.append(pg)
     return out
+
+
+def _without_doubles(page, tolerance: float = 1):
+    """The page without characters drawn twice in one place (same text, font and size, up
+    to `tolerance` pt apart). The same as pdfplumber's dedupe_chars, which puts its result
+    back in order with list.index for every character: 3-4 times the time to read a page."""
+    from pdfplumber.utils import cluster_objects
+
+    chars = page.chars
+
+    def same(i: int) -> tuple:
+        c = chars[i]
+        return (c["upright"], c["text"], c["fontname"], c["size"])
+
+    keep: set[int] = set()
+    for _, group in groupby(sorted(range(len(chars)), key=same), key=same):
+        for row in cluster_objects(list(group), lambda i: chars[i]["doctop"], tolerance):
+            for spot in cluster_objects(row, lambda i: chars[i]["x0"], tolerance):
+                keep.add(min(spot, key=lambda i: (chars[i]["doctop"], chars[i]["x0"], i)))
+    if len(keep) == len(chars):
+        return page
+    kept = {id(chars[i]) for i in keep}
+    return page.filter(lambda o: o.get("object_type") != "char" or id(o) in kept)
 
 
 def _glyphs(text: str) -> int:

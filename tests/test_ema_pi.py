@@ -730,7 +730,20 @@ def test_fake_bold_is_read_once(tmp_path):
     fake_bold_pdf(pdf, [("ALGOFREN 600 mg", True), ("plain text", False)])
     (page,) = ema_pi.read_pdf(pdf)
     assert [ln.text for ln in page.lines] == ["ALGOFREN 600 mg", "plain text"]
-    assert page.chars_read == page.chars_pdfium == 22  # nothing lost, nothing counted twice
+    # the check counts what pdfminer decoded, doubles included; pdfium drops these
+    assert (page.chars_read, page.chars_pdfium) == (35, 22)
+
+
+def test_doubles_that_pdfium_counts_twice_are_not_missing(tmp_path, monkeypatch):
+    # EMA SmPC of Alimta (11/2026): a figure repeats its labels in the same spot; pdfium
+    # counts them twice, the text keeps them once, and the file must not fail as
+    # "characters missing from the PDF text layer"
+    pdf = tmp_path / "figure.pdf"
+    fake_bold_pdf(pdf, [("Survival Time", True)])
+    monkeypatch.setattr(ema_pi, "_pdfium_counts", lambda path: [24])
+    (page,) = ema_pi.read_pdf(pdf)
+    assert [ln.text for ln in page.lines] == ["Survival Time"]
+    assert page.chars_read >= page.chars_pdfium
 
 
 def test_table_past_the_page_edge(tmp_path):
