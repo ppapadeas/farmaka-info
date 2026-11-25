@@ -1,0 +1,33 @@
+# Read only: how the characters of one product's EOF documents are drawn, from the
+# copies the crawl keeps in the Actions cache. No request goes to EOF, nothing is saved.
+# For working out a parse fault (e.g. doubled letters) on a file we do not have locally.
+name: eof-inspect
+on:
+  workflow_dispatch:
+    inputs:
+      product:
+        description: "EOF product code: the first 7 digits of the package code (e.g. 2076706)"
+        required: true
+        type: string
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install -e ".[pdf]"
+      - name: Restore EOF documents (the newest copy)
+        uses: actions/cache/restore@v4
+        with:
+          path: data/eof
+          key: eof-docs-none
+          restore-keys: eof-docs-
+      - name: Inspect
+        env:
+          PRODUCT: ${{ inputs.product }}
+        run: python -m ingest.eof_pi inspect --root data/eof --product "$PRODUCT"

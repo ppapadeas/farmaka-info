@@ -124,6 +124,18 @@ def test_parse_all_then_the_package_page(tmp_path):
     assert set(re.findall(r'href="#([^"]+)"', body)) <= ids
 
 
+def test_inspect_reads_the_cached_documents(tmp_path):
+    root = _root(tmp_path)
+    logs = []
+    eof_pi.inspect(root, "1898004", log=logs.append)
+    assert logs[0].startswith("1898004 ΥΔΩΡ ΓΙΑ ΕΝΕΣΙΜΑ")
+    assert [x.split()[1] for x in logs if x.startswith("== ")] == ["pil", "smpc"]
+    assert sum("lines still doubled after reading: 0" in x for x in logs) == 2
+    logs.clear()
+    eof_pi.inspect(root, "9999999", log=logs.append)
+    assert logs == [f"9999999: not in {root / 'manifest.json'}"]
+
+
 def test_time_limit_keeps_what_was_parsed(tmp_path):
     # a full parse that ran out of the job's time lost everything (21/11/2026): batches are
     # saved one by one, and after the time limit the rest waits for the next run

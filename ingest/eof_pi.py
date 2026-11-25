@@ -368,6 +368,83 @@ def parse_all(
     return report
 
 
+_DOUBLED = re.compile(r"\b(?:([^\W\d_])\1){4,}\b")  # AALLGGOOFFRREENN
+
+
+def inspect(root: Path, code: str, log=print, examples: int = 12) -> None:
+    """How the characters of one product's downloaded documents are drawn, read only: pairs
+    of the same character up to 3 pt apart (fake bold, shadows), grouped by offset, font,
+    size and colour, and the lines that still read doubled. For working out a parse fault
+    from the cached files without asking EOF for them again."""
+    import pdfplumber
+
+    manifest = json.loads((root / "manifest.json").read_text(encoding="utf-8"))
+    prod = manifest.get("products", {}).get(code)
+    if not prod:
+        log(f"{code}: not in {root / 'manifest.json'}")
+        return
+    log(f"{code} {prod.get('name')}")
+    for ref in prod.get("documents", []):
+        doc = manifest.get("documents", {}).get(ref["url"])
+        if not doc:
+            log(f"== {ref['type']}: not downloaded")
+            continue
+        src = root / doc["path"]
+        fmt = doc.get("format", "pdf")
+        path = src if fmt == "pdf" else root / "converted" / f"{src.stem}.pdf"
+        log(f"== {ref['type']} {fmt} {doc['path']}{'' if fmt == 'pdf' else f' (as {path.name})'}")
+        if not path.exists():
+            log("   no PDF on disk")
+            continue
+        groups: dict[tuple, int] = {}
+        shown = 0
+        with pdfplumber.open(path) as pdf:
+            meta = pdf.metadata or {}
+            log(
+                f"   {len(pdf.pages)} pages; producer {meta.get('Producer')!r}; creator {meta.get('Creator')!r}"
+            )
+            for page in pdf.pages:
+                chars = [c for c in page.chars if c["text"].strip()]
+                by_text: dict[str, list[dict]] = {}
+                for c in chars:
+                    by_text.setdefault(c["text"], []).append(c)
+                for same in by_text.values():
+                    same.sort(key=lambda c: c["top"])
+                    for i, a in enumerate(same):
+                        for b in same[i + 1 :]:
+                            dy = b["top"] - a["top"]
+                            if dy > 3:
+                                break
+                            dx = b["x0"] - a["x0"]
+                            if abs(dx) > 3:
+                                continue
+                            key = (
+                                round(abs(dx), 1),
+                                round(dy, 1),
+                                a["fontname"] == b["fontname"],
+                                round(b["size"] - a["size"], 3),
+                                a.get("non_stroking_color") == b.get("non_stroking_color"),
+                            )
+                            groups[key] = groups.get(key, 0) + 1
+                            if shown < examples and abs(dx) < 1.5:
+                                shown += 1
+                                log(
+                                    f"   p{page.page_number} {a['text']!r}: dx {dx:+.2f} dy {dy:+.2f} | "
+                                    f"{a['fontname']} {a['size']:.3f} {a.get('non_stroking_color')} | "
+                                    f"{b['fontname']} {b['size']:.3f} {b.get('non_stroking_color')}"
+                                )
+        log("   pairs by (|dx|, dy, same font, size difference, same colour), most first:")
+        for key, n in sorted(groups.items(), key=lambda kv: -kv[1])[:15]:
+            log(f"   {n:6d}  {key}")
+        try:
+            lines = [ln.text for pg in E.read_pdf(path) for ln in pg.lines if _DOUBLED.search(ln.text)]
+        except Exception as e:  # a broken file: say so, the rest is still useful
+            lines = [f"cannot read: {type(e).__name__}: {e}"]
+        log(f"   lines still doubled after reading: {len(lines)}")
+        for ln in lines[:5]:
+            log(f"     {ln[:150]}")
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="EOF SmPC and package leaflets in sections.")
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -376,6 +453,11 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--out", type=Path, default=Path("data/eof-links/eof_pi"))
     p.add_argument("--jobs", type=int, default=os.cpu_count() or 1)
     p.add_argument("--max-minutes", type=float, help="start no new batch after this many minutes")
+    i = sub.add_parser("inspect", help="how one product's documents draw their characters (read only)")
+    i.add_argument("--root", type=Path, default=Path("data/eof"))
+    i.add_argument(
+        "--product", required=True, help="EOF product code: the first 7 digits of the package code"
+    )
     args = ap.parse_args(argv)
     if not (args.root / "manifest.json").exists():
         print(f"no {args.root / 'manifest.json'}: nothing to parse")
@@ -385,6 +467,12 @@ def main(argv: list[str] | None = None) -> int:
     except ImportError:
         print('pdfplumber is not installed: pip install -e ".[pdf]"')
         return 1
+    if args.cmd == "inspect":
+        if not re.fullmatch(r"\d{7}", args.product):
+            print("--product takes the 7-digit EOF product code, e.g. 2076706")
+            return 2
+        inspect(args.root, args.product)
+        return 0
     parse_all(args.root, args.out, args.jobs, max_minutes=args.max_minutes)
     return 0
 
