@@ -67,6 +67,18 @@ class Context:
     compared: dict = field(default_factory=dict)  # eof_code -> Equivalents | None (cache of comparable())
     glance_failed: list = field(default_factory=list)  # «Με μια ματιά» left out: (package, error)
     names: dict = field(default_factory=dict)  # substances -> product names on sale (cache of has_generic())
+    brands: dict = field(default_factory=dict)  # name slug -> {slug, name, codes, family} (build.brand_index)
+    brand_of: dict = field(default_factory=dict)  # eof_code -> name slug
+    brand_pages: set = field(default_factory=set)  # name slugs that have a page under /onoma/
+    families: dict = field(default_factory=dict)  # family slug -> name slugs (cache of brand())
+
+
+def brand_href(ctx: Context, slug: str) -> str:
+    """Where a product name links: its page, or the package page when it has one package
+    (or no page fitted under the file limit: the first package)."""
+    if slug in ctx.brand_pages:
+        return f"/onoma/{slug}/"
+    return f"/farmako/{ctx.brands[slug]['codes'][0]}/"
 
 
 def sname(ctx: Context, inn: str) -> str:
@@ -842,6 +854,10 @@ def package(ctx: Context, p: dict) -> str:
     crumbs = (
         f'<a href="/ousia/{e(ctx.slug_of[subs[0]])}/">{e(sname(ctx, subs[0]))}</a>' if subs else "Συσκευασία"
     )
+    own = ctx.brand_of.get(p["eof_code"])
+    if own in ctx.brand_pages:
+        b = ctx.brands[own]
+        crumbs += f' / <a href="/onoma/{e(own)}/">{e(b["name"])} · όλες οι {len(b["codes"])}</a>'
     chips = [
         f'<a class="chip sub-link" href="/ousia/{e(ctx.slug_of[s])}/" title="{e(inn_label(s))}">{e(sname(ctx, s))}</a>'
         for s in subs
@@ -1079,6 +1095,7 @@ def substance(ctx: Context, s: dict) -> str:
 </div>
 {_filters(rows)}
 {"".join(parts)}
+{_names_section(ctx, {ctx.brand_of[p["eof_code"]] for p in rows if p["eof_code"] in ctx.brand_of}, "Εμπορικές ονομασίες")}
 </div>
 """
     return layout(
@@ -1090,6 +1107,152 @@ def substance(ctx: Context, s: dict) -> str:
         f"/ousia/{s['slug']}/",
         f"Όλες οι συσκευασίες με {sname(ctx, s['name'])} ({inn_label(s['name'])}) στην Ελλάδα, με τιμή και αποζημίωση.",
     )
+
+
+# ---------------------------------------------------------------- product name
+
+
+def _names_section(ctx: Context, slugs: set[str], title: str, most: int = 60) -> str:
+    if not slugs:
+        return ""
+    names = sorted(slugs, key=lambda s: ctx.brands[s]["name"])
+    links = "".join(
+        f'<li><a href="{e(brand_href(ctx, s))}">{e(ctx.brands[s]["name"])}</a></li>' for s in names[:most]
+    )
+    more = f'<p class="small">και {len(names) - most} ακόμη</p>' if len(names) > most else ""
+    return (
+        f'<section class="group names"><h2>{e(title)} <span>{len(names)}</span></h2>'
+        f'<ul class="az">{links}</ul>{more}</section>'
+    )
+
+
+def _name_texts(ctx: Context, rows: list[dict]) -> tuple[list[str], set[str]]:
+    """Links to the package leaflets of these packages, one per text, and who published them:
+    an EMA product has its own pages, an EOF one is on the page of its first package."""
+    links: list[str] = []
+    who: set[str] = set()
+    seen: set[str] = set()
+    for p in sorted(rows, key=lambda p: p["eof_code"]):
+        ema = next(
+            (
+                ctx.leaflets[pi["product_number"]]
+                for pi in p.get("product_information") or []
+                if (ctx.leaflets.get(pi.get("product_number")) or {}).get("slug")
+            ),
+            None,
+        )
+        if ema and ema["pil"]:
+            if ema["slug"] not in seen:
+                seen.add(ema["slug"])
+                who.add("EMA")
+                links.append(
+                    f'<a class="doc" href="/fylla/{e(ema["slug"])}/">Φύλλο οδηγιών χρήσης</a>'
+                    f"<div>{e(ema['name'])} · EMA</div>"
+                )
+            continue
+        key = f"EOF-{p['eof_code'][:7]}"
+        lf = ctx.leaflets.get(key) or {}
+        if key in seen or not (lf.get("texts") or {}).get("pil"):
+            continue
+        seen.add(key)
+        who.add("ΕΟΦ")
+        fam, form_label = form_kind(p["name"])
+        st = strength(p["name"])
+        what = " · ".join(x for x in ((form_label if fam != "other" else ""), (st[1] if st else "")) if x)
+        links.append(
+            f'<a class="doc" href="/farmako/{e(p["eof_code"])}/#fyllo">Φύλλο οδηγιών χρήσης</a>'
+            f"<div>{e(what or split_name(p['name'])[1])} · ΕΟΦ</div>"
+        )
+    return links, who
+
+
+def brand(ctx: Context, b: dict) -> str:
+    """Every package of one product name (Δ-25): what people type into a search engine."""
+    rows = sorted((ctx.by_code[c] for c in b["codes"]), key=lambda p: (p["prices"]["retail"], p["name"]))
+    subs = list(dict.fromkeys(s for p in rows for s in p["substances"]))
+    sub_names = [sname(ctx, s) for s in subs]
+    sub_links = " + ".join(f'<a href="/ousia/{e(ctx.slug_of[s])}/">{e(sname(ctx, s))}</a>' for s in subs)
+    mahs = sorted({short_mah(p["mah"]) for p in rows if p["mah"]})
+    lo, hi = rows[0]["prices"]["retail"], max(p["prices"]["retail"] for p in rows)
+    span = eur(lo) if lo == hi else f"από {eur(lo)} έως {eur(hi)}"
+    reimb = sum(1 for p in rows if p["reimbursement"])
+    otc = sum(1 for p in rows if p.get("kind") == "otc")
+    counts = [f"{num(len(rows), 0)} συσκευασίες", f"λιανική {span}"]
+    if reimb:
+        counts.append(f"{num(reimb, 0)} αποζημιώνονται")
+    if otc:
+        counts.append(f"{num(otc, 0)} χωρίς συνταγή")
+
+    groups: dict[str, list] = {}
+    if len({tuple(p["substances"]) for p in rows}) == 1:
+        for p in rows:
+            st = strength(p["name"])
+            groups.setdefault(st[1] if st else "Άλλες", []).append(p)
+        ordered = sorted(groups.items(), key=lambda kv: _strength_sort(kv[0]))
+    else:
+        for p in rows:
+            groups.setdefault(" + ".join(sname(ctx, s) for s in p["substances"]) or "Άλλες", []).append(p)
+        ordered = sorted(groups.items())
+    parts = "".join(
+        f'<section class="group"><h2>{e(label)} <span>{len(ps)}</span></h2>'
+        f'<ul class="rows">{"".join(_row(p) for p in ps)}</ul></section>'
+        for label, ps in ordered
+    )
+
+    texts, who = _name_texts(ctx, rows)
+    docs = (
+        f'<section class="card side name-docs"><h2>Επίσημα κείμενα</h2><div class="docs">{"".join(texts)}</div></section>'
+        if texts
+        else ""
+    )
+    if not ctx.families:
+        for x in ctx.brands.values():
+            ctx.families.setdefault(x["family"], []).append(x["slug"])
+    related = set(ctx.families.get(b["family"], [])) - {b["slug"]}
+    latest = max(rows, key=lambda p: p["price_source"]["published"])["price_source"]
+    srcs = [
+        f'<li><a href="{e(latest["url"])}" rel="noopener">Δελτίο τιμών ↗</a>'
+        f"<div>Υπουργείο Υγείας · {date_gr(latest['published'])} (το πιο πρόσφατο από αυτές τις συσκευασίες)</div></li>"
+    ]
+    rs = next((p["reimbursement"][0]["source"] for p in rows if p["reimbursement"]), None)
+    if rs:
+        srcs.append(
+            f'<li><a href="{e(rs["url"])}" rel="noopener">Κατάλογος αποζημίωσης ↗</a>'
+            f"<div>Υπουργείο Υγείας · {date_gr(rs['published'])}</div></li>"
+        )
+    first = f'<a href="/ousia/{e(ctx.slug_of[subs[0]])}/">{e(sub_names[0])}</a> / ' if subs else ""
+    body = f"""
+<div class="wrap">
+<nav class="crumbs" aria-label="Διαδρομή"><a href="/">Αρχική</a> / {first}Εμπορική ονομασία</nav>
+<div class="page-head">
+  <h1>{e(b["name"])}</h1>
+  {f'<p class="inn">{sub_links}</p>' if subs else ""}
+  <p>{" · ".join(counts)}{f" · {e(', '.join(mahs[:3]))}{' κ.ά.' if len(mahs) > 3 else ''}" if mahs else ""}</p>
+</div>
+{docs}
+{_filters(rows)}
+{parts}
+{_names_section(ctx, related, "Παρόμοιες ονομασίες")}
+<section class="card side name-srcs">
+  <h2>Πηγές</h2>
+  <ul class="srcs">{"".join(srcs)}</ul>
+  <p class="small"><a href="/sxetika/#ti-deixnei">Η τιμή δεν σημαίνει ότι κυκλοφορεί</a></p>
+</section>
+</div>
+"""
+    about = " + ".join(sub_names[:2]) + (" κ.ά." if len(sub_names) > 2 else "")
+    title = f"{b['name']}{f' ({about})' if about else ''} · τιμές{', φύλλο οδηγιών' if texts else ''} · farmaka.info"
+    desc = (
+        f"Οι {len(rows)} συσκευασίες του {b['name']}{f' ({about})' if about else ''} στην Ελλάδα: λιανική {span}"
+        + (f", {reimb} αποζημιώνονται" if reimb else "")
+        + (", φύλλο οδηγιών χρήσης σε ενότητες" if texts else "")
+        + ". Από τα επίσημα στοιχεία "
+        + " και ".join(
+            ["του Υπουργείου Υγείας"] + [x for k, x in (("ΕΟΦ", "του ΕΟΦ"), ("EMA", "της EMA")) if k in who]
+        )
+        + "."
+    )
+    return layout(ctx, title, body, f"/onoma/{b['slug']}/", desc)
 
 
 # ---------------------------------------------------------------- data & about

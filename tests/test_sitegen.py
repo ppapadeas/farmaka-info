@@ -62,6 +62,10 @@ def test_site_has_every_package_page(site):
     assert info["packages"] == 8922
     assert len(list((out / "farmako").iterdir())) == 8922
     assert info["files"] < 20000  # Workers static assets limit on the free plan
+    # a page per product name with more than one package, in the sitemap
+    assert info["brand_pages"] == len(list((out / "onoma").iterdir())) > 1000
+    assert info["brand_pages_left_out"] == 0
+    assert "<loc>https://farmaka.info/onoma/" in (out / "sitemap.xml").read_text(encoding="utf-8")
 
 
 def test_package_page_shows_price_and_source(site):
@@ -302,6 +306,80 @@ def test_substance_rows_tell_packs_apart_and_group_by_company():
     assert '<select data-group><option value="strength">Περιεκτικότητα</option>' in page
     # one company only: nothing to group
     assert "data-group" not in pages.substance(_ctx([a, b]), next(iter(_ctx([a, b]).subst.values())))
+
+
+def _with_names(ctx, room=100):
+    from sitegen.build import brand_index, brand_pages
+
+    ctx.brands = brand_index(list(ctx.by_code.values()))
+    ctx.brand_of = {c: b["slug"] for b in ctx.brands.values() for c in b["codes"]}
+    ctx.brand_pages = brand_pages(ctx.brands, room)
+    ctx.meta["sources"] = [
+        {"published": "2020-06-26", "moh_article": 7309, "url": "https://www.moh.gov.gr/b"}
+    ]
+    return ctx
+
+
+def test_names_fold_spellings_and_keep_their_address():
+    from sitegen.build import brand_index
+
+    pkgs = [
+        _pkg("600000001", "HUMALOG KWIKPEN", 30.0),
+        _pkg("600000002", "HUMALOG (KWIKPEN)", 31.0),
+        _pkg("600000003", "DEPON", 1.0),
+        _pkg("600000004", "DEPON MAXIMUM", 2.0),
+        _pkg("600000005", "+++", 3.0),  # no letters: no page
+    ]
+    names = brand_index(pkgs)
+    assert sorted(names) == ["depon", "depon-maximum", "humalog-kwikpen"]
+    assert names["humalog-kwikpen"]["codes"] == ["600000001", "600000002"]
+    assert names["depon-maximum"]["family"] == names["depon"]["family"] == "depon"
+    # a new medicine does not move the others: the address comes from the name alone
+    more = brand_index([_pkg("600000006", "DEPOMAX", 1.0), *pkgs])
+    assert {k: v["codes"] for k, v in more.items() if k != "depomax"} == {
+        k: v["codes"] for k, v in names.items()
+    }
+
+
+def test_name_pages_fit_in_the_room_left():
+    from sitegen.build import brand_index, brand_pages
+
+    pkgs = [_pkg(f"61000000{i}", "BIG", 10.0 + i) for i in range(3)]
+    pkgs += [_pkg(f"62000000{i}", "SMALL", 10.0 + i) for i in range(2)]
+    pkgs += [_pkg("630000000", "ALONE", 10.0)]
+    names = brand_index(pkgs)
+    assert brand_pages(names, 100) == {"big", "small"}  # one package: the package page is enough
+    assert brand_pages(names, 1) == {"big"}  # no room: the largest first
+    assert brand_pages(names, -5) == set()
+
+
+def test_name_page_lists_every_package_and_is_linked():
+    from sitegen import pages
+
+    a = _pkg("640000001", "ATORVA", 10.0, n=30)
+    b = _pkg("640000002", "ATORVA", 18.0, n=30, strength="40MG", rp=15.0)
+    c = _pkg("640000003", "ATORVA PLUS", 12.0)
+    d = _pkg("640000004", "OTHERNAME", 11.0)
+    ctx = _with_names(_ctx([a, b, c, d]))
+    page = pages.brand(ctx, ctx.brands["atorva"])
+    assert "<title>ATORVA (Atorvastatin) · τιμές · farmaka.info</title>" in page
+    assert "λιανική από 10,00 € έως 18,00 €, 1 αποζημιώνονται" in page
+    assert page.count('<a class="nm" href="/farmako/64000000') == 2
+    assert "<h2>20 mg <span>1</span></h2>" in page and "<h2>40 mg <span>1</span></h2>" in page
+    # the related name has one package: it links to that package
+    assert "Παρόμοιες ονομασίες <span>1</span>" in page and 'href="/farmako/640000003/">ATORVA PLUS<' in page
+    assert "Δελτίο τιμών ↗" in page and "05/10/2026" in page  # source and date next to the prices
+    assert '<link rel="canonical" href="https://farmaka.info/onoma/atorva/">' in page
+    # the package page links its name page; a name with one package has none
+    assert '<a href="/onoma/atorva/">ATORVA · όλες οι 2</a>' in pages.package(ctx, a)
+    assert "/onoma/" not in pages.package(ctx, d)
+    # the substance page lists the names
+    sub = pages.substance(ctx, next(iter(ctx.subst.values())))
+    assert "Εμπορικές ονομασίες <span>3</span>" in sub and 'href="/onoma/atorva/">ATORVA<' in sub
+    # no room for the page: links go to the first package, the worker sends /onoma/ to the search
+    ctx = _with_names(_ctx([a, b, c, d]), room=0)
+    assert "/onoma/" not in pages.package(ctx, a)
+    assert 'href="/farmako/640000001/">ATORVA<' in pages.substance(ctx, next(iter(ctx.subst.values())))
 
 
 def test_shortage_points_to_available_equivalents():

@@ -6,7 +6,7 @@ Usage:
 Input: the files written by `python -m ingest.build` (and, if present,
 `reimbursement_*.csv` from `python -m ingest.reimbursement`).
 Output (served as static assets by the worker in web/worker.js):
-    index.html, farmako/<eof_code>/, ousia/<slug>/, dedomena/, sxetika/, 404.html
+    index.html, farmako/<eof_code>/, ousia/<slug>/, onoma/<slug>/, dedomena/, sxetika/, 404.html
     allages/, allages/rss.xml recent changes (page and RSS)
     search-index.tsv          compact search index (browser and API)
     api/pk/<nn>.json          package records in 256 shards (API)
@@ -22,18 +22,22 @@ import json
 import re
 import shutil
 import sqlite3
-from collections import defaultdict
+from collections import Counter, defaultdict
 from datetime import UTC, datetime
 from pathlib import Path
 
 from . import changes, leaflets, pages, trivia
-from .drug import form_group, pack_label, strength
+from .drug import form_group, pack_label, split_name, strength
 from .text import skeleton, slugify
 
 ROOT = Path(__file__).resolve().parent.parent
 STATIC = ROOT / "web" / "static"
 SITE = "https://farmaka.info"
 SHARDS = 256
+# Workers static assets take at most 20,000 files on the free plan; the pages per product
+# name fill what is left under this, so new medicines never make the deploy fail
+MAX_FILES = 19_500
+MIN_BRAND_PACKAGES = 2  # a name with one package has the package page itself
 
 REIMBURSEMENT_SOURCE = {
     "publisher": "Υπουργείο Υγείας",
@@ -330,6 +334,44 @@ def substance_index(pkgs: list[dict], el: dict[str, str] | None = None) -> dict[
         for s in p["substances"]:
             out[slugs[s]]["codes"].append(p["eof_code"])
     return out
+
+
+def brand_index(pkgs: list[dict]) -> dict[str, dict]:
+    """slug -> {slug, name, codes, family}: the packages of each product name (the part of
+    the name before the dose form). The slug comes from the name alone, so a page keeps its
+    address when other medicines come and go, and spellings that fold to the same slug
+    ("HUMALOG KWIKPEN", "HUMALOG (KWIKPEN)") share one page. The family is the shortest
+    name that starts this one (DEPON for DEPON MAXIMUM): names shown together."""
+    spellings: dict[str, Counter] = defaultdict(Counter)
+    codes: dict[str, list[str]] = defaultdict(list)
+    for p in pkgs:
+        name = split_name(p["name"])[0].strip()
+        if not any(ch.isalnum() for ch in name):  # nothing to name a page by
+            continue
+        slug = slugify(name)
+        spellings[slug][name] += 1
+        codes[slug].append(p["eof_code"])
+    out: dict[str, dict] = {}
+    for slug in sorted(codes):
+        parts = slug.split("-")
+        family = next(f for i in range(1, len(parts) + 1) if (f := "-".join(parts[:i])) in codes)
+        out[slug] = {
+            "slug": slug,
+            "name": min(spellings[slug].items(), key=lambda kv: (-kv[1], kv[0]))[0],
+            "codes": sorted(codes[slug]),
+            "family": family,
+        }
+    return out
+
+
+def brand_pages(brands: dict[str, dict], room: int) -> set[str]:
+    """The names that get a page: those with more than one package, the largest first, as
+    many as there is room for under MAX_FILES."""
+    names = sorted(
+        (b for b in brands.values() if len(b["codes"]) >= MIN_BRAND_PACKAGES),
+        key=lambda b: (-len(b["codes"]), b["slug"]),
+    )
+    return {b["slug"] for b in names[: max(room, 0)]}
 
 
 def equivalents(pkgs: list[dict]) -> dict[str, list[str]]:
@@ -662,6 +704,15 @@ def build(data: Path, out: Path, built_at: str) -> dict:
     urls += [f"/fylla/{v['slug']}/" for v in ctx.leaflets.values()]
     # EOF texts in sections: on the package pages only (Δ-24)
     ctx.leaflets.update(leaflets.load_eof(data / "eof_pi"))
+    # pages per product name (Δ-25), in the room left under MAX_FILES: one file per package
+    # and substance page below, and the four files written last
+    ctx.brands = brand_index(pkgs)
+    ctx.brand_of = {c: b["slug"] for b in ctx.brands.values() for c in b["codes"]}
+    so_far = sum(1 for f in out.rglob("*") if f.is_file())
+    ctx.brand_pages = brand_pages(ctx.brands, MAX_FILES - so_far - len(pkgs) - len(subst) - 4)
+    left_out = sum(1 for b in ctx.brands.values() if len(b["codes"]) >= MIN_BRAND_PACKAGES) - len(
+        ctx.brand_pages
+    )
     for p in pkgs:
         d = out / "farmako" / p["eof_code"]
         d.mkdir(parents=True)
@@ -672,6 +723,11 @@ def build(data: Path, out: Path, built_at: str) -> dict:
         d.mkdir(parents=True)
         (d / "index.html").write_text(pages.substance(ctx, s), encoding="utf-8")
         urls.append(f"/ousia/{slug}/")
+    for slug in sorted(ctx.brand_pages):
+        d = out / "onoma" / slug
+        d.mkdir(parents=True)
+        (d / "index.html").write_text(pages.brand(ctx, ctx.brands[slug]), encoding="utf-8")
+        urls.append(f"/onoma/{slug}/")
 
     (out / "sitemap.xml").write_text(
         '<?xml version="1.0" encoding="UTF-8"?>\n'
@@ -689,6 +745,8 @@ def build(data: Path, out: Path, built_at: str) -> dict:
     return {
         "packages": len(pkgs),
         "substances": len(subst),
+        "brand_pages": len(ctx.brand_pages),
+        "brand_pages_left_out": left_out,
         "files": n_files,
         "glance_failed": ctx.glance_failed,
     }
@@ -702,7 +760,13 @@ def main() -> None:
     a = ap.parse_args()
     built_at = a.built_at or datetime.now(UTC).replace(microsecond=0).isoformat()
     r = build(a.data, a.out, built_at)
-    print(f"{r['packages']} packages, {r['substances']} substances, {r['files']} files -> {a.out}")
+    print(
+        f"{r['packages']} packages, {r['substances']} substances, {r['brand_pages']} product names, "
+        f"{r['files']} files -> {a.out}"
+    )
+    if r["brand_pages_left_out"]:
+        # the file limit of the host: these names link to the search instead (web/worker.js)
+        print(f"{r['brand_pages_left_out']} product names without a page: no room under {MAX_FILES} files")
     if r["glance_failed"]:
         # the summary is left out on these pages; the full leaflet is still there
         print(f"«Με μια ματιά» left out on {len(r['glance_failed'])} pages:")

@@ -52,3 +52,10 @@ test("worker shard function matches Python (tests/test_sitegen.py)", async () =>
   assert.equal(shardOf("312080101"), "5e");
   assert.equal(shardOf("000090201"), "3c");
 });
+
+test("a product name without a page goes to the search", async () => {
+  const worker = (await import("../worker.js")).default;
+  const r = await worker.fetch(new Request("https://farmaka.info/onoma/depon-cold-flu/"), {});
+  assert.equal(r.status, 302);
+  assert.equal(r.headers.get("location"), "https://farmaka.info/anazitisi?q=depon%20cold%20flu");
+});

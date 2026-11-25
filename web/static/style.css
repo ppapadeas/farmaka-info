@@ -407,6 +407,9 @@ a.stat-link span { text-decoration: underline; text-decoration-color: var(--line
 .az a:hover { text-decoration: underline; }
 .az .inn { color: var(--faint); font-size: 13px; }
 .az .n { color: var(--faint); font-size: 12px; font-variant-numeric: tabular-nums; }
+/* page per product name */
+.name-docs, .name-srcs { margin-top: 24px; }
+.names .small { margin-top: 8px; color: var(--faint); }
 .suggest .grp { padding: 6px 10px 2px; font-size: 12px; font-weight: 600; color: var(--faint); text-transform: none; }
 .suggest a.sub-hit .nm b { color: var(--accent); }
 

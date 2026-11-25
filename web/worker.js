@@ -204,6 +204,10 @@ export default {
     try {
       if (url.pathname === "/api/v1" || url.pathname.startsWith("/api/v1/")) return await api(url, env);
       if (url.pathname === "/anazitisi" || url.pathname === "/anazitisi/") return await searchPage(url, env);
+      // a product name without a page (one package left, or no room under the host's file
+      // limit, see sitegen/build.py): its packages are found by the search
+      const name = url.pathname.match(/^\/onoma\/([a-z0-9-]+)\/?$/);
+      if (name) return Response.redirect(`${url.origin}/anazitisi?q=${encodeURIComponent(name[1].replace(/-/g, " "))}`, 302);
       return await notFound(env);
     } catch (err) {
       console.error(err);
