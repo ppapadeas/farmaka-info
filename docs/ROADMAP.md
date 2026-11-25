@@ -81,7 +81,8 @@
 - [ ] Σελίδες ATC.
 - [ ] Έλεγχος προσβασιμότητας WCAG 2.1 AA (δεν έχει γίνει επίσημος έλεγχος).
 - [ ] Redirect `www` → `farmaka.info` (Redirect Rule στο Cloudflare).
-- [ ] Δήλωση sitemap σε Google Search Console και Bing.
+- [x] Δήλωση sitemap σε Google Search Console (ιδιοκτησία Domain, επαλήθευση με TXT στο DNS) και Bing
+  Webmaster Tools (εισαγωγή από το Search Console).
 - [ ] Δοκιμή σάρωσης barcode και offline σε πραγματικά κινητά.
 
 ## Φάση 5 — API και ενσωματώσεις
