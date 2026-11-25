@@ -734,6 +734,21 @@ def test_fake_bold_is_read_once(tmp_path):
     assert (page.chars_read, page.chars_pdfium) == (35, 22)
 
 
+def test_grey_shadow_is_read_once(tmp_path):
+    # EOF leaflet of ALGOFREN (PL_2076706_3, 11/2026): the name has a grey copy 0.48 pt
+    # right and down, drawn with its own text matrix, so its size is 12.000000000000028
+    pdf = tmp_path / "shadow.pdf"
+    one_page_pdf(
+        pdf,
+        [
+            "0 g BT /F1 12 Tf 72 760 Td (ALGOFREN) Tj ET",
+            "0.754 g BT /F1 1 Tf 12.000000000000028 0 0 12.000000000000028 72.48 759.52 Tm (ALGOFREN) Tj ET",
+        ],
+    )
+    (page,) = ema_pi.read_pdf(pdf)
+    assert [ln.text for ln in page.lines] == ["ALGOFREN"]
+
+
 def test_doubles_that_pdfium_counts_twice_are_not_missing(tmp_path, monkeypatch):
     # EMA SmPC of Alimta (11/2026): a figure repeats its labels in the same spot; pdfium
     # counts them twice, the text keeps them once, and the file must not fail as

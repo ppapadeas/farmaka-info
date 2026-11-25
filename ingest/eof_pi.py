@@ -34,7 +34,7 @@ from pathlib import Path
 from ingest import ema_pi as E
 
 SCHEMA_VERSION = 1
-PARSER_VERSION = 4  # bump to parse every document again (4: fake bold read once)
+PARSER_VERSION = 5  # bump to parse every document again (4: fake bold read once; 5: grey shadows)
 BATCH = 200  # products parsed and saved together
 LOGGED_ERRORS = 50  # errors printed one by one; all of them are in report.json
 PUBLISHER = "Εθνικός Οργανισμός Φαρμάκων (ΕΟΦ)"

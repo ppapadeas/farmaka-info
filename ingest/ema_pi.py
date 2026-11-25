@@ -325,15 +325,18 @@ def read_pdf(path: Path, pages: Iterable[int] | None = None) -> list[Page]:
 
 def _without_doubles(page, tolerance: float = 1):
     """The page without characters drawn twice in one place (same text, font and size, up
-    to `tolerance` pt apart). The same as pdfplumber's dedupe_chars, which puts its result
-    back in order with list.index for every character: 3-4 times the time to read a page."""
+    to `tolerance` pt apart; the colour may differ, as with a grey shadow). Like pdfplumber's
+    dedupe_chars, which puts its result back in order with list.index for every character
+    (3-4 times the time to read a page) and compares sizes exactly."""
     from pdfplumber.utils import cluster_objects
 
     chars = page.chars
 
     def same(i: int) -> tuple:
+        # sizes to a thousandth of a point: a copy drawn with its own text matrix comes out
+        # 12.000000000000028 against 12.0 (the grey shadow of "ALGOFREN" in the EOF leaflet)
         c = chars[i]
-        return (c["upright"], c["text"], c["fontname"], c["size"])
+        return (c["upright"], c["text"], c["fontname"], round(c["size"], 3))
 
     keep: set[int] = set()
     for _, group in groupby(sorted(range(len(chars)), key=same), key=same):
