@@ -19,8 +19,10 @@ from .drug import (
     dispensing_label,
     form_kind,
     inn_label,
+    is_concentration,
     pack_count,
     pack_label,
+    pack_size,
     short_mah,
     split_name,
     strength,
@@ -576,6 +578,11 @@ def comparable(ctx: Context, p: dict) -> Equivalents | None:
         else:
             n = pack_count(p["name"])
             rows = [q for q in rows if n is not None and pack_count(q["name"]) == n]
+            if is_concentration(p["name"]):
+                # 2% or 20 mg/ml: and the same volume or weight, known on both (a 5 ml bottle
+                # is not a 10 ml one)
+                size = pack_size(p["name"])
+                rows = [q for q in rows if size and pack_size(q["name"]) == size]
         if len(rows) >= 2:
             eq = Equivalents(rows, per_unit, counts)
             rows.sort(key=lambda q: (eq.key(q), q["prices"]["retail"], q["name"]))

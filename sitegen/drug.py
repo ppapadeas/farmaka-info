@@ -86,7 +86,8 @@ def form_group(name: str) -> str | None:
 
 
 _STRENGTH = re.compile(
-    r"(\(\s*\d[\d.,]*(?:\s*\+\s*\d[\d.,]*)+\s*\)|\d[\d.,]*)\s*(MCG|MG|G|IU|I\.U\.|ML|%|MMOL|U)\b"
+    # after '%' or 'I.U.' a space is no word boundary: '2% TUBx 30G' is 2%, not 30 g
+    r"(\(\s*\d[\d.,]*(?:\s*\+\s*\d[\d.,]*)+\s*\)|\d[\d.,]*)\s*(MCG|MG|G|IU|I\.U\.|ML|%|MMOL|U)(?:(?<=[%.])|\b)"
     r"(?:\s*/\s*(\d[\d.,]*\s*ML|ML|G|TAB|CAP|VIAL|DOSE|PF\.SYR|AMP|SACHET|H|24H))?",
     re.IGNORECASE,
 )
@@ -132,7 +133,7 @@ def strength(name: str) -> tuple[str, str] | None:
         )
         return "+".join(parts), label.replace(".", ",")
     m = _STRENGTH.search(rest)
-    if not m:
+    if not m or rest[m.end() :].lstrip().startswith("+"):  # '0,1%+0,3%' without brackets: not read
         return None
     amount = _numbers(re.sub(r"[()\s]", "", m.group(1)).replace(",", "."))
     unit = m.group(2).upper().replace("I.U.", "IU")
@@ -183,6 +184,30 @@ def unit_count(name: str) -> int | None:
     m = _COUNT.search(name)
     n = int(m.group(1)) if m else 0
     return n if n > 1 else None
+
+
+_SIZE = re.compile(r"[xX×]\s*(\d+(?:[.,]\d+)?)\s*(ML|MG|GR|G)\b", re.IGNORECASE)
+
+
+def pack_size(name: str) -> tuple[str, str] | None:
+    """(key, label) of what one container holds: 'FLx150 ML' -> ('150ML', '150 ml'),
+    'VIAL x 100MG' -> ('100MG', '100 mg')."""
+    m = _SIZE.search(split_name(name)[1])
+    if not m:
+        return None
+    n, unit = _number(m.group(1).replace(",", ".")), m.group(2).upper().replace("GR", "G")
+    return f"{n}{unit}", f"{n.replace('.', ',')} {unit.lower()}"
+
+
+def is_concentration(name: str) -> bool:
+    """A strength that says nothing of how much the container holds: '2%', '20MG/ML', and
+    '100MG/5ML' for a syrup. In an injection '120MG/1,7ML' is the vial itself."""
+    st = strength(name)
+    if not st:
+        return False
+    if "%" in st[0] or re.search(r"/1?(?:ML|G)$", st[0]):
+        return True
+    return bool(re.search(r"/[\d.]+(?:ML|G)$", st[0])) and form_kind(name)[0] not in ("injection", "infusion")
 
 
 def pack_label(name: str) -> str:

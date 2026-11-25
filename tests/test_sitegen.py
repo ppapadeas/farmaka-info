@@ -144,6 +144,47 @@ def test_unit_counts_and_strengths():
     assert form_group("GLUCOPHAGE F.C.TAB 500MG/TAB BTx30") == "oral-ir"
 
 
+def test_percent_strength_is_not_the_tube():
+    # '2% TUBx 30G' read as 30 g (25/11/2026): after '%' a space is no word boundary, so the
+    # tube size was taken for the strength of 476 creams, drops and solutions
+    from sitegen.drug import pack_size, strength
+
+    assert strength("FUCIDIN CREAM 2% TUBx 30G") == ("2%", "2%")
+    assert strength("MAXIDEX EY.DRO.SUS 0,1% FLX5ML") == ("0.1%", "0,1%")
+    assert strength("SODIUM CHLORIDE INJECTION /FRESENIUS SOL.INF 0,9%W/V BOTTLE x 500ML")[0] == "0.9%"
+    # a combination without brackets is not read at all, rather than by its first part
+    assert strength("TOBRADEX EY.DRO.SUS 0,1%+0,3% BT x 1 BOTTLE x5ML") is None
+    assert strength("VONCENTO P.SV.INJ.F 1000 IU+2400 IU (10ML SOLV) BT X 1 VIAL") is None
+    assert pack_size("FUCIDIN CREAM 2% TUBx 30G") == ("30G", "30 g")
+    assert pack_size("CAPSER CREAM 0,075% BT x 1 TUB x 100 GR") == ("100G", "100 g")
+    assert pack_size("VIDAZA PD.INJ.SUS 25MG/ML BTx1 VIAL x 100MG") == ("100MG", "100 mg")
+
+
+def test_vials_of_another_size_are_not_equivalent():
+    # OPDIVO 10 mg/ml in 4, 10 and 24 ml vials were compared box against box as equivalents
+    # (25/11/2026): with a concentration the container must be the same size
+    from sitegen.drug import is_concentration
+    from sitegen.pages import comparable
+
+    def vial(code, ml, retail):
+        p = _pkg(code, "NIVO", retail, n=1, strength="10MG/ML")
+        p["name"] = f"NIVO{code[-1]} C/S.SOL.IN 10MG/ML BT X 1 VIAL X {ml} ML"
+        p["substances"] = ["NIVOLUMAB"]
+        return p
+
+    small, big, other_small = (
+        vial("600000001", 4, 500.0),
+        vial("600000002", 24, 2900.0),
+        vial("600000003", 4, 480.0),
+    )
+    ctx = _ctx([small, big, other_small])
+    assert {q["eof_code"] for q in comparable(ctx, small).rows} == {"600000001", "600000003"}
+    assert comparable(ctx, big) is None
+    # in an injection '120MG/1,7ML' is the vial: no size needed
+    assert not is_concentration("XGEVA INJ.SOL 120MG/1,7ML (70MG/ML) BTx1VIAL")
+    assert is_concentration("CECLOR GRA.OR.SUS 375MG/5ML BTX1FLX60ML")
+
+
 def test_trivia_page(site):
     out, _ = site
     html = (out / "perierga" / "index.html").read_text(encoding="utf-8")
