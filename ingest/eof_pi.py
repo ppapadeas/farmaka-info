@@ -422,7 +422,8 @@ def inspect(root: Path, code: str, log=print, examples: int = 12) -> None:
                                 round(abs(dx), 1),
                                 round(dy, 1),
                                 a["fontname"] == b["fontname"],
-                                round(b["size"] - a["size"], 3),
+                                a["size"] == b["size"],  # exactly: the doubles are dropped only then
+                                a["upright"] == b["upright"],
                                 a.get("non_stroking_color") == b.get("non_stroking_color"),
                             )
                             groups[key] = groups.get(key, 0) + 1
@@ -430,10 +431,10 @@ def inspect(root: Path, code: str, log=print, examples: int = 12) -> None:
                                 shown += 1
                                 log(
                                     f"   p{page.page_number} {a['text']!r}: dx {dx:+.2f} dy {dy:+.2f} | "
-                                    f"{a['fontname']} {a['size']:.3f} {a.get('non_stroking_color')} | "
-                                    f"{b['fontname']} {b['size']:.3f} {b.get('non_stroking_color')}"
+                                    f"{a['fontname']} {a['size']!r} {a['upright']} {a.get('non_stroking_color')} | "
+                                    f"{b['fontname']} {b['size']!r} {b['upright']} {b.get('non_stroking_color')}"
                                 )
-        log("   pairs by (|dx|, dy, same font, size difference, same colour), most first:")
+        log("   pairs by (|dx|, dy, same font, same size, same direction, same colour), most first:")
         for key, n in sorted(groups.items(), key=lambda kv: -kv[1])[:15]:
             log(f"   {n:6d}  {key}")
         try:
