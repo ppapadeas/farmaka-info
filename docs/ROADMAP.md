@@ -80,7 +80,8 @@
 - [x] Κρυφή σελίδα «Περίεργα από τα δεδομένα», υπολογιζόμενη σε κάθε build.
 - [ ] Σελίδες ATC.
 - [ ] Έλεγχος προσβασιμότητας WCAG 2.1 AA (δεν έχει γίνει επίσημος έλεγχος).
-- [ ] Redirect `www` → `farmaka.info` (Redirect Rule στο Cloudflare).
+- [x] Redirect 301 `www` → `farmaka.info` (Redirect Rule στο Cloudflare, κρατά διαδρομή και query) και `http` →
+  `https` (Always Use HTTPS).
 - [x] Δήλωση sitemap σε Google Search Console (ιδιοκτησία Domain, επαλήθευση με TXT στο DNS) και Bing
   Webmaster Tools (εισαγωγή από το Search Console).
 - [ ] Δοκιμή σάρωσης barcode και offline σε πραγματικά κινητά.
