@@ -359,6 +359,38 @@ FORM_FAMILIES = {
 }
 
 
+_CAPS_WORD = re.compile(r"(?<![A-Za-z0-9])[A-Z][A-Z'\-]{3,}(?![A-Za-z0-9])")
+
+
+def brand_display(brand: str) -> str:
+    """'ALGOFREN' -> 'Algofren', 'CO-DIOVAN HCT' -> 'Co-Diovan HCT', for titles. Only Latin
+    words of four letters or more: shorter ones may be initials, words with digits are
+    codes (N9E), and Greek capitals carry no accents to put back (ΑΣΠΙΡΙΝΗ stays)."""
+    return _CAPS_WORD.sub(lambda m: "-".join(w.capitalize() for w in m.group(0).split("-")), brand)
+
+
+_BY_SIZE = ("oral_liquid", "eye", "ear", "nasal", "topical")  # sold by volume or weight
+
+
+def plain_name(name: str) -> str | None:
+    """The package in words people search with, for titles:
+    'ALGOFREN SYR 100MG/5ML FLx150 ML' -> 'Algofren σιρόπι 100 mg/5 ml, 150 ml',
+    'LIPITOR F.C.TAB 20MG/TAB ΒTx 14' -> 'Lipitor δισκία 20 mg, 14 τεμ.'.
+    None when the form or the strength is not read with confidence: the official name then."""
+    brand, rest = split_name(name)
+    fam, label = form_kind(name)
+    st = strength(name)
+    if fam == "other" or not st or ("+" in rest and "+" not in st[0]):  # '1000 IU+2400 IU': half read
+        return None
+    form = "για έγχυση" if fam == "infusion" else label[:1].lower() + label[1:]
+    n = unit_count(name) or pack_count(name)
+    size = f"{n} τεμ." if n else ""
+    ps = pack_size(name) if fam in _BY_SIZE and (n or 1) == 1 else None
+    if ps:  # 'BTx1 BOTTLEx100 ML': 100 ml says more than one piece
+        size = ps[1]
+    return f"{brand_display(brand)} {form} {st[1]}" + (f", {size}" if size else "")
+
+
 def form_kind(name: str) -> tuple[str, str]:
     """(family, Greek label) for a package, e.g. ('tablet', 'Δισκία παρατεταμένης αποδέσμευσης')."""
     f = dose_form(name) or ""

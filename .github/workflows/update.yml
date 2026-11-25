@@ -114,11 +114,17 @@ jobs:
           if [ -d data/eof-links/eof_pi ]; then rm -rf data/current/eof_pi && cp -r data/eof-links/eof_pi data/current/eof_pi; fi
           python -m sitegen.build --data data/current --out dist
           test "$(find dist -type f | wc -l)" -gt 10000
+      - name: Keep the live sitemap (to tell search engines what changed)
+        continue-on-error: true
+        run: curl -sSf --max-time 60 https://farmaka.info/sitemap.xml -o "$RUNNER_TEMP/old_sitemap.xml"
       - name: Deploy
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
         run: npx --yes wrangler@4 deploy
+      - name: IndexNow (pages whose data changed; Δ-26)
+        continue-on-error: true
+        run: python -m sitegen.indexnow --old "$RUNNER_TEMP/old_sitemap.xml" --new dist/sitemap.xml
       - name: Summary
         run: |
           python - <<'PY' >> "$GITHUB_STEP_SUMMARY"

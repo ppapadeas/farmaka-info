@@ -185,6 +185,58 @@ def test_vials_of_another_size_are_not_equivalent():
     assert is_concentration("CECLOR GRA.OR.SUS 375MG/5ML BTX1FLX60ML")
 
 
+def test_plain_names_for_titles():
+    from sitegen.drug import brand_display, plain_name
+
+    assert plain_name("ALGOFREN SYR 100MG/5ML FLx150 ML") == "Algofren σιρόπι 100 mg/5ml, 150 ml"
+    assert plain_name("LIPITOR F.C.TAB 20MG/TAB ΒTx 14") == "Lipitor δισκία 20 mg, 14 τεμ."
+    assert plain_name("FUCIDIN CREAM 2% TUBx 30G") == "Fucidin κρέμα 2%, 30 g"
+    assert (
+        plain_name("MEMOTON LIFE ORAL.SOL 4MG/ML BTx1 BOTTLEx100 ML")
+        == "Memoton Life πόσιμο διάλυμα 4 mg/ml, 100 ml"
+    )
+    assert plain_name("GEMCIPEN PD.SOL.INF 200MG/VIAL BTx1VIAL") == "Gemcipen για έγχυση 200 mg/vial, 1 τεμ."
+    # not read with confidence: the official name stays
+    assert plain_name("VONCENTO P.SV.INJ.F 1000 IU+2400 IU (10ML SOLV) BT X 1 VIAL") is None
+    assert plain_name("SOMETHING") is None
+    assert brand_display("CO-DIOVAN HCT") == "Co-Diovan HCT"
+    assert brand_display("OLEUNOR N9E") == "Oleunor N9E"
+    assert brand_display("ΑΣΠΙΡΙΝΗ") == "ΑΣΠΙΡΙΝΗ"  # no accents to put back on Greek capitals
+
+
+def test_titles_breadcrumbs_and_lastmod(site):
+    import re
+    import xml.etree.ElementTree as ET
+
+    from sitegen import indexnow
+
+    out, _ = site
+    html = (out / "farmako" / "312080101" / "index.html").read_text(encoding="utf-8")
+    title = re.search(r"<title>(.*?)</title>", html).group(1)
+    assert title.startswith("Xydalba ") and "τιμή 547,94 €" in title and "PD.C" not in title
+    assert "Επίσημη ονομασία: XYDALBA" in re.search(
+        r'<meta name="description" content="([^"]*)"', html
+    ).group(1)
+    (ld,) = re.findall(r'<script type="application/ld\+json">(.*?)</script>', html)
+    crumbs = json.loads(ld)
+    assert crumbs["@type"] == "BreadcrumbList"
+    assert crumbs["itemListElement"][0]["item"] == "https://farmaka.info/"
+    assert crumbs["itemListElement"][-1]["item"] == "https://farmaka.info/farmako/312080101/"
+    data = (out / "dedomena" / "index.html").read_text(encoding="utf-8")
+    (ds,) = (json.loads(x) for x in re.findall(r'<script type="application/ld\+json">(.*?)</script>', data))
+    assert ds["@type"] == "Dataset" and ds["license"].startswith(
+        "https://creativecommons.org/publicdomain/zero"
+    )
+    assert "https://farmaka.info/data/packages.csv" in {d["contentUrl"] for d in ds["distribution"]}
+    # lastmod is the date of the data on the page, not of the build
+    sm = indexnow.read_sitemap((out / "sitemap.xml").read_text(encoding="utf-8"))
+    assert sm["https://farmaka.info/farmako/312080101/"] == "2026-11-06"  # the price cut
+    assert sm["https://farmaka.info/sxetika/"] is None
+    assert all(d is None or re.fullmatch(r"\d{4}-\d{2}-\d{2}", d) and d <= "2026-11-14" for d in sm.values())
+    ET.fromstring((out / "sitemap.xml").read_text(encoding="utf-8"))
+    assert (out / f"{indexnow.KEY}.txt").read_text(encoding="utf-8") == indexnow.KEY
+
+
 def test_trivia_page(site):
     out, _ = site
     html = (out / "perierga" / "index.html").read_text(encoding="utf-8")
@@ -403,7 +455,7 @@ def test_name_page_lists_every_package_and_is_linked():
     d = _pkg("640000004", "OTHERNAME", 11.0)
     ctx = _with_names(_ctx([a, b, c, d]))
     page = pages.brand(ctx, ctx.brands["atorva"])
-    assert "<title>ATORVA (Atorvastatin) · τιμές · farmaka.info</title>" in page
+    assert "<title>Atorva (Atorvastatin) · τιμές · farmaka.info</title>" in page
     assert "λιανική από 10,00 € έως 18,00 €, 1 αποζημιώνονται" in page
     assert page.count('<a class="nm" href="/farmako/64000000') == 2
     assert "<h2>20 mg <span>1</span></h2>" in page and "<h2>40 mg <span>1</span></h2>" in page

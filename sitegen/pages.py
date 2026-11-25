@@ -1,6 +1,6 @@
 """HTML for every page type. Plain functions returning strings; all data is
-escaped with `e()`. No inline scripts or styles (the CSP forbids them); charts
-are inline SVG drawn with presentation attributes only."""
+escaped with `e()`. No inline scripts or styles (the CSP forbids them; JSON-LD
+is data and never runs); charts are inline SVG drawn with presentation attributes only."""
 
 from __future__ import annotations
 
@@ -16,6 +16,7 @@ from urllib.parse import quote
 from . import changes
 from .drug import (
     FORM_FAMILIES,
+    brand_display,
     dispensing_label,
     form_kind,
     inn_label,
@@ -23,6 +24,7 @@ from .drug import (
     pack_count,
     pack_label,
     pack_size,
+    plain_name,
     short_mah,
     split_name,
     strength,
@@ -103,9 +105,41 @@ def name_html(name: str, extra: str = "") -> str:
     return f"<b>{e(brand)}</b> <span>{e(tail)}</span>" if tail else f"<b>{e(brand)}</b>"
 
 
+def structured(items: list[dict]) -> str:
+    """schema.org JSON-LD. A data block, never run: the CSP (`script-src 'self'`) does not
+    apply to it, and '<' is escaped so no text can close the element."""
+    return "".join(
+        '<script type="application/ld+json">'
+        + json.dumps(x, ensure_ascii=False, separators=(",", ":")).replace("<", "\\u003c")
+        + "</script>\n"
+        for x in items
+    )
+
+
+def breadcrumbs(trail: list[tuple[str, str]]) -> dict:
+    """The path from the home page as a schema.org BreadcrumbList: [(name, path), …], last the page itself."""
+    return {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+            {"@type": "ListItem", "position": i, "name": name, "item": f"{SITE}{path}"}
+            for i, (name, path) in enumerate([("Αρχική", "/"), *trail], 1)
+        ],
+    }
+
+
 def layout(
-    ctx: Context, title: str, body: str, path: str, desc: str = "", search_box: bool = True, nav: str = ""
+    ctx: Context,
+    title: str,
+    body: str,
+    path: str,
+    desc: str = "",
+    search_box: bool = True,
+    nav: str = "",
+    trail: list[tuple[str, str]] | None = None,
+    ld: list[dict] | None = None,
 ) -> str:
+    ld = (ld or []) + ([breadcrumbs(trail)] if trail else [])
     mini = (
         f"""<form class="search search-mini" action="/anazitisi" method="get" role="search">
       {ICON_SEARCH.format(s=18)}
@@ -141,7 +175,7 @@ def layout(
 <link rel="stylesheet" href="/static/style.css?v={ASSET_VERSION}">
 <link rel="stylesheet" href="/static/scan.css?v={ASSET_VERSION}">
 <script type="module" src="/static/app.js?v={ASSET_VERSION}"></script>
-</head>
+{structured(ld)}</head>
 <body>
 <a class="skip" href="#main">Μετάβαση στο περιεχόμενο</a>
 <header class="top">
@@ -992,13 +1026,29 @@ def package(ctx: Context, p: dict) -> str:
 </div>
 """
     subst = ", ".join(sname(ctx, s) for s in subs) or "—"
+    # titles in the words people search with ('Algofren σιρόπι 100 mg/5ml, 150 ml'); the
+    # official name stays in the heading and the description
+    plain = plain_name(p["name"])
+    head = plain or f"{brand} {rest}"
+    path = f"/farmako/{p['eof_code']}/"
+    trail = [(sname(ctx, subs[0]), f"/ousia/{ctx.slug_of[subs[0]]}/")] if subs else []
+    if own in ctx.brand_pages:
+        trail.append((brand_display(ctx.brands[own]["name"]), f"/onoma/{own}/"))
+    if otc:
+        what = f"ενδεικτική λιανική τιμή {eur(pr['retail'])} (μη συνταγογραφούμενο)"
+    else:
+        what = f"λιανική τιμή {eur(pr['retail'])}, αποζημίωση"
+        what += ", φθηνότερα ισοδύναμα" if comparable(ctx, p) else ""
+        what += " και ιστορικό τιμής"
     return layout(
         ctx,
-        f"{brand} {rest} · {eur(pr['retail'])} · farmaka.info",
+        f"{head} · τιμή {eur(pr['retail'])} · farmaka.info",
         body,
-        f"/farmako/{p['eof_code']}/",
-        f"{p['name']} ({subst}). Λιανική {eur(pr['retail'])}, αποζημίωση, φθηνότερα ισοδύναμα και ιστορικό τιμής, "
-        "από το Υπουργείο Υγείας." + (" Φύλλο οδηγιών χρήσης σε ενότητες." if leaflet else ""),
+        path,
+        f"{head} ({subst}): {what}, από το Υπουργείο Υγείας."
+        + (" Φύλλο οδηγιών χρήσης σε ενότητες." if leaflet else "")
+        + (f" Επίσημη ονομασία: {p['name']}." if plain else ""),
+        trail=trail + [(head, path)],
     )
 
 
@@ -1094,7 +1144,7 @@ def substance(ctx: Context, s: dict) -> str:
     reimb = sum(1 for p in rows if p["reimbursement"])
     body = f"""
 <div class="wrap">
-<nav class="crumbs" aria-label="Διαδρομή"><a href="/">Αρχική</a> / Δραστική ουσία</nav>
+<nav class="crumbs" aria-label="Διαδρομή"><a href="/">Αρχική</a> / <a href="/ousies/">Δραστικές ουσίες</a></nav>
 <div class="page-head">
   <h1>{e(sname(ctx, s["name"]))}</h1>
   {f'<p class="inn">{e(inn_label(s["name"]))}</p>' if s.get("name_el") else ""}
@@ -1113,6 +1163,7 @@ def substance(ctx: Context, s: dict) -> str:
         body,
         f"/ousia/{s['slug']}/",
         f"Όλες οι συσκευασίες με {sname(ctx, s['name'])} ({inn_label(s['name'])}) στην Ελλάδα, με τιμή και αποζημίωση.",
+        trail=[("Δραστικές ουσίες", "/ousies/"), (sname(ctx, s["name"]), f"/ousia/{s['slug']}/")],
     )
 
 
@@ -1248,9 +1299,19 @@ def brand(ctx: Context, b: dict) -> str:
 </div>
 """
     about = " + ".join(sub_names[:2]) + (" κ.ά." if len(sub_names) > 2 else "")
-    title = f"{b['name']}{f' ({about})' if about else ''} · τιμές{', φύλλο οδηγιών' if texts else ''} · farmaka.info"
+    shown = brand_display(b["name"])
+    title = (
+        f"{shown}{f' ({about})' if about else ''} · τιμές{', φύλλο οδηγιών' if texts else ''} · farmaka.info"
+    )
+    forms = list(
+        dict.fromkeys(
+            lb[:1].lower() + lb[1:] for f, lb in map(form_kind, (p["name"] for p in rows)) if f != "other"
+        )
+    )
     desc = (
-        f"Οι {len(rows)} συσκευασίες του {b['name']}{f' ({about})' if about else ''} στην Ελλάδα: λιανική {span}"
+        f"Οι {len(rows)} συσκευασίες του {shown}{f' ({about})' if about else ''} στην Ελλάδα"
+        + (f" ({', '.join(forms[:4])})" if forms else "")
+        + f": λιανική {span}"
         + (f", {reimb} αποζημιώνονται" if reimb else "")
         + (", φύλλο οδηγιών χρήσης σε ενότητες" if texts else "")
         + ". Από τα επίσημα στοιχεία "
@@ -1259,7 +1320,9 @@ def brand(ctx: Context, b: dict) -> str:
         )
         + "."
     )
-    return layout(ctx, title, body, f"/onoma/{b['slug']}/", desc)
+    trail = [(sub_names[0], f"/ousia/{ctx.slug_of[subs[0]]}/")] if subs else []
+    trail.append((shown, f"/onoma/{b['slug']}/"))
+    return layout(ctx, title, body, f"/onoma/{b['slug']}/", desc, trail=trail)
 
 
 # ---------------------------------------------------------------- data & about
@@ -1387,7 +1450,49 @@ def data_page(ctx: Context) -> str:
         "/dedomena/",
         "Ανοιχτά δεδομένα φαρμάκων (CC0) και API χωρίς κλειδί.",
         nav="data",
+        ld=[dataset(ctx)],
     )
+
+
+_MEDIA_TYPES = {".csv": "text/csv", ".json": "application/json", ".sqlite": "application/vnd.sqlite3"}
+
+
+def dataset(ctx: Context) -> dict:
+    """schema.org Dataset for the downloads, for dataset search engines (Google Dataset Search)."""
+    m = ctx.meta
+    return {
+        "@context": "https://schema.org",
+        "@type": "Dataset",
+        "name": "farmaka.info: τιμές, αποζημίωση και ελλείψεις φαρμάκων στην Ελλάδα",
+        "description": (
+            f"Όλες οι {num(m['packages'], 0)} συσκευασίες φαρμάκων των δελτίων τιμών του Υπουργείου Υγείας, "
+            "με τιμή παραγωγού, χονδρικής και λιανικής, το ιστορικό κάθε αλλαγής τιμής, την τιμή αποζημίωσης "
+            "από τον κατάλογο αποζημιούμενων φαρμάκων, τις ελλείψεις και διακοπές κυκλοφορίας από τις λίστες "
+            "του ΕΟΦ και της EMA και τους συνδέσμους στα επίσημα κείμενα. Κάθε τιμή έχει την πηγή της "
+            "(δελτίο, ημερομηνία δημοσίευσης). Ενημερώνεται καθημερινά."
+        ),
+        "url": f"{SITE}/dedomena/",
+        "license": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "isAccessibleForFree": True,
+        "inLanguage": "el",
+        "keywords": ["φάρμακα", "τιμές φαρμάκων", "αποζημίωση", "ελλείψεις φαρμάκων", "Ελλάδα", "ΕΟΦ"],
+        "spatialCoverage": {"@type": "Place", "name": "Ελλάδα"},
+        "temporalCoverage": f"{min(s['published'] for s in m['sources'])}/..",
+        "dateModified": m["data_published"],
+        "creator": {"@type": "Organization", "name": "farmaka.info", "url": SITE},
+        "isBasedOn": "https://www.moh.gov.gr/articles/times-farmakwn/deltia-timwn",
+        "distribution": [
+            {
+                "@type": "DataDownload",
+                "name": d["name"],
+                "description": DOWNLOAD_INFO[d["name"]],
+                "encodingFormat": _MEDIA_TYPES[Path(d["name"]).suffix],
+                "contentUrl": f"{SITE}/data/{d['name']}",
+            }
+            for d in ctx.downloads
+            if d["name"] in DOWNLOAD_INFO and Path(d["name"]).suffix in _MEDIA_TYPES
+        ],
+    }
 
 
 def about(ctx: Context) -> str:

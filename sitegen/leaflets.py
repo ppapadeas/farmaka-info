@@ -219,6 +219,7 @@ def _page(ctx, d: dict, slug: str, kind: str) -> str:
         body,
         path,
         f"{title} για το {name} (επίσημο κείμενο της EMA, στα ελληνικά), οργανωμένο σε ενότητες.",
+        trail=[("Επίσημα κείμενα", "/fylla/"), (f"{name}" + ("" if kind == "pil" else " · ΠΧΠ"), path)],
     )
 
 
@@ -395,15 +396,21 @@ def glance(doc: dict) -> dict:
     return out
 
 
-def source_date(d: dict) -> str:
-    """The text's date: the file's own date (EOF) or the EMA pdf's Last-Modified."""
+def source_iso(d: dict) -> str:
+    """The text's date as YYYY-MM-DD: the file's own date (EOF) or the EMA pdf's Last-Modified."""
     src = d.get("source") or {}
     if re.fullmatch(r"\d{4}-\d{2}-\d{2}", src.get("date") or ""):
-        return date_gr(src["date"])
+        return src["date"]
     try:
-        return date_gr(parsedate_to_datetime(src["last_modified"]).date().isoformat())
+        return parsedate_to_datetime(src["last_modified"]).date().isoformat()
     except (KeyError, TypeError, ValueError):
         return ""
+
+
+def source_date(d: dict) -> str:
+    """The text's date: the file's own date (EOF) or the EMA pdf's Last-Modified."""
+    iso = source_iso(d)
+    return date_gr(iso) if iso else ""
 
 
 def source_short(d: dict) -> str:

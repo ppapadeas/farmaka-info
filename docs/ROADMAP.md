@@ -84,6 +84,8 @@
   `https` (Always Use HTTPS).
 - [x] Δήλωση sitemap σε Google Search Console (ιδιοκτησία Domain, επαλήθευση με TXT στο DNS) και Bing
   Webmaster Tools (εισαγωγή από το Search Console).
+- [x] Τίτλοι συσκευασιών με απλά λόγια, `lastmod` στο sitemap από τα στοιχεία κάθε σελίδας, διαδρομή και
+  Dataset σε JSON-LD, IndexNow μετά από κάθε deploy (Δ-26).
 - [ ] Δοκιμή σάρωσης barcode και offline σε πραγματικά κινητά.
 
 ## Φάση 5 — API και ενσωματώσεις

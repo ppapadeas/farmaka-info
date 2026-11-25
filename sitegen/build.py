@@ -26,7 +26,7 @@ from collections import Counter, defaultdict
 from datetime import UTC, datetime
 from pathlib import Path
 
-from . import changes, leaflets, pages, trivia
+from . import changes, indexnow, leaflets, pages, trivia
 from .drug import form_group, pack_label, split_name, strength
 from .text import skeleton, slugify
 
@@ -561,6 +561,39 @@ def sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+_ISO_DATE = re.compile(r"\d{4}-\d{2}-\d{2}")
+
+
+def page_date(p: dict, texts: dict) -> str:
+    """When the data on a package page last changed, for the sitemap's lastmod: the newest of
+    its price bulletin, price changes, reimbursement list, shortage lists, EOF documents and
+    the leaflet shown. Not the build date: a daily build that changes nothing must not ask
+    search engines to read every page again."""
+    dates = [p["price_source"]["published"]]
+    dates += [h["published"] for h in p["price_history"]]
+    dates += [r["source"]["published"] for r in p["reimbursement"]]
+    dates += [a.get("published") for a in p["availability"]]
+    dates += [d.get("date") for d in p["documents"]]
+    keys = [pi.get("product_number") for pi in p.get("product_information") or []] + [
+        f"EOF-{p['eof_code'][:7]}"
+    ]
+    dates += [leaflets.source_iso(texts[k]["texts"]) for k in keys if k in texts]
+    return max(d[:10] for d in dates if d and _ISO_DATE.match(d))
+
+
+def write_sitemap(path: Path, urls: list[tuple[str, str | None]]) -> None:
+    """[(path, YYYY-MM-DD or None)] -> sitemap.xml; no lastmod where no data date says it."""
+    path.write_text(
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+        + "".join(
+            f"<url><loc>{SITE}{u}</loc>{f'<lastmod>{d}</lastmod>' if d else ''}</url>\n" for u, d in urls
+        )
+        + "</urlset>\n",
+        encoding="utf-8",
+    )
+
+
 def build(data: Path, out: Path, built_at: str) -> dict:
     packages, sources, report, history = load(data)
     reimb = load_reimbursement(data)
@@ -679,7 +712,6 @@ def build(data: Path, out: Path, built_at: str) -> dict:
     ctx = pages.Context(
         meta=meta, by_code=by_code, subst=subst, slug_of=slug_of, downloads=downloads, equiv=equivalents(pkgs)
     )
-    urls = ["/", "/dedomena/", "/sxetika/", "/ousies/", "/elleipseis/", "/allages/"]
     (out / "index.html").write_text(pages.home(ctx, history), encoding="utf-8")
     for path, html in (
         ("dedomena", pages.data_page(ctx)),
@@ -701,15 +733,32 @@ def build(data: Path, out: Path, built_at: str) -> dict:
     (out / "_templates").mkdir()
     (out / "_templates" / "search.html").write_text(pages.search_template(ctx), encoding="utf-8")
     ctx.leaflets = leaflets.build(ctx, data / "ema_pi", out)
-    urls += [f"/fylla/{v['slug']}/" for v in ctx.leaflets.values()]
+    ema_pages = []  # (path, date) of the EMA texts' own pages
+    for v in ctx.leaflets.values():
+        when = leaflets.source_iso(v["texts"]) or None
+        ema_pages.append((f"/fylla/{v['slug']}/", when))
+        if v["pil"] and v["smpc"]:
+            ema_pages.append((f"/fylla/{v['slug']}/pxp/", when))
     # EOF texts in sections: on the package pages only (Δ-24)
     ctx.leaflets.update(leaflets.load_eof(data / "eof_pi"))
+    dates = {p["eof_code"]: page_date(p, ctx.leaflets) for p in pkgs}
+    newest = max(dates.values())
+    urls: list[tuple[str, str | None]] = [
+        ("/", newest),
+        ("/dedomena/", newest),
+        ("/sxetika/", None),
+        ("/ousies/", None),
+        ("/elleipseis/", newest),
+        ("/allages/", newest),
+        ("/fylla/", max((d for _, d in ema_pages if d), default=None)),
+        *ema_pages,
+    ]
     # pages per product name (Δ-25), in the room left under MAX_FILES: one file per package
-    # and substance page below, and the four files written last
+    # and substance page below, and the five files written last
     ctx.brands = brand_index(pkgs)
     ctx.brand_of = {c: b["slug"] for b in ctx.brands.values() for c in b["codes"]}
     so_far = sum(1 for f in out.rglob("*") if f.is_file())
-    ctx.brand_pages = brand_pages(ctx.brands, MAX_FILES - so_far - len(pkgs) - len(subst) - 4)
+    ctx.brand_pages = brand_pages(ctx.brands, MAX_FILES - so_far - len(pkgs) - len(subst) - 5)
     left_out = sum(1 for b in ctx.brands.values() if len(b["codes"]) >= MIN_BRAND_PACKAGES) - len(
         ctx.brand_pages
     )
@@ -717,25 +766,20 @@ def build(data: Path, out: Path, built_at: str) -> dict:
         d = out / "farmako" / p["eof_code"]
         d.mkdir(parents=True)
         (d / "index.html").write_text(pages.package(ctx, p), encoding="utf-8")
-        urls.append(f"/farmako/{p['eof_code']}/")
+        urls.append((f"/farmako/{p['eof_code']}/", dates[p["eof_code"]]))
     for slug, s in subst.items():
         d = out / "ousia" / slug
         d.mkdir(parents=True)
         (d / "index.html").write_text(pages.substance(ctx, s), encoding="utf-8")
-        urls.append(f"/ousia/{slug}/")
+        urls.append((f"/ousia/{slug}/", max(dates[c] for c in s["codes"])))
     for slug in sorted(ctx.brand_pages):
         d = out / "onoma" / slug
         d.mkdir(parents=True)
         (d / "index.html").write_text(pages.brand(ctx, ctx.brands[slug]), encoding="utf-8")
-        urls.append(f"/onoma/{slug}/")
+        urls.append((f"/onoma/{slug}/", max(dates[c] for c in ctx.brands[slug]["codes"])))
 
-    (out / "sitemap.xml").write_text(
-        '<?xml version="1.0" encoding="UTF-8"?>\n'
-        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
-        + "".join(f"<url><loc>{SITE}{u}</loc></url>\n" for u in urls)
-        + "</urlset>\n",
-        encoding="utf-8",
-    )
+    write_sitemap(out / "sitemap.xml", urls)
+    (out / f"{indexnow.KEY}.txt").write_text(indexnow.KEY, encoding="utf-8")  # proves the key is ours
     (out / "robots.txt").write_text(
         f"User-agent: *\nAllow: /\nDisallow: /_templates/\nSitemap: {SITE}/sitemap.xml\n", encoding="utf-8"
     )
